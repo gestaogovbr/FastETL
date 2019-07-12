@@ -1,5 +1,6 @@
 INSERT INTO PGG_DW.CONTROLE.qt_cargos_orgao_classificacao (
-  orgao_codigo_siorg
+	ano_mes
+    , orgao_codigo_siorg
 	, orgao_nome
 	, orgao_natureza_juridica
 	, orgao_classificacao
