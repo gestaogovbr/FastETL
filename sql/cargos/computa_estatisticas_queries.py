@@ -31,6 +31,19 @@ table_aggr_mes_anterior AS (
 	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
 	  WHERE ano_mes = %s)
 
+INSERT INTO PGG_DW.CONTROLE.cargos_estatisticas (
+	ano_mes,
+	orgao_codigo_siorg,
+	orgao_nome,
+	orgao_natureza_juridica,
+	orgao_classificacao,
+	cargo_descricao,
+	quantidade_cargos_mes,
+	quantidade_cargos_mes_anterior,
+	variacao_bruta_cargos,
+	variacao_percentual_cargos,
+	data_snapshot
+)
 SELECT t_mes.ano_mes,
 	   t_mes.orgao_codigo_siorg,
 	   t_mes.orgao_nome,
@@ -47,7 +60,8 @@ SELECT t_mes.ano_mes,
 				THEN 1
 			ELSE
 				(t_mes.quantidade_cargos - t_mes_anterior.quantidade_cargos) / t_mes.quantidade_cargos
-		END) AS variacao_percentual_cargos
+		END) AS variacao_percentual_cargos,
+		GETDATE() as data_snapshot
 FROM table_aggr_mes t_mes
 JOIN table_aggr_mes_anterior t_mes_anterior
 	ON t_mes.orgao_codigo_siorg = t_mes_anterior.orgao_codigo_siorg
