@@ -1,7 +1,7 @@
 query_fetch_meses = """
     SELECT DISTINCT ano_mes
     FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-    ORDER BY ano_mes DESC
+    ORDER BY ano_mes DESC;
 """
 
 query_estatisticas_cargos = """
@@ -16,7 +16,7 @@ WITH table_aggr_mes AS (
 		  ,quantidade_cargos
 		  ,data_snapshot
 	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-	  WHERE ano_mes = {{ mes_atual }}),
+	  WHERE ano_mes = %s),
 
 table_aggr_mes_anterior AS (
 	SELECT ano_mes
@@ -29,7 +29,7 @@ table_aggr_mes_anterior AS (
 		  ,quantidade_cargos
 		  ,data_snapshot
 	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-	  WHERE ano_mes = {{ mes_anterior }})
+	  WHERE ano_mes = %s)
 
 INSERT INTO PGG_DW.CONTROLE.cargos_estatisticas (
 	ano_mes,
@@ -65,5 +65,5 @@ SELECT t_mes.ano_mes,
 FROM table_aggr_mes t_mes
 JOIN table_aggr_mes_anterior t_mes_anterior
 	ON t_mes.orgao_codigo_siorg = t_mes_anterior.orgao_codigo_siorg
-	   AND t_mes.cargo_descricao = t_mes_anterior.cargo_descricao
+	   AND t_mes.cargo_descricao = t_mes_anterior.cargo_descricao;
 """
