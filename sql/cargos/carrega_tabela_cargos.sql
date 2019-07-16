@@ -1,12 +1,12 @@
 INSERT INTO PGG_DW.CONTROLE.qt_cargos_orgao_classificacao (
-	ano_mes
-    , orgao_codigo_siorg
-	, orgao_nome
-	, orgao_natureza_juridica
-	, orgao_classificacao
-	, cargo_descricao
-	, quantidade_cargos
-	, data_snapshot
+		ano_mes
+	  , orgao_codigo_siorg
+		, orgao_nome
+		, orgao_natureza_juridica
+		, orgao_classificacao
+		, cargo_descricao
+		, quantidade_cargos
+		, data_snapshot
 )
 SELECT
 	CONVERT(INT, SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6))  as ano_mes
