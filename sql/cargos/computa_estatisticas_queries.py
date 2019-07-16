@@ -16,7 +16,7 @@ WITH table_aggr_mes AS (
 		  ,quantidade_cargos
 		  ,data_snapshot
 	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-	  WHERE ano_mes = %s),
+	  WHERE ano_mes = {{ mes_atual }}),
 
 table_aggr_mes_anterior AS (
 	SELECT ano_mes
@@ -29,7 +29,7 @@ table_aggr_mes_anterior AS (
 		  ,quantidade_cargos
 		  ,data_snapshot
 	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-	  WHERE ano_mes = %s)
+	  WHERE ano_mes = {{ mes_anterior }})
 
 INSERT INTO PGG_DW.CONTROLE.cargos_estatisticas (
 	ano_mes,
