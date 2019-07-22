@@ -7,5 +7,5 @@ query_checa_atualizacao_2 = """
 query_checa_atualizacao = """
     SELECT *
 FROM PGG_DW.CONTROLE.sensor_test
-WHERE ID = '{{ macros.ds_format(macros.ds_add(ds, -25), "%Y-%m-%d", "%Y%m") }}';
+WHERE ID = %s;
 """
