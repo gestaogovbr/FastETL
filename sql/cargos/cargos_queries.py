@@ -71,5 +71,5 @@ JOIN table_aggr_mes_anterior t_mes_anterior
 query_checa_carga_dag = """
 SELECT COUNT(ano_mes) as cnt_ano_mes
 FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
-WHERE ano_mes = {{ macros.ds_format(macros.ds_add(ds, -25), %Y-%m-%d, %Y%m) }};
+WHERE ano_mes = {{ macros.ds_format(macros.ds_add(ds, -25), "%Y-%m-%d", "%Y%m") }};
 """
