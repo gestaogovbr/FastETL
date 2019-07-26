@@ -73,3 +73,10 @@ SELECT COUNT(ano_mes) as cnt_ano_mes
 FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
 WHERE ano_mes = {{ macros.ds_format(macros.ds_add(ds, -25), "%Y-%m-%d", "%Y%m") }};
 """
+
+query_checa_atualizacao = """
+SELECT COUNT(1) as qt_registros
+FROM PGG_DW.DW_APF_FATOS.FT_INFORMACOES_SIAPE
+WHERE INFORMACAO_TIPO_ID = 20001
+	AND SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6) = 201907;
+"""
