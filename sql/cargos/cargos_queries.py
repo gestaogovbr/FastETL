@@ -64,7 +64,7 @@ SELECT t_mes.ano_mes
 				THEN 1
 			ELSE
 				(t_mes.quantidade_cargos - t_mes_anterior.quantidade_cargos) / t_mes.quantidade_cargos
-		END) AS variacao_percentual_cargos,
+		END) AS variacao_percentual_cargos
 		,GETDATE() as data_snapshot
 FROM table_aggr_mes t_mes
 JOIN table_aggr_mes_anterior t_mes_anterior
