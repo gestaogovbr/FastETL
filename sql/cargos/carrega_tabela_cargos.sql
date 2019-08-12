@@ -9,7 +9,7 @@ INSERT INTO PGG_DW.CONTROLE.qt_cargos_orgao_classificacao (
 		, data_snapshot
 )
 SELECT
-	CONVERT(INT, SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6))  as ano_mes
+	CONVERT(INT, SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6)) as ano_mes
 	, OP.ORG_PADR_CODIGO as orgao_codigo_siorg
 	, OP.ORG_PADR_NOME as orgao_nome
 	, NJ.ORGAO_NATUREZA_JURIDICA_DESCRICAO as orgao_natureza_juridica
