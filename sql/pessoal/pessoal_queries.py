@@ -6,7 +6,7 @@ query_fetch_meses = """
 
 query_estatistica_orgao = """
 WITH table_aggr_mes AS (
-	SELECT 
+	SELECT
 		ano_mes
 		, ano_mes_dt
 		, informacao_tipo_id
@@ -34,6 +34,7 @@ table_aggr_mes_anterior AS (
 		, data_snapshot
 	  FROM PGG_DW.CONTROLE.pessoal_orgao
 	  WHERE ano_mes = %s)
+
 INSERT INTO PGG_DW.CONTROLE.pessoal_estatistica (
 		ano_mes
 		, ano_mes_dt
@@ -47,6 +48,7 @@ INSERT INTO PGG_DW.CONTROLE.pessoal_estatistica (
 		, variacao_bruta_valor_abs
 		, variacao_percentual_valor
 		, data_snapshot)
+
 SELECT t_mes.ano_mes
        ,t_mes.ano_mes_dt
 	   ,t_mes.orgao_codigo_siorg
@@ -66,7 +68,6 @@ SELECT t_mes.ano_mes
 				(t_mes.sum_valor - t_mes_anterior.sum_valor) / t_mes.sum_valor
 		END) AS variacao_percentual_valor
 		,GETDATE() as data_snapshot
-INTO PGG_DW.CONTROLE.pessoal_estatistica
 FROM table_aggr_mes t_mes
 JOIN table_aggr_mes_anterior t_mes_anterior
 	ON t_mes.orgao_codigo_siorg = t_mes_anterior.orgao_codigo_siorg
