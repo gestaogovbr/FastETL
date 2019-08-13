@@ -1,6 +1,6 @@
 query_fetch_meses = """
     SELECT DISTINCT ano_mes
-    FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
+    FROM PGG_DW.CONTROLE.cargos_orgao
     ORDER BY ano_mes DESC;
 """
 
@@ -16,10 +16,10 @@ WITH table_aggr_mes AS (
 		  ,cargo_tipo
 		  ,quantidade_cargos
 		  ,data_snapshot
-	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
+	  FROM PGG_DW.CONTROLE.cargos_orgao
 	  WHERE ano_mes = %s
 	    AND CONVERT(date, data_snapshot) = (SELECT CONVERT(date, MAX(data_snapshot))
-									  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao)
+									  FROM PGG_DW.CONTROLE.cargos_orgao)
 	),
 
 table_aggr_mes_anterior AS (
@@ -33,13 +33,13 @@ table_aggr_mes_anterior AS (
 		  ,cargo_tipo
 		  ,quantidade_cargos
 		  ,data_snapshot
-	  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
+	  FROM PGG_DW.CONTROLE.cargos_orgao
 	  WHERE ano_mes = %s
 	    AND CONVERT(date, data_snapshot) = (SELECT CONVERT(date, MAX(data_snapshot))
-									  FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao)
+									  FROM PGG_DW.CONTROLE.cargos_orgao)
 	)
 
-INSERT INTO PGG_DW.CONTROLE.cargos_estatisticas (
+INSERT INTO PGG_DW.CONTROLE.cargos_estatistica (
 	ano_mes
     , ano_mes_dt
 	, orgao_codigo_siorg
@@ -83,6 +83,6 @@ JOIN table_aggr_mes_anterior t_mes_anterior
 
 query_checa_carga_dag = """
 SELECT COUNT(ano_mes) as cnt_ano_mes
-FROM PGG_DW.CONTROLE.qt_cargos_orgao_classificacao
+FROM PGG_DW.CONTROLE.cargos_orgao
 WHERE ano_mes = {{ macros.datetime(execution_date.year, execution_date.month -1, 1).strftime("%Y%m") }};
 """

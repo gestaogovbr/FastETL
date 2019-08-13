@@ -1,4 +1,4 @@
-INSERT INTO PGG_DW.CONTROLE.qt_cargos_orgao_classificacao (
+INSERT INTO PGG_DW.CONTROLE.cargos_orgao (
 		ano_mes
 	  , orgao_codigo_siorg
 		, orgao_nome

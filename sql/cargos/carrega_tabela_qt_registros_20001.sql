@@ -1,4 +1,4 @@
-INSERT INTO PGG_DW.CONTROLE.qt_registros_FT_20001 (
+INSERT INTO PGG_DW.CONTROLE.cargos_registro (
     ano_mes,
     ano_mes_dt,
     orgao_unificado_id,
