@@ -50,6 +50,7 @@ INSERT INTO PGG_DW.CONTROLE.cargos_estatistica (
 	, quantidade_cargos_mes
 	, quantidade_cargos_mes_anterior
 	, variacao_bruta_cargos
+	, variacao_bruta_cargos_abs
 	, variacao_percentual_cargos
 	, data_snapshot_origem_mes
 	, data_snapshot_origem_mes_anterior
@@ -65,6 +66,7 @@ SELECT t_mes.ano_mes
 	   , t_mes.quantidade_cargos AS quantidade_cargos_mes
 	   , t_mes_anterior.quantidade_cargos AS quantidade_cargos_mes_anterior
 	   , (t_mes.quantidade_cargos - t_mes_anterior.quantidade_cargos) AS variacao_bruta_cargos
+	   , ABS(t_mes.quantidade_cargos - t_mes_anterior.quantidade_cargos) AS variacao_bruta_cargos_abs
 	   , (CASE
 			WHEN t_mes.quantidade_cargos = 0 AND t_mes_anterior.quantidade_cargos = 0
 				THEN 0

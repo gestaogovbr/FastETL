@@ -82,7 +82,7 @@ SELECT t_mes.ano_mes
 		, t_mes_anterior.data_snapshot AS data_snapshot_origem_mes_anterior
 		, GETDATE() as data_snapshot
 FROM table_aggr_mes t_mes
-JOIN table_aggr_mes_anterior t_mes_anterior
+LEFT JOIN table_aggr_mes_anterior t_mes_anterior
 	ON t_mes.orgao_codigo_siorg = t_mes_anterior.orgao_codigo_siorg
 	   AND t_mes.informacao_tipo_id = t_mes_anterior.informacao_tipo_id;
 """
