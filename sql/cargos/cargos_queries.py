@@ -90,7 +90,12 @@ WHERE ano_mes = {{ macros.datetime(execution_date.year, execution_date.month -1,
 """
 
 query_compara_fato_stage = """
-WITH tbl_fato AS (
+WITH tbl_tempo_dia_id AS (
+	SELECT DISTINCT TEMPO_DIA_ID
+	FROM PGG_DW.DW_APF_FATOS_BKP.FT_INFORMACOES_SIAPE_BKP
+	WHERE INFORMACAO_TIPO_ID = 20001
+),
+tbl_fato AS (
 	SELECT
 		INFORMACOES_ID
 		, HARMONIZACAO_BASICA_ID
@@ -117,8 +122,7 @@ WITH tbl_fato AS (
 		, UORG_VINC
 		, FT_INFORMACOES_SIAPE_DT_INCLUSAO
 	FROM PGG_DW.DW_APF_FATOS.FT_INFORMACOES_SIAPE
-	WHERE INFORMACAO_TIPO_ID = 20001 AND SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6) <> {{ macros.datetime(execution_date.year, execution_date.month -1, 1).strftime("%Y%m") }}
-),
+	WHERE INFORMACAO_TIPO_ID = 20001 AND TEMPO_DIA_ID IN (SELECT TEMPO_DIA_ID FROM tbl_tempo_dia_id)),
 tbl_fato_bkp AS (
 	SELECT
 		INFORMACOES_ID
@@ -146,8 +150,7 @@ tbl_fato_bkp AS (
 		, UORG_VINC
 		, FT_INFORMACOES_SIAPE_DT_INCLUSAO
 	FROM PGG_DW.DW_APF_FATOS_BKP.FT_INFORMACOES_SIAPE_BKP
-	WHERE INFORMACAO_TIPO_ID = 20001 AND SUBSTRING(CONVERT(VARCHAR, TEMPO_DIA_ID), 1, 6) <> {{ macros.datetime(execution_date.year, execution_date.month -1, 1).strftime("%Y%m") }}
-)
+	WHERE INFORMACAO_TIPO_ID = 20001 AND TEMPO_DIA_ID IN (SELECT TEMPO_DIA_ID FROM tbl_tempo_dia_id))
 SELECT COUNT(1) as qt_registros
 FROM
 	((SELECT *
