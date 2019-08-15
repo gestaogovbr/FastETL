@@ -89,7 +89,7 @@ FROM PGG_DW.CONTROLE.cargos_orgao
 WHERE ano_mes = {{ macros.datetime(execution_date.year, execution_date.month -1, 1).strftime("%Y%m") }};
 """
 
-query_compara_fato_stage = """
+query_compara_fato_backup = """
 WITH tbl_tempo_dia_id AS (
 	SELECT DISTINCT TEMPO_DIA_ID
 	FROM PGG_DW.DW_APF_FATOS_BKP.FT_INFORMACOES_SIAPE_BKP
