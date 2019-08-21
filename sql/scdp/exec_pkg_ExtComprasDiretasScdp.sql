@@ -1,8 +1,5 @@
 -- Executa uma package SSIS
 
-USE SSISDB
-GO
-
 DECLARE @execution_id BIGINT
 
 -- Create execution
