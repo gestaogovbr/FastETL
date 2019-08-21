@@ -1,6 +1,6 @@
 
 SELECT	-- e1.execution_id, 
-		CASE e1.status
+	    CAST(CASE e1.status
 			WHEN 1 THEN 0 -- 'criado'
 			WHEN 2 THEN 0 -- 'executando'
 			WHEN 3 THEN 0 -- 'cancelado'
@@ -11,7 +11,7 @@ SELECT	-- e1.execution_id,
 			WHEN 8 THEN 0 -- 'parando'
 			WHEN 9 THEN 0 -- 'concluido'
 			ELSE 0 -- 'desconhecido'
-		END AS status
+		END AS int) AS status
 		-- e1.start_time, 
 		-- e1.end_time, 
 		-- e1.cpu_count
