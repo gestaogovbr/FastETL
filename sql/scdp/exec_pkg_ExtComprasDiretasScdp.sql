@@ -14,9 +14,9 @@ EXEC [SSISDB].[catalog].[create_execution]
 -- System parameters
 EXEC [SSISDB].[catalog].[set_execution_parameter_value] 
 	@execution_id
-	, @object_type = 50						-- System parameter
+	, @object_type = 50	    -- System parameter
 	, @parameter_name = 'SYNCHRONIZED'
-	, @parameter_value = 0
+	, @parameter_value = 0	-- Precisa ser "not synchronized" para executar pelo Airflow
 
 -- Execute the package
 EXEC [SSISDB].[catalog].[start_execution] @execution_id
