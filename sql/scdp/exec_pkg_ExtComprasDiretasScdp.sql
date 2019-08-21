@@ -16,7 +16,7 @@ EXEC [SSISDB].[catalog].[set_execution_parameter_value]
 	@execution_id
 	, @object_type = 50						-- System parameter
 	, @parameter_name = 'SYNCHRONIZED'
-	, @parameter_value = 1
+	, @parameter_value = 0
 
 -- Execute the package
 EXEC [SSISDB].[catalog].[start_execution] @execution_id
