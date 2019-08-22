@@ -4,9 +4,9 @@ DECLARE @execution_id BIGINT
 
 -- Create execution
 EXEC [SSISDB].[catalog].[create_execution] 
-	@package_name = N'teste_exporta_csv.dtsx'
-	, @project_name = N'prjExtComprasDiretasScdp'
-	, @folder_name = N'icSCDP'
+	@package_name = N'carrega Stage.dtsx'
+	, @project_name = N'PrjQuartzoSicaf'
+	, @folder_name = N'icCompras'
 	, @use32bitruntime = False
 	, @reference_id = NULL
 	, @execution_id = @execution_id OUTPUT
