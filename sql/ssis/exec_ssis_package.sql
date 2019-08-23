@@ -1,13 +1,12 @@
-# coding: utf-8
 -- Executa uma package SSIS
 
 DECLARE @execution_id BIGINT
 
 -- Create execution
 EXEC [SSISDB].[catalog].[create_execution] 
-	@package_name = '{{ params.package_name }}'
-	, @project_name = '{{ params.project_name }}'
-	, @folder_name = '{{ params.folder_name }}'
+	@package_name = N'{{ params.package_name }}'
+	, @project_name = N'{{ params.project_name }}'
+	, @folder_name = N'{{ params.folder_name }}'
 	, @use32bitruntime = False
 	, @reference_id = NULL
 	, @execution_id = @execution_id OUTPUT
