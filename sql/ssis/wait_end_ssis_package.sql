@@ -1,3 +1,4 @@
+# coding: utf-8
 -- Verifica se a execução mais recente da package já finalizou (para usar no Sensor)
 
 SELECT	COUNT(*)

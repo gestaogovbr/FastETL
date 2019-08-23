@@ -1,3 +1,4 @@
+# coding: utf-8
 -- Executa uma package SSIS
 
 DECLARE @execution_id BIGINT

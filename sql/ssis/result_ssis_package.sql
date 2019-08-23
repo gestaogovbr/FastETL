@@ -1,3 +1,4 @@
+# coding: utf-8
 -- Verifica se o resultado (status) da execução mais recente da package
 
 SELECT	COUNT(*)
