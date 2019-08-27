@@ -1,4 +1,4 @@
--- Verifica se uma package executou com sucesso (status 7) no ano/mês corrente
+-- Verifica se uma package executou com sucesso (status 7) no ano/mes corrente
 
 SELECT COUNT(*)
 FROM [SSISDB].[catalog].[executions] e1
