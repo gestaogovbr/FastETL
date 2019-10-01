@@ -1,1 +1,3 @@
 exemplos/
+.mypy_cache/
+.vscode/
