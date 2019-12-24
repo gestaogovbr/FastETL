@@ -18,9 +18,9 @@ INNER JOIN
 	 FROM [SSISDB].[catalog].[executions]
 	 WHERE project_name = N'{{ params.project_name }}'
 	   AND package_name = N'{{ params.package_name }}'
-	   AND end_time IS NOT NULL
 	) e2
 ON e1.execution_id = e2.max_exec_id
 WHERE CONVERT(CHAR(8),e1.end_time,112) = CONVERT(CHAR(8),CURRENT_TIMESTAMP,112)
+AND e1.end_time IS NOT NULL
 AND e1.status = 7 
 
