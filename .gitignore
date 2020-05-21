@@ -130,4 +130,7 @@ dmypy.json
 centralit.json
 ConsomeAPI.ipynb
 old.sql
+
+# specifics
 .vscode/settings.json
+ dags/raiox/credenciais/token.pickle
