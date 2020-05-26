@@ -132,5 +132,5 @@ ConsomeAPI.ipynb
 old.sql
 
 # specifics
-.vscode/settings.json
- dags/raiox/credenciais/token.pickle
+**/.vscode/settings.json
+dags/raiox/credenciais/token.pickle
