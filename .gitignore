@@ -134,3 +134,4 @@ old.sql
 # specifics
 **/.vscode/settings.json
 dags/raiox/credenciais/token.pickle
+test_notrack/
