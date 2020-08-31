@@ -17,10 +17,10 @@ class LoadGSheetOperator(BaseOperator):
                  dest_conn_id,
                  schema,
                  table,
-                 column_name_to_add,
-                 value_to_add,
-                  *args,
-                  **kwargs):
+                 column_name_to_add=None,
+                 value_to_add=None,
+                 *args,
+                 **kwargs):
         super(LoadGSheetOperator, self).__init__(*args, **kwargs)
         self.gsheet_conn_id = gsheet_conn_id
         self.spreadsheet_id = spreadsheet_id
@@ -37,7 +37,8 @@ class LoadGSheetOperator(BaseOperator):
                                  sheet_name=self.sheet_name)
         df = gsheet_hook.get_gsheet_df()
 
-        df[self.column_name_to_add] = self.value_to_add
+        if self.column_name_to_add:
+            df[self.column_name_to_add] = self.value_to_add
 
         df.to_sql(self.table,
             schema=self.schema,
