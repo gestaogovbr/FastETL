@@ -1,7 +1,28 @@
+"""
+Operador Customizado que carrega uma planilha do Google em uma tabela no
+banco de dados. A primera linha da planilha é utilizada para nomear as
+colunas. Caso a tabela não exista ela será criada automaticamente.
+Permite a inclusão de uma coluna com valor constante. Funciona com MSSql
+Server.
+Args:
+    gsheet_conn_id (str): conn_id contendo JSON google authentication no
+    campo password
+    spreadsheet_id (str): id único da spreadsheet google. Faz parte da
+    URL da planilha online
+    sheet_name (str): nome da planilha dentre as várias da spreadsheet
+    que será carregada na tabela
+    dest_conn_id (str): conn_id para o BD de escrita dos dados
+    schema (str): schema da tabela a ser escrita
+    table (str): tabela a ser escrita
+    column_name_to_add (str): nome da coluna a ser incluída na tabela.
+    Por padrão não adicionar nenhuma coluna
+    value_to_add : valor a ser incluído caso se utilize o parâmetro
+    anterior
+"""
+
 from airflow.operators.bash_operator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-# from custom_functions.gsheet_services import get_gsheet_df
 from hooks.gsheet_hook import GSheetHook
 from custom_functions.fast_etl import get_mssql_odbc_engine
 
