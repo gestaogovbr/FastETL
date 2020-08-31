@@ -1,3 +1,8 @@
+"""
+Hook customizado para realizar operações de leitura e escrita com
+planilhas do Google através de sua API (google sheets).
+"""
+
 import pandas as pd
 
 from airflow.utils.decorators import apply_defaults
