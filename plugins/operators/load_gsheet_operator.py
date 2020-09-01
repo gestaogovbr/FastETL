@@ -4,6 +4,7 @@ banco de dados. A primera linha da planilha é utilizada para nomear as
 colunas. Caso a tabela não exista ela será criada automaticamente.
 Permite a inclusão de uma coluna com valor constante. Funciona com MSSql
 Server.
+
 Args:
     gsheet_conn_id (str): conn_id contendo JSON google authentication no
     campo password
@@ -54,9 +55,8 @@ class LoadGSheetOperator(BaseOperator):
 
     def execute(self, context):
         gsheet_hook = GSheetHook(conn_id=self.gsheet_conn_id,
-                                 spreadsheet_id=self.spreadsheet_id,
-                                 sheet_name=self.sheet_name)
-        df = gsheet_hook.get_gsheet_df()
+                                 spreadsheet_id=self.spreadsheet_id)
+        df = gsheet_hook.get_gsheet_df(sheet_name=self.sheet_name)
 
         if self.column_name_to_add:
             df[self.column_name_to_add] = self.value_to_add
