@@ -10,8 +10,8 @@ from airflow.utils.decorators import apply_defaults
 
 
 class DownloadCSVFromDbOperator(BaseOperator):
-    # ui_color = '#72efdd'
-    # ui_fgcolor = '#000000'
+    ui_color = '#95aad5'
+    ui_fgcolor = '#000000'
 
     @apply_defaults
     def __init__(self,
