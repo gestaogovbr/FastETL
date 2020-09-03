@@ -62,7 +62,7 @@ class LoadGSheetOperator(BaseOperator):
             df[self.column_name_to_add] = self.value_to_add
 
         df.to_sql(self.table,
-            schema=self.schema,
-            con=get_mssql_odbc_engine(self.dest_conn_id),
-            if_exists='append',
-            index=False)
+                  schema=self.schema,
+                  con=get_mssql_odbc_engine(self.dest_conn_id),
+                  if_exists='append',
+                  index=False)
