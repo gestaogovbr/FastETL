@@ -1,5 +1,17 @@
 """
-TODO: Escrever essa docstring
+Operador que executa uma query SQL, gera um arquivo CSV com o resultado
+e grava o arquivo no sistema de arquivo.
+
+Args:
+    mssql_conn_id (str): Airflow conn_id do BD onde a query select_sql
+    será executada
+    select_sql (str): query que retorna os dados que serão gravados no
+    CSV
+    target_file_dir (str): local no sistema de arquivo onde o arquivo
+    CSV será gravado
+    file_name (str): nome para o arquivo CSV a ser gravado
+    int_columns (str): lista com nome das colunas que são do tipo
+    inteiro para geração correta do arquivo CSV
 """
 
 import os
@@ -17,7 +29,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
     def __init__(self,
                  mssql_conn_id,
                  select_sql,
-                 target_file_path,
+                 target_file_dir,
                  file_name,
                  int_columns=None,
                  *args,
@@ -27,7 +39,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
         self.mssql_conn_id = mssql_conn_id
         self.select_sql = select_sql
         self.int_columns = int_columns
-        self.target_file_path = target_file_path
+        self.target_file_dir = target_file_dir
         self.file_name = file_name
 
     def execute(self, context):
@@ -40,8 +52,8 @@ class DownloadCSVFromDbOperator(BaseOperator):
                 df[col] = df[col].astype("Int64")
 
         # Create folder if not exists
-        if not os.path.exists(self.target_file_path):
-            os.mkdir(self.target_file_path)
+        if not os.path.exists(self.target_file_dir):
+            os.mkdir(self.target_file_dir)
 
-        file_path = os.path.join(self.target_file_path, self.file_name)
+        file_path = os.path.join(self.target_file_dir, self.file_name)
         df.to_csv(file_path, index=False)
