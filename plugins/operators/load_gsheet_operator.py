@@ -58,6 +58,9 @@ class LoadGSheetOperator(BaseOperator):
                                  spreadsheet_id=self.spreadsheet_id)
         df = gsheet_hook.get_gsheet_df(sheet_name=self.sheet_name)
 
+        # Remove colunas vazias
+        df = df[[c for c in df.columns if len(c) > 0]]
+
         if self.column_name_to_add:
             df[self.column_name_to_add] = self.value_to_add
 
