@@ -136,4 +136,3 @@ old.sql
 dags/raiox/credenciais/token.pickle
 test_notrack/
 **/.DS_Store
-!dags/painel_fornecedores/downloads
