@@ -45,7 +45,10 @@ class GSheetHook(BaseHook):
 
         # Transform key_id to json
         key_str = BaseHook.get_connection(self.conn_id).password
-        key_value = json.loads(key_str)
+        try:
+            key_value = json.loads(key_str)
+        except:
+            raise Exception("Erro na leitura da conexão. Tem que copiar o conteúdo de Extra para Password.")
 
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_value, scopes=scopes)
 
