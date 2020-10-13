@@ -69,3 +69,31 @@ class LoadGSheetOperator(BaseOperator):
                   con=get_mssql_odbc_engine(self.dest_conn_id),
                   if_exists='append',
                   index=False)
+
+class LoadGSheetCSVOperator(BaseOperator):
+    ui_color = '#72efdd'
+    ui_fgcolor = '#000000'
+
+    @apply_defaults
+    def __init__(self,
+                 gsheet_conn_id,
+                 spreadsheet_id,
+                 sheet_name,
+                 dest_path,
+                 *args,
+                 **kwargs):
+        super(LoadGSheetCSVOperator, self).__init__(*args, **kwargs)
+        self.gsheet_conn_id = gsheet_conn_id
+        self.spreadsheet_id = spreadsheet_id
+        self.sheet_name = sheet_name
+        self.dest_path = dest_path
+
+    def execute(self, context):
+        gsheet_hook = GSheetHook(conn_id=self.gsheet_conn_id,
+                                 spreadsheet_id=self.spreadsheet_id)
+        df = gsheet_hook.get_gsheet_df(sheet_name=self.sheet_name)
+
+        # Remove colunas vazias
+        df = df[[c for c in df.columns if len(c) > 0]]
+
+        df.to_csv(self.dest_path, index=False)
