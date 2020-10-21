@@ -1,16 +1,13 @@
 """
-Hook para utilização da API do Bancon Central - Bacen. Geralmente
+Hook para utilização do STA (API do Bancon Central - Bacen). Geralmente
 utilizada para download de arquivos de dados.
 """
 from datetime import datetime, timedelta
-
 import xml.etree.ElementTree as ET
-
 import requests
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base_hook import BaseHook
-
 
 class BacenSTAHook(BaseHook):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
