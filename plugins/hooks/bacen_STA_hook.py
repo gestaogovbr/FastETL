@@ -66,10 +66,7 @@ class BacenSTAHook(BaseHook):
         Realiza o download do arquivo mais recente. Recebe a janela de
         filtro em dias para reduzir carga na API. Utiliza 30 dias como padrão.
         """
-        try:
-            id_newest_file = self._get_id_newest_file(lastdays_filter)
-        except:
-            raise Exception(f"API do BACEN retornou nenhum arquivo.")
+        id_newest_file = self._get_id_newest_file(lastdays_filter)
 
         file_url = self.STA_URL + f"/arquivos/{id_newest_file}/conteudo"
         raw_file = requests.request("GET",
