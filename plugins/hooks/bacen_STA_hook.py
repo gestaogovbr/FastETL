@@ -2,9 +2,9 @@
 Hook para utilização do STA (API do Bancon Central - Bacen). Geralmente
 utilizada para download de arquivos de dados.
 """
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime
 import xml.etree.ElementTree as ET
+import pytz
 import requests
 
 from airflow.utils.decorators import apply_defaults
@@ -18,8 +18,8 @@ class BacenSTAHook(BaseHook):
     def __init__(self,
                  conn_id,
                  sistema,
-                  *args,
-                  **kwargs):
+                 *args,
+                 **kwargs):
         self.conn_id = conn_id
         self.sistema = sistema
 
@@ -41,10 +41,10 @@ class BacenSTAHook(BaseHook):
 
         tz = pytz.timezone("America/Sao_Paulo")
         if data_max is None:
-            data_max = datetime.now(tz)
-        elif data_max > datetime.now(tz):
+            data_max = datetime.now(tz).date()
+        elif data_max > datetime.now(tz).date():
             raise Exception('data_max não pode ser maior que data atual.' \
-                            ' É necessário considerar o timezone do Airflow.')
+                            'É necessário considerar o timezone do Airflow.')
 
         querystring = {
             "dataHoraInicio": data_min.strftime(self.DATE_FORMAT)[:23],
@@ -62,7 +62,7 @@ class BacenSTAHook(BaseHook):
 
         extract_date = lambda x: datetime.strptime(x, self.DATE_FORMAT)
         data_id_map = {
-                extract_date(node.find('DataHoraDisponibilizacao').text):
+            extract_date(node.find('DataHoraDisponibilizacao').text):
                 node.find('Protocolo').text
             for node in xml_tree.findall('Arquivo')
         }
@@ -71,8 +71,8 @@ class BacenSTAHook(BaseHook):
 
     def download_latest_file(self,
                              dest_file_path: str,
-                              data_min,
-                              data_max=None):
+                             data_min,
+                             data_max=None):
         """
         Realiza o download do arquivo mais recente. Recebe a janela de
         filtro em dias para reduzir carga na API. Utiliza 30 dias como padrão.
