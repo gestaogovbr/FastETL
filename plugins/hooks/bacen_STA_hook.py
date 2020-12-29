@@ -33,18 +33,30 @@ class BacenSTAHook(BaseHook):
             }
         return headers
 
+    def _get_correct_time_range(self, date_min, date_max=None):
+        tz = pytz.timezone("America/Sao_Paulo")
+        if date_max is None:
+            date_max = datetime.now(tz)
+        else:
+            if not date_max.tzinfo:
+                date_max = tz.localize(date_max, is_dst=None)\
+                             .astimezone(pytz.utc)
+            # Regra do webservice do BACEN
+            if date_max > datetime.now(tz):
+                raise Exception('data_max não pode ser maior que ' \
+                                'data atual. É necessário considerar ' \
+                                'o timezone do Airflow.')
+        if not date_min.tzinfo:
+            date_min = tz.localize(date_min, is_dst=None).astimezone(pytz.utc)
+
+        return date_min, date_max
+
     def _get_id_newest_file(self, data_min, data_max=None) -> str:
         """
         Filtra os arquivos do STA pelo intervalo de datas e retorna o id
         (protocolo) do arquivo mais recente.
         """
-
-        tz = pytz.timezone("America/Sao_Paulo")
-        if data_max is None:
-            data_max = datetime.now(tz)
-        elif data_max > datetime.now(tz):
-            raise Exception('data_max não pode ser maior que data atual. ' \
-                            'É necessário considerar o timezone do Airflow.')
+        data_min, data_max = self._get_correct_time_range(data_min, data_max)
 
         querystring = {
             "dataHoraInicio": data_min.strftime(self.DATE_FORMAT)[:23],
@@ -71,8 +83,8 @@ class BacenSTAHook(BaseHook):
 
     def download_latest_file(self,
                              dest_file_path: str,
-                             data_min,
-                             data_max=None):
+                             data_min: datetime,
+                             data_max: datetime = None):
         """
         Realiza o download do arquivo mais recente. Recebe a janela de
         filtro em dias para reduzir carga na API. Utiliza 30 dias como padrão.
