@@ -39,15 +39,14 @@ class BacenSTAHook(BaseHook):
             date_max = datetime.now(tz)
         else:
             if not date_max.tzinfo:
-                date_max = tz.localize(date_max, is_dst=None)\
-                             .astimezone(pytz.utc)
+                date_max = pytz.utc.localize(date_max, is_dst=None).astimezone(tz)
             # Regra do webservice do BACEN
             if date_max > datetime.now(tz):
                 raise Exception('data_max não pode ser maior que ' \
                                 'data atual. É necessário considerar ' \
                                 'o timezone do Airflow.')
         if not date_min.tzinfo:
-            date_min = tz.localize(date_min, is_dst=None).astimezone(pytz.utc)
+            date_min = pytz.utc.localize(date_min, is_dst=None).astimezone(tz)
 
         return date_min, date_max
 
