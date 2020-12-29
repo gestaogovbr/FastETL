@@ -43,7 +43,7 @@ class BacenSTAHook(BaseHook):
         if data_max is None:
             data_max = datetime.now(tz).date()
         elif data_max > datetime.now(tz).date():
-            raise Exception('data_max não pode ser maior que data atual.' \
+            raise Exception('data_max não pode ser maior que data atual. ' \
                             'É necessário considerar o timezone do Airflow.')
 
         querystring = {
