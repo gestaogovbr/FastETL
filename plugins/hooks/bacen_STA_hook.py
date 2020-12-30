@@ -4,8 +4,9 @@ utilizada para download de arquivos de dados.
 """
 from datetime import datetime
 import xml.etree.ElementTree as ET
-import pytz
+import base64
 import requests
+import pytz
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base_hook import BaseHook
@@ -27,9 +28,15 @@ class BacenSTAHook(BaseHook):
         """ Função auxiliar para construir os cabeçalhos para requisições HTTP
         """
         conn_values = BaseHook.get_connection(self.conn_id)
+
+        message = f"{conn_values.login}:{conn_values.password}"
+        message_bytes = message.encode('ascii')
+        base64_bytes = base64.b64encode(message_bytes)
+        base64_message = base64_bytes.decode('ascii')
+
         headers = {
             "user-agent": "airflow-SEGES-ME",
-            "authorization": conn_values.extra_dejson.get("authorization")
+            "authorization": f"Basic {base64_message}"
             }
         return headers
 
