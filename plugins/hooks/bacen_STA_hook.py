@@ -25,6 +25,11 @@ class BacenSTAHook(BaseHook):
     STA_PASSW_URL = 'https://www3.bcb.gov.br/senhaws/senha'
     EMAIL_TO_LIST = [
         'nitai.silva@economia.gov.br',
+        'washington.antonio@economia.gov.br',
+        'rene.deckers@economia.gov.br',
+        'augusto.herrmann@economia.gov.br',
+        'luis.jesus@economia.gov.br',
+        'vitor.bellini@economia.gov.br',
     ]
 
     @apply_defaults
@@ -146,13 +151,11 @@ class BacenSTAHook(BaseHook):
             via o STA foi atualizada.
             <br>
             <br>
-            A nova senha é: {new_pass}
+            A nova senha é: <b>{new_pass}</b>
             <br>
+            O login é: <b>841260010.NITAI</b>
             <br>
-            O login é: 841260010.NITAI
-            <br>
-            <br>
-            Para testar acesse:
+            Caso queira testar acesse:
             <a href="https://sta.bcb.gov.br/"
                target="_blank">https://sta.bcb.gov.br/</a>
             <br>
@@ -160,6 +163,7 @@ class BacenSTAHook(BaseHook):
             Esta mensagem foi enviada pela dag <b>{dag_id}</b>.
             <br>
             Para acessar: <a href="{dag_url}" target="_blank">{dag_url}</a>
+            <br>
             <br>
             Airflow-bot.
             <br>
@@ -182,10 +186,7 @@ class BacenSTAHook(BaseHook):
         .first()
 
         cur_pass = conn_model.password
-        print('velha_senha: ' + cur_pass)
-
         new_pass = self._generate_new_password()
-        print('nova_senha: ' + new_pass)
 
         request_template = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <Parametros>
@@ -207,6 +208,6 @@ class BacenSTAHook(BaseHook):
             session.commit()
             self._send_email_password_updated(new_pass)
         else:
-            print('response.status_code: ', response.status_code)
+            print('response.status_code HTTP: ', response.status_code)
             print(response.content)
-            raise Exception('Atualização de senha falhou.')
+            raise Exception('A atualização da senha falhou.')
