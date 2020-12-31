@@ -1,19 +1,31 @@
 """
 Hook para utilização do STA (API do Bancon Central - Bacen). Geralmente
 utilizada para download de arquivos de dados.
+Manual do STA: https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Manual_STA_Web_Services.pdf
 """
 from datetime import datetime
 import xml.etree.ElementTree as ET
 import base64
 import requests
 import pytz
+import string
+from random import choice
 
+from airflow import settings
+from airflow.models import Connection
+from airflow.utils.email import send_email
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base_hook import BaseHook
+
+from custom_functions.utils.encode_html import replace_to_html_encode
 
 class BacenSTAHook(BaseHook):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
     STA_URL = "https://sta.bcb.gov.br/staws"
+    STA_PASSW_URL = 'https://www3.bcb.gov.br/senhaws/senha'
+    EMAIL_TO_LIST = [
+        'nitai.silva@economia.gov.br',
+    ]
 
     @apply_defaults
     def __init__(self,
@@ -24,8 +36,9 @@ class BacenSTAHook(BaseHook):
         self.conn_id = conn_id
         self.sistema = sistema
 
-    def _get_request_headers(self):
-        """ Função auxiliar para construir os cabeçalhos para requisições HTTP
+    def _get_auth_headers(self):
+        """ Função auxiliar para construir os cabeçalhos para as
+        requisições à API. Inclui o cabeçalho de autenticação
         """
         conn_values = BaseHook.get_connection(self.conn_id)
 
@@ -41,6 +54,10 @@ class BacenSTAHook(BaseHook):
         return headers
 
     def _get_correct_time_range(self, date_min, date_max=None):
+        """
+        Validate max_date and generate if its None. Also localize to
+        compare properly.
+        """
         tz = pytz.timezone("America/Sao_Paulo")
         if date_max is None:
             date_max = datetime.now(tz)
@@ -72,7 +89,7 @@ class BacenSTAHook(BaseHook):
         url = self.STA_URL + "/arquivos/disponiveis"
         response = requests.request("GET",
                                     url,
-                                    headers=self._get_request_headers(),
+                                    headers=self._get_auth_headers(),
                                     params=querystring)
         # TODO: Tratar erro de login/senha com mensagem esclarecedora
 
@@ -100,7 +117,7 @@ class BacenSTAHook(BaseHook):
         file_url = self.STA_URL + f"/arquivos/{id_newest_file}/conteudo"
         raw_file = requests.request("GET",
                                     file_url,
-                                    headers=self._get_request_headers(),
+                                    headers=self._get_auth_headers(),
                                     stream=True)
 
         with open(dest_file_path, "wb") as file:
@@ -108,3 +125,88 @@ class BacenSTAHook(BaseHook):
                 file.write(chunk)
 
         print(f"Downloaded file with id {id_newest_file}.")
+
+    def _generate_new_password(self):
+        return ("".join(choice(string.ascii_letters) for x in range(2))).upper() + \
+               ("".join(choice(string.ascii_letters) for x in range(3))).lower() + \
+               "@" + \
+               "".join(choice(string.digits) for x in range(3))
+
+    def _send_email_password_updated(self, new_pass):
+        """Envia email para admins informando a nova senha após atualização
+        """
+        subject = "Atualização da senha da WS do BACEN (STA)"
+        dag_id = 'update_password_sta_bacen'
+        dag_url = f'http://etl-cginflab.mp.intra/tree?dag_id={dag_id}'
+        content = f"""
+            Olá!
+            <br>
+            <br>
+            A senha utilizada pelas dags que acessam arquivos no BACEN
+            via o STA foi atualizada.
+            <br>
+            <br>
+            A nova senha é: {new_pass}
+            <br>
+            <br>
+            O login é: 841260010.NITAI
+            <br>
+            <br>
+            Para testar acesse:
+            <a href="https://sta.bcb.gov.br/"
+               target="_blank">https://sta.bcb.gov.br/</a>
+            <br>
+            <br>
+            Esta mensagem foi enviada pela dag <b>{dag_id}</b>.
+            <br>
+            Para acessar: <a href="{dag_url}" target="_blank">{dag_url}</a>
+            <br>
+            Airflow-bot.
+            <br>
+            <br>
+        """
+        send_email(to=self.EMAIL_TO_LIST,
+                   subject=subject,
+                   html_content=replace_to_html_encode(content))
+
+    def update_password(self):
+        """
+        Call web service method to update the credential password. Its
+        necessary due to expiration rules in the WS.
+        """
+        # Get the sql alchemy object to persist changes if update succeed
+        session = settings.Session()
+        conn_model = session\
+        .query(Connection)\
+        .filter(Connection.conn_id == self.conn_id)\
+        .first()
+
+        cur_pass = conn_model.password
+        print('velha_senha: ' + cur_pass)
+
+        new_pass = self._generate_new_password()
+        print('nova_senha: ' + new_pass)
+
+        request_template = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <Parametros>
+            <Senha>{cur_pass}</Senha>
+            <NovaSenha>{new_pass}</NovaSenha>
+            <ConfirmacaoNovaSenha>{new_pass}</ConfirmacaoNovaSenha>
+        </Parametros>
+        """
+        headers = self._get_auth_headers()
+        headers['Content-Type'] = 'application/xml'
+        response = requests.request('PUT',
+                                    self.STA_PASSW_URL,
+                                    headers=headers,
+                                    data=request_template)
+
+        if response.status_code == 204:
+            conn_model.set_password(new_pass)
+            session.add(conn_model)
+            session.commit()
+            self._send_email_password_updated(new_pass)
+        else:
+            print('response.status_code: ', response.status_code)
+            print(response.content)
+            raise Exception('Atualização de senha falhou.')
