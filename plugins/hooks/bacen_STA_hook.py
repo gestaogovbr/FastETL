@@ -6,10 +6,10 @@ Manual do STA: https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Man
 from datetime import datetime
 import xml.etree.ElementTree as ET
 import base64
-import requests
-import pytz
 import string
 from random import choice
+import requests
+import pytz
 
 from airflow import settings
 from airflow.models import Connection
