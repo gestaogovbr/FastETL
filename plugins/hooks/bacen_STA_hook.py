@@ -23,23 +23,14 @@ class BacenSTAHook(BaseHook):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
     STA_URL = "https://sta.bcb.gov.br/staws"
     STA_PASSW_URL = 'https://www3.bcb.gov.br/senhaws/senha'
-    EMAIL_TO_LIST = [
-        'nitai.silva@economia.gov.br',
-        'washington.antonio@economia.gov.br',
-        'rene.deckers@economia.gov.br',
-        'augusto.herrmann@economia.gov.br',
-        'luis.jesus@economia.gov.br',
-        'vitor.bellini@economia.gov.br',
-    ]
 
     @apply_defaults
     def __init__(self,
                  conn_id,
-                 sistema,
                  *args,
                  **kwargs):
         self.conn_id = conn_id
-        self.sistema = sistema
+        # self.sistema = sistema
 
     def _get_auth_headers(self):
         """ Função auxiliar para construir os cabeçalhos para as
@@ -79,7 +70,7 @@ class BacenSTAHook(BaseHook):
 
         return date_min, date_max
 
-    def _get_id_newest_file(self, data_min, data_max=None) -> str:
+    def _get_id_newest_file(self, sistema, data_min, data_max=None) -> str:
         """
         Filtra os arquivos do STA pelo intervalo de datas e retorna o id
         (protocolo) do arquivo mais recente.
@@ -89,7 +80,7 @@ class BacenSTAHook(BaseHook):
         querystring = {
             "dataHoraInicio": data_min.strftime(self.DATE_FORMAT)[:23],
             "dataHoraFim": data_max.strftime(self.DATE_FORMAT)[:23],
-            "sistemas": self.sistema
+            "sistemas": sistema
             }
         url = self.STA_URL + "/arquivos/disponiveis"
         response = requests.request("GET",
@@ -111,13 +102,14 @@ class BacenSTAHook(BaseHook):
 
     def download_latest_file(self,
                              dest_file_path: str,
+                             sistema: str,
                              data_min: datetime,
                              data_max: datetime = None):
         """
         Realiza o download do arquivo mais recente. Recebe a janela de
         filtro em dias para reduzir carga na API. Utiliza 30 dias como padrão.
         """
-        id_newest_file = self._get_id_newest_file(data_min, data_max)
+        id_newest_file = self._get_id_newest_file(sistema, data_min, data_max)
 
         file_url = self.STA_URL + f"/arquivos/{id_newest_file}/conteudo"
         raw_file = requests.request("GET",
@@ -137,7 +129,7 @@ class BacenSTAHook(BaseHook):
                "@" + \
                "".join(choice(string.digits) for x in range(3))
 
-    def _send_email_password_updated(self, new_pass):
+    def _send_email_password_updated(self, new_pass, email_to_list):
         """Envia email para admins informando a nova senha após atualização
         """
         subject = "Atualização da senha da WS do BACEN (STA)"
@@ -169,11 +161,11 @@ class BacenSTAHook(BaseHook):
             <br>
             <br>
         """
-        send_email(to=self.EMAIL_TO_LIST,
+        send_email(to=email_to_list,
                    subject=subject,
                    html_content=replace_to_html_encode(content))
 
-    def update_password(self):
+    def update_password(self, email_to_list):
         """
         Call web service method to update the credential password. Its
         necessary due to expiration rules in the WS.
@@ -206,7 +198,7 @@ class BacenSTAHook(BaseHook):
             conn_model.set_password(new_pass)
             session.add(conn_model)
             session.commit()
-            self._send_email_password_updated(new_pass)
+            self._send_email_password_updated(new_pass, email_to_list)
         else:
             print('response.status_code HTTP: ', response.status_code)
             print(response.content)
