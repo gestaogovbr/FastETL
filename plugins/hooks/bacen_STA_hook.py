@@ -98,7 +98,7 @@ class BacenSTAHook(BaseHook):
             for node in xml_tree.findall('Arquivo')
         }
         if not data_id_map:
-            raise Exception('Web Service do Bacen (STA) respondeu com '
+            raise Exception('Web Service do Bacen (STA) respondeu com ' \
                             'nenhum resultado.')
         newest_date = max(data_id_map.keys())
         return data_id_map[newest_date]
