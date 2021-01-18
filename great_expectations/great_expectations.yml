@@ -13,7 +13,14 @@ config_version: 2.0
 # Datasources tell Great Expectations where your data lives and how to get it.
 # You can use the CLI command `great_expectations datasource new` to help you
 # add a new datasource. Read more at https://docs.greatexpectations.io/en/latest/reference/core_concepts/datasource_reference.html
-datasources: {}
+datasources:
+  mssql_31_db:
+    data_asset_type:
+      module_name: great_expectations.dataset
+      class_name: SqlAlchemyDataset
+    module_name: great_expectations.datasource
+    credentials: ${mssql_31_db}
+    class_name: SqlAlchemyDatasource
 
 # This config file supports variable substitution which enables: 1) keeping
 # secrets out of source control & 2) environment-based configuration changes
