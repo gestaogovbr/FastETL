@@ -1,0 +1,368 @@
+{
+  "data_asset_type": "Dataset",
+  "expectation_suite_name": "raiox.dw_production",
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "max_value": 805036,
+        "min_value": 658665
+      },
+      "meta": {
+        "BasicSuiteBuilderProfiler": {
+          "confidence": "very low"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_table_column_count_to_equal",
+      "kwargs": {
+        "value": 28
+      },
+      "meta": {
+        "BasicSuiteBuilderProfiler": {
+          "confidence": "very low"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_table_columns_to_match_ordered_list",
+      "kwargs": {
+        "column_list": [
+          "HARMONIZACAO_BASICA_ID",
+          "TEMPO_DIA_ID",
+          "ORGAO_UNIFICADO_ID",
+          "ORGAO_SUPERIOR_UNIFICADO_ID",
+          "VINCULO_SERV",
+          "COR_ORIGEM_ETNICA",
+          "REGIME_JURIDICO",
+          "SITUACAO_VINC_SERV",
+          "IDADE",
+          "FAIXA_ETARIA4",
+          "ABONO_PERMANENCIA_ID",
+          "ESCOLARIDADE",
+          "SEXO",
+          "CARGO_EFT_NIVEL",
+          "MUNICIPIO_ID",
+          "CARGO_COMISS_SUBNIVEL_ID",
+          "PESSOA_TIPO_VINCULO_ID",
+          "N5_ID_UNIDADE_ORGANIZACIONAL",
+          "DENOMINACAO_CARGO_ID",
+          "UORG_VINC",
+          "QT_CARGOS_ALOCADOS",
+          "QT_CARGOS_COMISS_OCUPADOS",
+          "VL_REMUN_CARGOS_COMISS",
+          "VL_REND_CARGOS_COMISS",
+          "QT_SERVIDORES_FORCA_TRAB",
+          "VL_REMUN_SERV_FORCA_TRAB",
+          "VL_REND_SERV_FORCA_TRAB",
+          "QT_SERVIDORES_CEDIDOS"
+        ]
+      },
+      "meta": {
+        "BasicSuiteBuilderProfiler": {
+          "confidence": "very low"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "QT_SERVIDORES_FORCA_TRAB",
+        "mostly": 0.566
+      },
+      "meta": {
+        "BasicSuiteBuilderProfiler": {
+          "confidence": "very low"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_distinct_values_to_be_in_set",
+      "kwargs": {
+        "column": "QT_SERVIDORES_FORCA_TRAB",
+        "value_set": [
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0,
+          11.0,
+          12.0,
+          13.0,
+          14.0,
+          15.0,
+          16.0,
+          17.0,
+          18.0,
+          19.0,
+          20.0,
+          21.0,
+          22.0,
+          23.0,
+          24.0,
+          25.0,
+          26.0,
+          27.0,
+          28.0,
+          29.0,
+          30.0,
+          31.0,
+          32.0,
+          33.0,
+          34.0,
+          35.0,
+          36.0,
+          37.0,
+          38.0,
+          39.0,
+          40.0,
+          41.0,
+          42.0,
+          43.0,
+          44.0,
+          45.0,
+          46.0,
+          47.0,
+          48.0,
+          49.0,
+          50.0,
+          51.0,
+          52.0,
+          53.0,
+          54.0,
+          55.0,
+          56.0,
+          57.0,
+          58.0,
+          59.0,
+          60.0,
+          61.0,
+          63.0,
+          64.0,
+          65.0,
+          66.0,
+          69.0,
+          70.0,
+          71.0,
+          73.0,
+          74.0,
+          75.0,
+          76.0,
+          77.0,
+          78.0,
+          79.0,
+          80.0,
+          82.0,
+          83.0,
+          84.0,
+          85.0,
+          86.0,
+          91.0,
+          93.0,
+          96.0,
+          97.0,
+          98.0,
+          101.0,
+          105.0,
+          107.0,
+          110.0,
+          111.0,
+          112.0,
+          113.0,
+          118.0,
+          120.0,
+          123.0,
+          126.0,
+          137.0,
+          140.0,
+          149.0,
+          150.0,
+          160.0,
+          162.0,
+          164.0,
+          172.0,
+          176.0,
+          187.0,
+          191.0,
+          193.0,
+          203.0,
+          220.0,
+          224.0,
+          225.0,
+          229.0,
+          243.0,
+          246.0,
+          250.0,
+          251.0,
+          255.0,
+          265.0,
+          267.0,
+          294.0,
+          301.0,
+          306.0,
+          311.0,
+          323.0,
+          333.0,
+          336.0,
+          364.0,
+          369.0,
+          385.0,
+          391.0,
+          408.0,
+          423.0,
+          425.0,
+          427.0,
+          428.0,
+          459.0,
+          467.0,
+          469.0,
+          470.0,
+          472.0,
+          490.0,
+          493.0,
+          499.0,
+          500.0,
+          510.0,
+          535.0,
+          569.0,
+          581.0,
+          622.0,
+          640.0,
+          770.0,
+          872.0
+        ]
+      },
+      "meta": {
+        "BasicSuiteBuilderProfiler": {
+          "confidence": "very low"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "BasicSuiteBuilderProfiler": {
+      "batch_kwargs": {
+        "data_asset_name": null,
+        "datasource": "mssql_31_db",
+        "query": "SELECT * FROM PGG_DW.[DW_APF_FATOS].[VW_FT_INFORMACOES_SIAPE] WHERE TEMPO_DIA_ID = 20201130"
+      },
+      "created_at": 1610928476.9684794,
+      "created_by": "BasicSuiteBuilderProfiler"
+    },
+    "citations": [
+      {
+        "batch_kwargs": {
+          "data_asset_name": null,
+          "datasource": "mssql_31_db",
+          "query": "SELECT * FROM PGG_DW.[DW_APF_FATOS].[VW_FT_INFORMACOES_SIAPE] WHERE TEMPO_DIA_ID = 20201130"
+        },
+        "batch_markers": {
+          "ge_load_time": "20210118T000746.132010Z"
+        },
+        "batch_parameters": null,
+        "citation_date": "20210118T000757.727222Z",
+        "comment": "BasicSuiteBuilderProfiler added a citation based on the current batch."
+      }
+    ],
+    "columns": {
+      "ABONO_PERMANENCIA_ID": {
+        "description": ""
+      },
+      "CARGO_COMISS_SUBNIVEL_ID": {
+        "description": ""
+      },
+      "CARGO_EFT_NIVEL": {
+        "description": ""
+      },
+      "COR_ORIGEM_ETNICA": {
+        "description": ""
+      },
+      "DENOMINACAO_CARGO_ID": {
+        "description": ""
+      },
+      "ESCOLARIDADE": {
+        "description": ""
+      },
+      "FAIXA_ETARIA4": {
+        "description": ""
+      },
+      "HARMONIZACAO_BASICA_ID": {
+        "description": ""
+      },
+      "IDADE": {
+        "description": ""
+      },
+      "MUNICIPIO_ID": {
+        "description": ""
+      },
+      "N5_ID_UNIDADE_ORGANIZACIONAL": {
+        "description": ""
+      },
+      "ORGAO_SUPERIOR_UNIFICADO_ID": {
+        "description": ""
+      },
+      "ORGAO_UNIFICADO_ID": {
+        "description": ""
+      },
+      "PESSOA_TIPO_VINCULO_ID": {
+        "description": ""
+      },
+      "QT_CARGOS_ALOCADOS": {
+        "description": ""
+      },
+      "QT_CARGOS_COMISS_OCUPADOS": {
+        "description": ""
+      },
+      "QT_SERVIDORES_CEDIDOS": {
+        "description": ""
+      },
+      "QT_SERVIDORES_FORCA_TRAB": {
+        "description": ""
+      },
+      "REGIME_JURIDICO": {
+        "description": ""
+      },
+      "SEXO": {
+        "description": ""
+      },
+      "SITUACAO_VINC_SERV": {
+        "description": ""
+      },
+      "TEMPO_DIA_ID": {
+        "description": ""
+      },
+      "UORG_VINC": {
+        "description": ""
+      },
+      "VINCULO_SERV": {
+        "description": ""
+      },
+      "VL_REMUN_CARGOS_COMISS": {
+        "description": ""
+      },
+      "VL_REMUN_SERV_FORCA_TRAB": {
+        "description": ""
+      },
+      "VL_REND_CARGOS_COMISS": {
+        "description": ""
+      },
+      "VL_REND_SERV_FORCA_TRAB": {
+        "description": ""
+      }
+    },
+    "great_expectations_version": "0.13.4",
+    "notes": {
+      "content": [
+        "_To add additional notes, edit the <code>meta.notes.content</code> field in the appropriate Expectation json file._"
+      ],
+      "format": "markdown"
+    }
+  }
+}
