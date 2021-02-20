@@ -16,10 +16,10 @@ class DbToDbHook(BaseHook):
 
     @apply_defaults
     def __init__(self,
-                 source_conn_id,
-                 destination_conn_id,
-                 source_provider,
-                 destination_provider,
+                 source_conn_id: str,
+                 destination_conn_id: str,
+                 source_provider: str,
+                 destination_provider: str,
                  *args,
                  **kwargs):
         self.source_conn_id = source_conn_id
@@ -28,11 +28,11 @@ class DbToDbHook(BaseHook):
         self.destination_provider = destination_provider
 
     def full_copy(self,
-             destination_table,
-             source_table,
-             select_sql,
-             destination_truncate,
-             chunksize):
+             destination_table: str,
+             select_sql: str = None,
+             destination_truncate: str = True,
+             source_table: str = None,
+             chunksize: int = 1000):
         copy_db_to_db(
             source_table=source_table,
             destination_table=destination_table,
