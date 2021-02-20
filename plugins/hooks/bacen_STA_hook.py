@@ -1,7 +1,8 @@
 """
 Hook para utilização do STA (API do Bancon Central - Bacen). Geralmente
 utilizada para download de arquivos de dados.
-Manual do STA: https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Manual_STA_Web_Services.pdf
+Manual do STA:
+https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Manual_STA_Web_Services.pdf
 """
 from datetime import datetime
 import xml.etree.ElementTree as ET
@@ -30,7 +31,6 @@ class BacenSTAHook(BaseHook):
                  *args,
                  **kwargs):
         self.conn_id = conn_id
-        # self.sistema = sistema
 
     def _get_auth_headers(self):
         """ Função auxiliar para construir os cabeçalhos para as
