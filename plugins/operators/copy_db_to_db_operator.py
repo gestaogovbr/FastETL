@@ -49,14 +49,17 @@ class CopyDbToDbOperator(BaseOperator):
 
 
     def execute(self, context):
-        copied = copy_db_to_db(
+        copy_db_to_db(
             destination_table=self.destination_table,
             source_conn_id=self.source_conn_id,
             source_provider=self.source_provider,
             destination_conn_id=self.destination_conn_id,
             destination_provider=self.destination_provider,
             source_table=self.source_table,
-            select_sql=self.select_sql)
-        message = "logs {}".format(copied)
-        print(message)
-        return message
+            select_sql=self.select_sql,
+            destination_truncate=self.destination_truncate,
+            chunksize=self.chunksize
+            )
+        # message = "logs {}".format(copied)
+        # print(message)
+        # return message
