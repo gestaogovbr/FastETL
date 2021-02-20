@@ -19,7 +19,7 @@ Args:
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from custom_functions.fast_etl import copy_db_to_db
+from hooks.db_to_db_hook import DbToDbHook
 
 class CopyDbToDbOperator(BaseOperator):
 
@@ -49,17 +49,16 @@ class CopyDbToDbOperator(BaseOperator):
 
 
     def execute(self, context):
-        copy_db_to_db(
-            destination_table=self.destination_table,
+        hook = DbToDbHook(
             source_conn_id=self.source_conn_id,
-            source_provider=self.source_provider,
             destination_conn_id=self.destination_conn_id,
-            destination_provider=self.destination_provider,
+            source_provider=self.source_provider,
+            destination_provider=self.destination_provider
+            )
+        hook.full_copy(
+            destination_table=self.destination_table,
             source_table=self.source_table,
             select_sql=self.select_sql,
             destination_truncate=self.destination_truncate,
             chunksize=self.chunksize
             )
-        # message = "logs {}".format(copied)
-        # print(message)
-        # return message
