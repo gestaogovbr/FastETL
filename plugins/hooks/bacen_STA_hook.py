@@ -137,7 +137,7 @@ class BacenSTAHook(BaseHook):
         """
         subject = "Atualização da senha da WS do BACEN (STA)"
         dag_id = 'update_password_sta_bacen'
-        dag_url = f'http://etl-cginflab.mp.intra/tree?dag_id={dag_id}'
+        dag_url = f'http://airflow.seges.mp.intra/tree?dag_id={dag_id}'
         content = f"""
             Olá!
             <br>
