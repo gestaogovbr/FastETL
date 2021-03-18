@@ -430,46 +430,61 @@ def _build_incremental_sqls(dest_table: str, source_table: str,
             """
     return updates_sql, inserts_sql
 
-
-def sync_db_to_db_incremental(source_conn_id: str,
-                              destination_conn_id: str,
-                              table: str,
-                              key_column: str,
-                              source_schema: str,
-                              destination_schema: str,
-                              chunksize: int = 1000) -> None:
-
-    """ Realiza a atualização incremental da tabela (table).
-    Preferencialmente utilizará a coluna 'dataalteracao' como chave da
-    tabela para a sincronização e alternativamente utilizará o parâmetro
-    recebido (key_column). A sincronização é realizada em 3 etapas. 1-Envia
-    as alterações necessárias para uma tabela com sufixo '_alteracoes',
-    Ex.: 'tbl_pregao_alteracoes'. 2-Realiza os Updates. 3-Realiza os
-    Insertes. Apenas as colunas que existam na tabela no BD destino
-    serão sincronizadas. Funciona com Postgres na origem e MsSql no
-    destino. É necessário que exista uma tabela com sufixo '_alteracoes'
-    para o funcionamento.
+def sync_db_2_db(source_conn_id: str,
+                 destination_conn_id: str,
+                 table: str,
+                 date_column: str,
+                 key_column: str,
+                 source_schema: str,
+                 destination_schema: str,
+                 increment_schema: str,
+                 sync_exclusions: bool = False,
+                 source_exc_schema: str = None,
+                 source_exc_table: str = None,
+                 source_exc_column: str = None,
+                 chunksize: int = 1000) -> None:
+    """ Realiza a atualização incremental de uma tabela. A sincronização
+    é realizada em 3 etapas. 1-Envia s alterações necessárias para uma
+    tabela intermediária localizada no esquema `increment_schema`.
+    2-Realiza os Updates. 3-Realiza os Insertes. Apenas as colunas que
+    existam na tabela no BD destino serão sincronizadas. Funciona com
+    Postgres na origem e MsSql no destino. O algoritmo também realiza
+    sincronização de exclusões.
 
     Exemplo:
-        sync_db_to_db_incremental(source_conn_id=SOURCE_CONN_ID,
-                              destination_conn_id=DEST_CONN_ID,
-                              table=table,
-                              key_column=key_column,
-                              source_schema=SOURCE_SCHEMA,
-                              destination_schema=STG_SCHEMA,
-                              chunksize=CHUNK_SIZE)
+        sync_db_2_db(source_conn_id=SOURCE_CONN_ID,
+                     destination_conn_id=DEST_CONN_ID,
+                     table=table,
+                     date_column=date_column,
+                     key_column=key_column,
+                     source_schema=SOURCE_SCHEMA,
+                     destination_schema=STG_SCHEMA,
+                     chunksize=CHUNK_SIZE)
 
     Args:
         source_conn_id (str): string de conexão airflow do DB origem
         destination_conn_id (str): string de conexão airflow do DB destino
         table (str): tabela a ser sincronizada
-        key_column (str): nome da coluna a ser utilizado alternativamente
-        à 'dataalteracao' na descoberta das mudanças. Também utilizado
-        como chave para updates.
+        date_column (str): nome da coluna a ser utilizado para
+        identificação dos registros atualizados na origem.
+        key_column (str): nome da coluna a ser utilizado como chave na
+        etapa de atualização dos registros antigos que sofreram
+        atualizações na origem.
         source_eschema (str): esquema do BD na origem
-        destination_eschema (str): esquema do BD no destino
+        destination_schema (str): esquema do BD no destino
+        increment_schema (str): Esquema no banco utilizado para tabelas
+        temporárias. Caso esta variável seja None, esta tabela será
+        criada no mesmo schema com sufixo '_alteracoes'
+        sync_exclusions (bool): opção de sincronizar exclusões.
+        Default = False.
+        source_exc_schema (str): esquema da tabela na origem onde estão
+        registradas exclusões
+        source_exc_table (str): tabela na origem onde estão registradas
+        exclusões
+        source_exc_column (str): coluna na tabela na origem onde estão
+        registradas exclusões
         chunksize (int): tamanho do bloco de leitura na origem.
-            Default = 1000 linhas
+        Default = 1000 linhas
 
     Return:
         None
@@ -481,79 +496,6 @@ def sync_db_to_db_incremental(source_conn_id: str,
         * Possibilitar inserir data da carga na tabela de destino
         * Criar testes
     """
-    source_table_name = f"{source_schema}.{table}"
-    dest_table_name = f"{destination_schema}.{table}"
-    source_hook = PostgresHook(postgres_conn_id=source_conn_id, autocommit=True)
-    dest_hook = MsSqlHook(mssql_conn_id=destination_conn_id, autocommit=True)
-    col_list = get_table_cols_name(destination_conn_id,
-                                   destination_schema,
-                                   table)
-
-    dest_rows_count = _table_rows_count(dest_hook, dest_table_name)
-    print(f"Total de linhas atualmente na tabela destino: {dest_rows_count}.")
-    where_condition = _build_increm_filter(col_list, dest_hook,
-                                          dest_table_name, key_column)
-    new_rows_count = _table_rows_count(source_hook,
-                                       source_table_name,
-                                       where_condition)
-    print(f"Total de linhas novas ou modificadas: {new_rows_count}.")
-
-    # TODO: Tratar caso em que é a primeira vez de carga e a quantidade
-    # é razoavelmente pequena
-    worth_increment = dest_rows_count > 0 and \
-                      (new_rows_count / dest_rows_count) < 0.3
-    if not worth_increment:
-        raise Exception("Muitas linhas a inserir! Utilize carga full!")
-
-    # Guarda as alterações e inclusões necessárias
-    select_sql = build_select_sql(f"{source_table_name}", col_list)
-    select_diff = f"{select_sql} WHERE {where_condition}"
-    print(f"SELECT para espelhamento: {select_diff}")
-    copy_db_to_db(destination_table=f"{dest_table_name}_alteracoes",
-                  source_conn_id=source_conn_id,
-                  source_provider='PG',
-                  destination_conn_id=destination_conn_id,
-                  destination_provider='MSSQL',
-                  source_table=None,
-                  select_sql=select_diff,
-                  destination_truncate=True,
-                  chunksize=chunksize)
-
-    # Reconstrói índices
-    sql = f"ALTER INDEX ALL ON {dest_table_name}_alteracoes REBUILD"
-    dest_hook.run(sql)
-
-    print(f"Iniciando carga incremental na tabela {dest_table_name}.")
-    updates_sql, inserts_sql = _build_incremental_sqls(
-        dest_table=f"{dest_table_name}",
-        source_table=f"{dest_table_name}_alteracoes",
-        key_column=key_column,
-        column_list=col_list)
-    # Realiza updates
-    dest_hook.run(updates_sql)
-    # Realiza inserts de novas linhas
-    dest_hook.run(inserts_sql)
-
-
-# New func: Distingue se a coluna para obtenção do max() e montagem do
-#           filtro (where) é uma "data/hora alteração" ou é um número
-#           sequencial (id, pk, etc.): 'date_column' ou 'key_column'.
-#           Também permite que a tabela de carga dos incrementos esteja
-#           em um schema diferente. Também trata exclusões da origem.
-def sync_db_2_db(source_conn_id: str,
-                destination_conn_id: str,
-                table: str,
-                date_column: str,
-                key_column: str,
-                source_schema: str,
-                destination_schema: str,
-                increment_schema: str,
-                sync_exclusions: bool = False,
-                source_exc_schema: str = None,
-                source_exc_table: str = None,
-                source_exc_column: str = None,
-                chunksize: int = 1000) -> None:
-
     source_table_name = f"{source_schema}.{table}"
     dest_table_name = f"{destination_schema}.{table}"
     if increment_schema:
