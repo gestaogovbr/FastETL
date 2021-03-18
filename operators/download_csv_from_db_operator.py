@@ -24,6 +24,7 @@ from airflow.utils.decorators import apply_defaults
 class DownloadCSVFromDbOperator(BaseOperator):
     ui_color = '#95aad5'
     ui_fgcolor = '#000000'
+    template_fields = ('select_sql', 'target_file_dir', 'file_name')
 
     @apply_defaults
     def __init__(self,
