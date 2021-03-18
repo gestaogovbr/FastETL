@@ -30,6 +30,7 @@ from custom_functions.fast_etl import get_mssql_odbc_engine
 class LoadGSheetOperator(BaseOperator):
     ui_color = '#72efdd'
     ui_fgcolor = '#000000'
+    template_fields = ('sheet_name', 'column_name_to_add', 'value_to_add' )
 
     @apply_defaults
     def __init__(self,
