@@ -1,4 +1,5 @@
-def replace_to_html_encode(text):
+def replace_to_html_encode(text: str) -> str:
+    "Replace accented characters with html entity equivalents."
     html_map = (
         ('À', '&Agrave;'),
         ('Á', '&Aacute;'),
