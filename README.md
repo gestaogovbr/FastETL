@@ -6,8 +6,8 @@ Funcionalidades Comuns para implementação de fluxos de dados nas DAGs do Apach
 
 # Principais funcionalidades
 * **Replicação** de tabelas *full* ou incremental em bancos de dados SQL Server e Postgres
-* Carga de dados à partir do **GSheets**, do [**STA-BACEN**](https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Manual_STA_Web_Services.pdf) e de planilhas na rede **Samba/Windows**
-* Extração de **CSV** à partir do SQL
+* Carga de dados a partir do **GSheets**, do [**STA-BACEN**](https://www.bcb.gov.br/content/acessoinformacao/sisbacen_docs/Manual_STA_Web_Services.pdf) e de planilhas na rede **Samba/Windows**
+* Extração de **CSV** a partir do SQL
 * Ferramentas de ***Data Wrangle***
 
 # Instalação no Airflow
