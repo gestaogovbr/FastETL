@@ -33,6 +33,7 @@ class CopyDbToDbOperator(BaseOperator):
             destination_provider: str,
             source_table: str = None,
             select_sql: str = None,
+            columns_to_ignore: list = [],
             destination_truncate: bool = True,
             chunksize: int = 1000,
             *args, **kwargs) -> None:
@@ -44,6 +45,7 @@ class CopyDbToDbOperator(BaseOperator):
         self.destination_provider = destination_provider
         self.source_table = source_table
         self.select_sql = select_sql
+        self.columns_to_ignore = columns_to_ignore
         self.destination_truncate = destination_truncate
         self.chunksize = chunksize
 
@@ -59,6 +61,7 @@ class CopyDbToDbOperator(BaseOperator):
             destination_table=self.destination_table,
             source_table=self.source_table,
             select_sql=self.select_sql,
+            columns_to_ignore=self.columns_to_ignore,
             destination_truncate=self.destination_truncate,
             chunksize=self.chunksize
             )
