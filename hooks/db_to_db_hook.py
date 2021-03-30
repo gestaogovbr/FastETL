@@ -30,6 +30,7 @@ class DbToDbHook(BaseHook):
     def full_copy(self,
              destination_table: str,
              select_sql: str = None,
+             columns_to_ignore: list = [],
              destination_truncate: str = True,
              source_table: str = None,
              chunksize: int = 1000):
@@ -41,6 +42,7 @@ class DbToDbHook(BaseHook):
             destination_conn_id=self.destination_conn_id,
             destination_provider=self.destination_provider,
             select_sql=select_sql,
+            columns_to_ignore=columns_to_ignore,
             destination_truncate=destination_truncate,
             chunksize=chunksize
             )
