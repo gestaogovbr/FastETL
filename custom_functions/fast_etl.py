@@ -77,8 +77,8 @@ def build_select_sql(source_table: str,
 
     return f'SELECT {columns} FROM {source_table}'
 
-def build_dest_sqls(destination_table: str,
-                    column_list: str) -> Union[str, str, str]:
+def build_dest_sqls(destination_table: str, column_list: str,
+                    wildcard_symbol: str) -> Union[str, str, str]:
     """
     Monta a string do insert do destino
     Monta a string de truncate do destino
@@ -86,7 +86,7 @@ def build_dest_sqls(destination_table: str,
 
     columns = ', '.join(col for col in column_list)
 
-    values = ", ".join(['?' for i in range(len(column_list))])
+    values = ", ".join([wildcard_symbol for i in range(len(column_list))])
     insert = f'INSERT INTO {destination_table} ({columns}) ' \
              f'VALUES ({values})'
 
@@ -295,6 +295,9 @@ def copy_db_to_db(destination_table: str,
                     if destination_provider == 'MSSQL':
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
+                        wildcard_symbol = '?'
+                    else:
+                        wildcard_symbol = '%s'
 
                     # gera queries
                     col_list = get_cols_name(destination_cur,
@@ -303,14 +306,15 @@ def copy_db_to_db(destination_table: str,
                                              columns_to_ignore)
 
                     insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list)
+                                                       col_list, wildcard_symbol)
                     if not select_sql:
                         select_sql = build_select_sql(source_table, col_list)
 
                     # truncate stg
                     if destination_truncate:
                         destination_cur.execute(truncate)
-                        destination_cur.commit()
+                        if destination_provider == 'MSSQL':
+                            destination_cur.commit()
 
                     # download data
                     start_time = time.perf_counter()
@@ -323,6 +327,7 @@ def copy_db_to_db(destination_table: str,
                         destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
+                        print(f'{rows_inserted} linhas inseridas!!')
 
                     destination_conn.commit()
 
@@ -677,13 +682,16 @@ def copy_by_key_interval(
                     if destination_provider == 'MSSQL':
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
+                        wildcard_symbol = '?'
+                    else:
+                        wildcard_symbol = '%s'
 
                     # gera queries
                     col_list = get_cols_name(destination_cur,
                                              destination_provider,
                                              destination_table)
                     insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list)
+                                                       col_list, wildcard_symbol)
                     select_sql = build_select_sql(source_table, col_list)
                     # pyodbc: select_sql = f"{select_sql} WHERE {key_column} BETWEEN ? AND ?"
                     select_sql = f"{select_sql} WHERE {key_column} BETWEEN %s AND %s"
@@ -903,7 +911,7 @@ def copy_by_limit_offset(
                                              destination_provider,
                                              destination_table)
                     insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list)
+                                                       col_list, '?')
                     select_sql = build_select_sql(source_table, col_list)
                     # pyodbc: select_sql = f"{select_sql} limit ?, ?"
                     select_sql = f"{select_sql} limit %s, %s"
