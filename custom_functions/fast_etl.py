@@ -509,7 +509,15 @@ def sync_db_2_db(source_conn_id: str,
         inc_table_name = f"{destination_schema}.{table}_alteracoes"
 
     source_hook = PostgresHook(postgres_conn_id=source_conn_id, autocommit=True)
-    dest_hook = MsSqlHook(mssql_conn_id=destination_conn_id, autocommit=True)
+
+    conn_values = BaseHook.get_connection(destination_conn_id)
+    if conn_values.conn_type == 'mssql':
+        dest_hook = MsSqlHook(mssql_conn_id=destination_conn_id)
+        destination_provider = 'MSSQL'
+    elif conn_values.conn_type == 'postgres':
+        dest_hook = PostgresHook(postgres_conn_id=destination_conn_id)
+        destination_provider = 'PG'
+
     col_list = get_table_cols_name(destination_conn_id,
                                    destination_schema,
                                    table)
@@ -541,14 +549,18 @@ def sync_db_2_db(source_conn_id: str,
                   source_conn_id=source_conn_id,
                   source_provider='PG',
                   destination_conn_id=destination_conn_id,
-                  destination_provider='MSSQL',
+                  destination_provider=destination_provider,
                   source_table=None,
                   select_sql=select_diff,
                   destination_truncate=True,
                   chunksize=chunksize)
 
     # Reconstrói índices
-    sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
+    if conn_values.conn_type == 'mssql':
+        sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
+    elif conn_values.conn_type == 'postgres':
+        sql = f"REINDEX TABLE {inc_table_name}"
+
     dest_hook.run(sql)
 
     print(f"Iniciando carga incremental na tabela {dest_table_name}.")
