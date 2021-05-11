@@ -19,20 +19,21 @@ import pandas as pd
 
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.hooks.mysql_hook import MySqlHook
 from airflow.hooks.base_hook import BaseHook
 
 
 class DbConnection():
     """
     Gera as conexões origem e destino dependendo do tipo de provider.
-    Providers disponíveis: 'MSSQL' e 'PG'
+    Providers disponíveis: 'MSSQL', 'PG' e 'MYSQL'
     """
 
     def __init__(self, conn_id: str, provider: str):
         # Valida providers suportados
-        providers = ['MSSQL', 'PG']
+        providers = ['MSSQL', 'PG', 'MYSQL']
         assert provider.upper() in providers, 'Provider não suportado '\
-                                              ' (utilize MSSQL ou PG) :P'
+                                              '(utilize MSSQL, PG ou MYSQL) :P'
 
         if provider.upper() == 'MSSQL':
             conn_values = BaseHook.get_connection(conn_id)
@@ -49,6 +50,8 @@ class DbConnection():
                 Pwd={password};"""
         elif provider.upper() == 'PG':
             self.pg_hook = PostgresHook(postgres_conn_id=conn_id)
+        elif provider.upper() == 'MYSQL':
+            self.msql_hook = MySqlHook(mysql_conn_id=conn_id)
         self.provider = provider
 
     def __enter__(self):
@@ -62,6 +65,11 @@ class DbConnection():
                 self.conn = self.pg_hook.get_conn()
             except:
                 raise Exception('PG connection failed.')
+        elif self.provider == 'MYSQL':
+            try:
+                self.conn = self.msql_hook.get_conn()
+            except:
+                raise Exception('MYSQL connection failed.')
         return self.conn
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -235,7 +243,7 @@ def copy_db_to_db(destination_table: str,
                   destination_truncate: bool = True,
                   chunksize: int = 1000) -> None:
     """
-    Carrega dado do Postgres/MSSQL para Postgres/MSSQL com psycopg2 e pyodbc
+    Carrega dado do Postgres/MSSQL/MySQL para Postgres/MSSQL com psycopg2 e pyodbc
     copiando todas as colunas e linhas já existentes na tabela de destino.
     Tabela de destino deve ter a mesma estrutura e nome de tabela e colunas
     que a tabela de origem, ou passar um select_sql que tenha as colunas de
