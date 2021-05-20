@@ -13,7 +13,7 @@ from smb.SMBConnection import SMBConnection
 
 from airflow.hooks.base_hook import BaseHook
 
-from custom_functions.utils.string_formatting import slugify_column_names
+from FastETL.custom_functions.utils.string_formatting import slugify_column_names
 
 class SambaConnection():
     """

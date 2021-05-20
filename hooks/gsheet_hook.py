@@ -16,8 +16,8 @@ from apiclient import discovery
 from httplib2 import Http
 import pygsheets
 
-from custom_functions.utils.string_formatting import slugify_column_names
-from custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
+from FastETL.custom_functions.utils.string_formatting import slugify_column_names
+from FastETL.custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
 
 class GSheetHook(BaseHook):
 

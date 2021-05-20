@@ -19,7 +19,7 @@ Args:
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from hooks.db_to_db_hook import DbToDbHook
+from FastETL.hooks.db_to_db_hook import DbToDbHook
 
 class CopyDbToDbOperator(BaseOperator):
 

@@ -10,7 +10,7 @@ from airflow.utils.email import send_email
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base_hook import BaseHook
 
-from custom_functions.fast_etl import copy_db_to_db
+from FastETL.custom_functions.fast_etl import copy_db_to_db
 
 class DbToDbHook(BaseHook):
 
