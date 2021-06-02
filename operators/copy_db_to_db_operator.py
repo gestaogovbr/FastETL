@@ -22,6 +22,7 @@ from airflow.utils.decorators import apply_defaults
 from FastETL.hooks.db_to_db_hook import DbToDbHook
 
 class CopyDbToDbOperator(BaseOperator):
+    template_fields = ('select_sql', )
 
     @apply_defaults
     def __init__(
