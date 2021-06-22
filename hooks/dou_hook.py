@@ -19,17 +19,16 @@ class Section(Enum):
     EDICAO_EXTRA = 'doe'
     EDICAO_SUPLEMENTAR = 'do1a'
 
-    description = {
-        SECAO_1: 'Seção 1',
-        SECAO_2: 'Seção 2',
-        SECAO_3: 'Seção 3',
-        EDICAO_EXTRA: 'Edição Extra',
-        EDICAO_SUPLEMENTAR: 'Edição Suplementar'
-    }
-
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
     IN_API_BASE_URL = 'https://www.in.gov.br/consulta/-/buscar/dou'
+    SEC_DESCRIPTION = {
+        Section.SECAO_1.value: 'Seção 1',
+        Section.SECAO_2.value: 'Seção 2',
+        Section.SECAO_3.value: 'Seção 3',
+        Section.EDICAO_EXTRA.value: 'Edição Extra',
+        Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar'
+    }
 
     @apply_defaults
     def __init__(self,
@@ -53,7 +52,7 @@ class DOUHook(BaseHook):
         # caso de eles serem formados por mais de uma palavra
         payload = {
             'q': f'"{search_term}"',
-            's': section,
+            's': section.value,
             'exactDate': 'dia',
             'sortType': '0'
         }
@@ -69,7 +68,7 @@ class DOUHook(BaseHook):
         if search_results:
             for content in search_results:
                 item = {}
-                item['section'] = Section.description[section]
+                item['section'] = self.SEC_DESCRIPTION[section.value]
                 item['title'] = content['title']
                 item['href'] = self.IN_WEB_BASE_URL + content['urlTitle']
                 item['abstract'] = content['content']
