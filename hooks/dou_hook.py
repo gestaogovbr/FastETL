@@ -1,7 +1,7 @@
 """
 Hook para realizar operações de consultas à API do Diário Oficial da União.
 """
-
+from enum import Enum
 import json
 import requests
 
@@ -9,6 +9,23 @@ from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base_hook import BaseHook
 
 from bs4 import BeautifulSoup
+
+class Section(Enum):
+    """Define the section list options to be used as parameter in the search
+    """
+    SECAO_1 = 'do1'
+    SECAO_2 = 'do2'
+    SECAO_3 = 'do3'
+    EDICAO_EXTRA = 'doe'
+    EDICAO_SUPLEMENTAR = 'do1a'
+
+    description = {
+        SECAO_1: 'Seção 1',
+        SECAO_2: 'Seção 2',
+        SECAO_3: 'Seção 3',
+        EDICAO_EXTRA: 'Edição Extra',
+        EDICAO_SUPLEMENTAR: 'Edição Suplementar'
+    }
 
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
@@ -20,12 +37,13 @@ class DOUHook(BaseHook):
                  **kwargs):
         pass
 
-    def search_text(self, search_term: str):
+    def search_text(self, search_term: str, section: Section):
         """
         Search for a term in the API and return all ocurrences.
 
         Args:
-            - search_term: The term to perform the search on.
+            - search_term: The term to perform the search with.
+            - section: The Journal section to perform the search on.
 
         Return:
             - A list of dicts of structred results.
@@ -35,7 +53,7 @@ class DOUHook(BaseHook):
         # caso de eles serem formados por mais de uma palavra
         payload = {
             'q': f'"{search_term}"',
-            's': 'do1',
+            's': section,
             'exactDate': 'dia',
             'sortType': '0'
         }
@@ -51,7 +69,7 @@ class DOUHook(BaseHook):
         if search_results:
             for content in search_results:
                 item = {}
-                item['section'] = 'Seção 1'
+                item['section'] = Section.description[section]
                 item['title'] = content['title']
                 item['href'] = self.IN_WEB_BASE_URL + content['urlTitle']
                 item['abstract'] = content['content']
