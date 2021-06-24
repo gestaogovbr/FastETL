@@ -3,7 +3,7 @@ Operador que executa uma query SQL, gera um arquivo CSV com o resultado
 e grava o arquivo no sistema de arquivo.
 
 Args:
-    mssql_conn_id (str): Airflow conn_id do BD onde a query select_sql
+    conn_id (str): Airflow conn_id do BD onde a query select_sql
     será executada
     select_sql (str): query que retorna os dados que serão gravados no
     CSV
@@ -18,6 +18,8 @@ import os
 
 from airflow.operators.bash_operator import BaseOperator
 from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.hooks.postgres_hook import PostgresHook
+from airflow.hooks.base_hook import BaseHook
 from airflow.utils.decorators import apply_defaults
 
 
@@ -28,7 +30,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
 
     @apply_defaults
     def __init__(self,
-                 mssql_conn_id,
+                 conn_id,
                  select_sql,
                  target_file_dir,
                  file_name,
@@ -37,15 +39,23 @@ class DownloadCSVFromDbOperator(BaseOperator):
                  **kwargs
                  ):
         super(DownloadCSVFromDbOperator, self).__init__(*args, **kwargs)
-        self.mssql_conn_id = mssql_conn_id
+        self.conn_id = conn_id
         self.select_sql = select_sql
         self.int_columns = int_columns
         self.target_file_dir = target_file_dir
         self.file_name = file_name
 
     def execute(self, context):
-        mssql_hook = MsSqlHook(mssql_conn_id=self.mssql_conn_id)
-        df = mssql_hook.get_pandas_df(self.select_sql)
+        base_hook = BaseHook.get_connection(self.conn_id)
+
+        if base_hook.conn_type == 'mssql':
+            db_hook = MsSqlHook(mssql_conn_id=self.conn_id)
+        elif base_hook.conn_type == 'postgres':
+            db_hook = PostgresHook(postgres_conn_id=self.conn_id)
+        else:
+            raise Exception('Conn_type not implemented.')
+
+        df = db_hook.get_pandas_df(self.select_sql)
 
         # Convert columns data types to int
         if self.int_columns:
