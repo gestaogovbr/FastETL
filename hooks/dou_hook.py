@@ -11,7 +11,7 @@ from airflow.hooks.base_hook import BaseHook
 from bs4 import BeautifulSoup
 
 class Section(Enum):
-    """Define the section list options to be used as parameter in the search
+    """Define the section options to be used as parameter in the search
     """
     SECAO_1 = 'do1'
     SECAO_2 = 'do2'
@@ -19,6 +19,14 @@ class Section(Enum):
     EDICAO_EXTRA = 'doe'
     EDICAO_SUPLEMENTAR = 'do1a'
     TODOS = 'todos'
+
+class SearchDate(Enum):
+    """Define the search date options to be used as parameter in the search
+    """
+    DIA = 'dia'
+    SEMANA = 'semana'
+    MES = 'mes'
+    ANO = 'ano'
 
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
@@ -28,7 +36,8 @@ class DOUHook(BaseHook):
         Section.SECAO_2.value: 'Seção 2',
         Section.SECAO_3.value: 'Seção 3',
         Section.EDICAO_EXTRA.value: 'Edição Extra',
-        Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar'
+        Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar',
+        Section.TODOS.value: 'Todas'
     }
 
     @apply_defaults
@@ -37,7 +46,9 @@ class DOUHook(BaseHook):
                  **kwargs):
         pass
 
-    def search_text(self, search_term: str, sections: [Section]):
+    def search_text(self, search_term: str,
+                          sections: [Section],
+                          exact_date=SearchDate.DIA):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -53,7 +64,7 @@ class DOUHook(BaseHook):
         # caso de eles serem formados por mais de uma palavra
         payload = [
             ('q', f'"{search_term}"'),
-            ('exactDate', 'dia'),
+            ('exactDate', exact_date.value),
             ('sortType', '0')
         ]
         for section in sections:
@@ -71,7 +82,7 @@ class DOUHook(BaseHook):
         if search_results:
             for content in search_results:
                 item = {}
-                item['section'] = self.SEC_DESCRIPTION[section.value]
+                item['section'] = str(sections)
                 item['title'] = content['title']
                 item['href'] = self.IN_WEB_BASE_URL + content['urlTitle']
                 item['abstract'] = content['content']
