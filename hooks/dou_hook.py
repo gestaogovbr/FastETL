@@ -28,6 +28,13 @@ class SearchDate(Enum):
     MES = 'mes'
     ANO = 'ano'
 
+class Field(Enum):
+    """Define the search field options to be used as parameter in the search
+    """
+    TUDO = 'tudo'
+    TITULO = 'title_pt_BR'
+    CONTEUDO = 'ddm__text__21040__texto_pt_BR'
+
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
     IN_API_BASE_URL = 'https://www.in.gov.br/consulta/-/buscar/dou'
@@ -46,9 +53,16 @@ class DOUHook(BaseHook):
                  **kwargs):
         pass
 
+    def _get_query_str(self, term, field):
+        if field == Field.TUDO:
+            return f'"{term}"'
+        else:
+            return f'{field.value}-"{term}"'
+
     def search_text(self, search_term: str,
                           sections: [Section],
-                          exact_date=SearchDate.DIA):
+                          search_date=SearchDate.DIA,
+                          field=Field.TUDO):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -63,8 +77,8 @@ class DOUHook(BaseHook):
         # Adiciona aspas duplas no inicio e no fim de cada termo para o
         # caso de eles serem formados por mais de uma palavra
         payload = [
-            ('q', f'"{search_term}"'),
-            ('exactDate', exact_date.value),
+            ('q', self._get_query_str(search_term, field)),
+            ('exactDate', search_date.value),
             ('sortType', '0')
         ]
         for section in sections:
