@@ -18,6 +18,7 @@ class Section(Enum):
     SECAO_3 = 'do3'
     EDICAO_EXTRA = 'doe'
     EDICAO_SUPLEMENTAR = 'do1a'
+    TODOS = 'todos'
 
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
