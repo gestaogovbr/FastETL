@@ -53,16 +53,20 @@ class DOUHook(BaseHook):
                  **kwargs):
         pass
 
-    def _get_query_str(self, term, field):
+    def _get_query_str(self, term, field, is_exact_search):
+        if is_exact_search:
+            term = f'"{term}"'
+
         if field == Field.TUDO:
-            return f'"{term}"'
+            return term
         else:
-            return f'{field.value}-"{term}"'
+            return f'{field.value}-{term}'
 
     def search_text(self, search_term: str,
                           sections: [Section],
                           search_date=SearchDate.DIA,
-                          field=Field.TUDO):
+                          field=Field.TUDO,
+                          is_exact_search=True):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -77,7 +81,7 @@ class DOUHook(BaseHook):
         # Adiciona aspas duplas no inicio e no fim de cada termo para o
         # caso de eles serem formados por mais de uma palavra
         payload = [
-            ('q', self._get_query_str(search_term, field)),
+            ('q', self._get_query_str(search_term, field, is_exact_search)),
             ('exactDate', search_date.value),
             ('sortType', '0')
         ]
