@@ -37,7 +37,7 @@ class DOUHook(BaseHook):
                  **kwargs):
         pass
 
-    def search_text(self, search_term: str, section: Section):
+    def search_text(self, search_term: str, sections: [Section]):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -51,12 +51,14 @@ class DOUHook(BaseHook):
 
         # Adiciona aspas duplas no inicio e no fim de cada termo para o
         # caso de eles serem formados por mais de uma palavra
-        payload = {
-            'q': f'"{search_term}"',
-            's': section.value,
-            'exactDate': 'dia',
-            'sortType': '0'
-        }
+        payload = [
+            ('q', f'"{search_term}"'),
+            ('exactDate', 'dia'),
+            ('sortType', '0')
+        ]
+        for section in sections:
+            payload.append(('s', section.value))
+
         page = requests.get(self.IN_API_BASE_URL, params=payload, verify=False)
         soup = BeautifulSoup(page.content, 'html.parser')
 
