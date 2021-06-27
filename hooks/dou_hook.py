@@ -100,7 +100,7 @@ class DOUHook(BaseHook):
         if search_results:
             for content in search_results:
                 item = {}
-                item['section'] = str(sections)
+                item['section'] = content['pubName'].lower()
                 item['title'] = content['title']
                 item['href'] = self.IN_WEB_BASE_URL + content['urlTitle']
                 item['abstract'] = content['content']
