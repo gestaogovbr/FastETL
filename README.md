@@ -1,4 +1,4 @@
-O FastETL é um pacote de plugins do Airflow para construção de pipelines de dados para uma variedade de cenários comuns.
+O **FastETL** é um pacote de plugins do Airflow para construção de pipelines de dados para uma variedade de cenários comuns.
 
 Principais funcionalidades:
 * **Replicação** de tabelas *full* ou incremental em bancos de dados SQL Server e Postgres
