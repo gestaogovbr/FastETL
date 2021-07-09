@@ -1,4 +1,4 @@
-![Logotipo do FastETL. É um canivete tipo suiço com várias peças abertas](logo.png)
+![Logotipo do FastETL. É um canivete tipo suiço com várias peças abertas](docs/logo.png)
 
 <p align="center">
     <em>Framework fastETL, moderno, versátil, faz quase tudo.</em>
