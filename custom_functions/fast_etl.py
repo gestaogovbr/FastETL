@@ -545,10 +545,6 @@ def sync_db_2_db(source_conn_id: str,
                                        where_condition)
     print(f"Total de linhas novas ou modificadas: {new_rows_count}.")
 
-    worth_increment = (new_rows_count / dest_rows_count) < 0.3
-    if not worth_increment:
-        raise Exception("Muitas linhas a inserir! Utilize carga full!")
-
     # Guarda as alterações e inclusões necessárias
     select_sql = build_select_sql(f"{source_table_name}", col_list)
     select_diff = f"{select_sql} WHERE {where_condition}"
