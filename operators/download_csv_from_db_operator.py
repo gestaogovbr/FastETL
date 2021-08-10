@@ -16,7 +16,7 @@ Args:
 
 import os
 
-from airflow.operators.bash_operator import BaseOperator
+from airflow.models.baseoperator import BaseOperator
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook

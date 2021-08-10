@@ -21,7 +21,7 @@ Args:
     anterior
 """
 
-from airflow.operators.bash_operator import BaseOperator
+from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
 from FastETL.hooks.gsheet_hook import GSheetHook
