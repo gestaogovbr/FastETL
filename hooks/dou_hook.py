@@ -88,7 +88,7 @@ class DOUHook(BaseHook):
         for section in sections:
             payload.append(('s', section.value))
 
-        page = requests.get(self.IN_API_BASE_URL, params=payload, verify=False)
+        page = requests.get(self.IN_API_BASE_URL, params=payload)
         soup = BeautifulSoup(page.content, 'html.parser')
 
         script_tag = soup.find(
