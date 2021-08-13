@@ -213,7 +213,7 @@ class GSheetHook(BaseHook):
 
         print(f'Última atualização do arquivo em: {update_date}')
 
-        if update_date.date() >= until_date:
+        if update_date.date() >= until_date.date():
             return True
         else:
             return False
