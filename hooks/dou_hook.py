@@ -17,6 +17,7 @@ class Section(Enum):
     SECAO_2 = 'do2'
     SECAO_3 = 'do3'
     EDICAO_EXTRA = 'doe'
+    EDICAO_EXTRA_A = 'do1_extra_a'
     EDICAO_SUPLEMENTAR = 'do1a'
     TODOS = 'todos'
 
@@ -43,6 +44,7 @@ class DOUHook(BaseHook):
         Section.SECAO_2.value: 'Seção 2',
         Section.SECAO_3.value: 'Seção 3',
         Section.EDICAO_EXTRA.value: 'Edição Extra',
+        Section.EDICAO_EXTRA_A.value: 'Seção: 1 - Extra A',
         Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar',
         Section.TODOS.value: 'Todas'
     }
