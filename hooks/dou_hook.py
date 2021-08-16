@@ -1,6 +1,7 @@
 """
 Hook para realizar operações de consultas à API do Diário Oficial da União.
 """
+from datetime import datetime, timedelta
 from enum import Enum
 import json
 import requests
@@ -56,6 +57,10 @@ class DOUHook(BaseHook):
         pass
 
     def _get_query_str(self, term, field, is_exact_search):
+        """
+        Adiciona aspas duplas no inicio e no fim de cada termo para o
+        caso de eles serem formados por mais de uma palavra
+        """
         if is_exact_search:
             term = f'"{term}"'
 
@@ -64,8 +69,32 @@ class DOUHook(BaseHook):
         else:
             return f'{field.value}-{term}'
 
+    def calculate_from_datetime(self,
+                                publish_to_date: datetime,
+                                search_date: SearchDate):
+        """
+        Calculate parameter `publishFrom` to be passed to the API based
+        on publishTo parameter and `search_date`. Perform especial
+        calculation to the MES (month) parameter option
+        """
+        if search_date == SearchDate.DIA:
+            return (publish_to_date - timedelta(days=1))
+
+        elif search_date == SearchDate.SEMANA:
+            return (publish_to_date - timedelta(days=7))
+
+        elif search_date == SearchDate.MES:
+            end_last_month = publish_to_date.replace(day=1) - timedelta(days=1)
+            publish_from_date = end_last_month.replace(day=publish_to_date.day)
+            return publish_from_date
+
+        elif search_date == SearchDate.ANO:
+            return (publish_to_date - timedelta(days=365))
+
+
     def search_text(self, search_term: str,
                           sections: [Section],
+                          reference_date:datetime=datetime.now(),
                           search_date=SearchDate.DIA,
                           field=Field.TUDO,
                           is_exact_search=True):
@@ -80,11 +109,13 @@ class DOUHook(BaseHook):
             - A list of dicts of structred results.
         """
 
-        # Adiciona aspas duplas no inicio e no fim de cada termo para o
-        # caso de eles serem formados por mais de uma palavra
+        publish_from = self.calculate_from_datetime(reference_date, search_date)
+
         payload = [
             ('q', self._get_query_str(search_term, field, is_exact_search)),
-            ('exactDate', search_date.value),
+            ('exactDate', 'personalizado'),
+            ('publishFrom', publish_from.strftime('%d-%m-%Y')),
+            ('publishTo', reference_date.strftime('%d-%m-%Y')),
             ('sortType', '0')
         ]
         for section in sections:
