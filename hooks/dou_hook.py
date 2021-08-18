@@ -78,19 +78,18 @@ class DOUHook(BaseHook):
         calculation to the MES (month) parameter option
         """
         if search_date == SearchDate.DIA:
-            return (publish_to_date - timedelta(days=1))
+            return publish_to_date
 
         elif search_date == SearchDate.SEMANA:
-            return (publish_to_date - timedelta(days=7))
+            return (publish_to_date - timedelta(days=6))
 
         elif search_date == SearchDate.MES:
-            end_last_month = publish_to_date.replace(day=1) - timedelta(days=1)
-            publish_from_date = end_last_month.replace(day=publish_to_date.day)
-            return publish_from_date
+            end_prev_month = publish_to_date.replace(day=1) - timedelta(days=1)
+            publish_from_date = end_prev_month.replace(day=publish_to_date.day)
+            return (publish_from_date - timedelta(days=1))
 
         elif search_date == SearchDate.ANO:
-            return (publish_to_date - timedelta(days=365))
-
+            return (publish_to_date - timedelta(days=364))
 
     def search_text(self, search_term: str,
                           sections: [Section],
