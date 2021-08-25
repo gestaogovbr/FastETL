@@ -22,6 +22,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.utils.decorators import apply_defaults
 
+from FastETL.custom_functions.fast_etl import get_table_cols_name
 
 class DownloadCSVFromDbOperator(BaseOperator):
     ui_color = '#95aad5'
@@ -31,9 +32,11 @@ class DownloadCSVFromDbOperator(BaseOperator):
     @apply_defaults
     def __init__(self,
                  conn_id,
-                 select_sql,
                  target_file_dir,
                  file_name,
+                 select_sql=None,
+                 table_name=None,
+                 table_scheme=None,
                  int_columns=None,
                  *args,
                  **kwargs
@@ -41,9 +44,20 @@ class DownloadCSVFromDbOperator(BaseOperator):
         super(DownloadCSVFromDbOperator, self).__init__(*args, **kwargs)
         self.conn_id = conn_id
         self.select_sql = select_sql
+        self.table_name = table_name
+        self.table_scheme = table_scheme
         self.int_columns = int_columns
         self.target_file_dir = target_file_dir
         self.file_name = file_name
+
+    def select_all_sql(self):
+        cols = get_table_cols_name(self.conn_id, self.table_scheme, self.table_name)
+
+        return f"""
+            SELECT
+            {','.join(cols)}
+            FROM {self.table_scheme}.{self.table_name};
+            """
 
     def execute(self, context):
         base_hook = BaseHook.get_connection(self.conn_id)
@@ -55,7 +69,10 @@ class DownloadCSVFromDbOperator(BaseOperator):
         else:
             raise Exception('Conn_type not implemented.')
 
-        df = db_hook.get_pandas_df(self.select_sql)
+        df = db_hook.get_pandas_df(
+            self.select_sql if self.select_sql
+            else self.select_all_sql()
+            )
 
         # Convert columns data types to int
         if self.int_columns:
