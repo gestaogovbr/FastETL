@@ -7,6 +7,14 @@ Args:
     será executada
     select_sql (str): query que retorna os dados que serão gravados no
     CSV
+    table_name (str): nome da tabela utilizado para construção dinâmica
+    do sql. Deve ser utilizado alternativamente ao parâmetro `select_sql`
+    table_scheme (str): nome do esquema utilizado para construção
+    dinâmica do sql. Deve ser utilizado alternativamente ao parâmetro
+    `select_sql` em conjunto com o `table_name`
+    columns_to_remove (list): deve ser utilizado em conjunto com os
+    campos `table_name` e `table_scheme` para remover as colunas que
+    não serão extraídas para o CSB
     target_file_dir (str): local no sistema de arquivo onde o arquivo
     CSV será gravado
     file_name (str): nome para o arquivo CSV a ser gravado
@@ -37,6 +45,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
                  select_sql=None,
                  table_name=None,
                  table_scheme=None,
+                 columns_to_remove: []=None,
                  int_columns=None,
                  *args,
                  **kwargs
@@ -46,12 +55,15 @@ class DownloadCSVFromDbOperator(BaseOperator):
         self.select_sql = select_sql
         self.table_name = table_name
         self.table_scheme = table_scheme
+        self.columns_to_remove = columns_to_remove
         self.int_columns = int_columns
         self.target_file_dir = target_file_dir
         self.file_name = file_name
 
     def select_all_sql(self):
         cols = get_table_cols_name(self.conn_id, self.table_scheme, self.table_name)
+        if self.columns_to_remove:
+            cols = [c for c in cols if c not in self.columns_to_remove]
 
         return f"""
             SELECT
