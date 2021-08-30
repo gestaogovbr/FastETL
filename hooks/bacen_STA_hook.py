@@ -87,10 +87,13 @@ class BacenSTAHook(BaseHook):
                                     url,
                                     headers=self._get_auth_headers(),
                                     params=querystring)
-        # TODO: Tratar erro de login/senha com mensagem esclarecedora
+
+        if response.status_code == 401:
+            raise ValueError('Web Service do Bacen rejeitou as '
+                             'credenciais de login. Confira o login e '
+                             'senha cadastrados.')
 
         xml_tree = ET.fromstring(response.content)
-
         extract_date = lambda x: datetime.strptime(x, self.DATE_FORMAT)
         data_id_map = {
             extract_date(node.find('DataHoraDisponibilizacao').text):
@@ -98,7 +101,7 @@ class BacenSTAHook(BaseHook):
             for node in xml_tree.findall('Arquivo')
         }
         if not data_id_map:
-            raise Exception('Web Service do Bacen (STA) respondeu com ' \
+            raise ValueError('Web Service do Bacen (STA) respondeu com '
                             'nenhum resultado.')
         newest_date = max(data_id_map.keys())
         return data_id_map[newest_date]
