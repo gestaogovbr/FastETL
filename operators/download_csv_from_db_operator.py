@@ -68,3 +68,4 @@ class DownloadCSVFromDbOperator(BaseOperator):
 
         file_path = os.path.join(self.target_file_dir, self.file_name)
         df.to_csv(file_path, index=False)
+        return self.file_name
