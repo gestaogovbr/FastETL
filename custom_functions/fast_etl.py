@@ -729,11 +729,11 @@ def copy_by_key_interval(
                         source_cur.execute(select_sql, (key_begin, key_end))
                         rows = source_cur.fetchall()    # psycopg2
                     except Exception as e:
-                        print("Erro: ", str(e))
+                        print("Erro origem: ", str(e), "Key interval: ", key_begin, "-", key_end)
                         return False, key_begin
 
                     last_sleep = datetime.now()
-                    run_step = 60 * 2 #minutos
+                    run_step = 60 * 30 # 30 minutos
 
                     # Consulta max id na origem
                     db_hook = PostgresHook( postgres_conn_id=source_conn_id)
@@ -756,7 +756,7 @@ def copy_by_key_interval(
                                 destination_cur.executemany(insert, rows)
                                 destination_conn.commit()
                             except Exception as e:
-                                print("Erro: ", str(e))
+                                print("Erro destino: ", str(e), "Key interval: ", key_begin, "-", key_end)
                                 return False, key_begin
 
                         rows_inserted += len(rows)
@@ -768,7 +768,7 @@ def copy_by_key_interval(
                             source_cur.execute(select_sql, (key_begin, key_end))
                             rows = source_cur.fetchall()    # psycopg2
                         except Exception as e:
-                            print("Erro: ", str(e))
+                            print("Erro origem: ", str(e), "Key interval: ", key_begin, "-", key_end)
                             return False, key_begin
 
                     destination_conn.commit()
