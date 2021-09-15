@@ -81,10 +81,13 @@ class DownloadCSVFromDbOperator(BaseOperator):
         else:
             raise Exception('Conn_type not implemented.')
 
-        df = db_hook.get_pandas_df(
-            self.select_sql if self.select_sql
-            else self.select_all_sql()
-            )
+        if self.select_sql:
+            df_select = self.select_sql
+        else:
+            df_select = self.select_all_sql()
+
+        self.log.info(f'Executing SQL check: {df_select}')
+        df = db_hook.get_pandas_df(df_select)
 
         # Convert columns data types to int
         if self.int_columns:
