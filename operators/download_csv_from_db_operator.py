@@ -94,6 +94,13 @@ class DownloadCSVFromDbOperator(BaseOperator):
             for col in self.int_columns:
                 df[col] = df[col].astype("Int64")
 
+        # Remove specified columns
+        if self.columns_to_remove:
+            df.drop(self.columns_to_remove,
+                    axis=1,
+                    errors='ignore',
+                    inplace=True)
+
         # Create folder if not exists
         if not os.path.exists(self.target_file_dir):
             os.mkdir(self.target_file_dir)
