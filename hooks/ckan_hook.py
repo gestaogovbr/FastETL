@@ -1,5 +1,4 @@
-"""
-Access the CKAN API to update datasets and resources.
+"""Airflow hooks to access the CKAN API to update datasets and resources.
 """
 
 from collections import ChainMap
@@ -12,6 +11,8 @@ from ckanapi import RemoteCKAN
 USER_AGENT = "airflow-fastetl/0.1 (+https://github.com/economiagovbr/FastETL)"
 
 class CKANHook(BaseHook):
+    """Provides access to the CKAN API.
+    """
 
     @apply_defaults
     def __init__(self,
@@ -22,6 +23,9 @@ class CKANHook(BaseHook):
         self.conn_id = conn_id
     
     def _get_catalog(self):
+        """Returns an instance of RemoteCKAN that can be used to operate
+        the CKAN API.
+        """
         conn = BaseHook.get_connection(self.conn_id)
         ckan_url = f"{conn.schema}://{conn.host}"
         if getattr(conn, "port", None):
