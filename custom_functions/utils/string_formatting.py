@@ -4,7 +4,11 @@ DAGs
 """
 
 from datetime import datetime
+import inspect
+import textwrap
+
 import slugify as sl
+from markdown import markdown
 
 def slugify_column_names(column_name: str):
     """
@@ -58,3 +62,8 @@ def construct_vocative_names_from_emails(emails_list: list):
         vocative_names = captalized_names_list[0]
 
     return vocative_names
+
+def imarkdown_to_html(text: str) -> str:
+    """Transforms indented markdown text to html.
+    """
+    return markdown(inspect.cleandoc(textwrap.dedent(text)))
