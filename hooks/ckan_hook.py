@@ -42,7 +42,7 @@ class CKANHook(BaseHook):
         dataset_id: str,
         name: str,
         url: str,
-        format_: str,
+        format: str,
         description: str = None,
         ):
         "Creates or updates a resource on CKAN."
@@ -59,7 +59,7 @@ class CKANHook(BaseHook):
                     'name': name,
                     'url': url,
                     'description': resource['description'] if description is None else description,
-                    'format': format_
+                    'format': format
                 },
                 resource
             ))
@@ -69,6 +69,6 @@ class CKANHook(BaseHook):
                 package_id=dataset_id,
                 url=url,
                 name=name,
-                format=format_,
+                format=format,
                 description=description
             )
