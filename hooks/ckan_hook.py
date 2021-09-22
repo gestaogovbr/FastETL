@@ -37,6 +37,15 @@ class CKANHook(BaseHook):
             return RemoteCKAN(ckan_url,
                         user_agent=USER_AGENT)
 
+    def update_dataset(
+        self,
+        dataset_id: str,
+        **properties
+        ):
+        "Update some properties of the dataset on CKAN."
+        catalog = self._get_catalog()
+        catalog.action.package_patch(id=dataset_id, **properties)
+
     def create_or_update_resource(
         self,
         dataset_id: str,
