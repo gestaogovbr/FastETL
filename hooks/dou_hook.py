@@ -1,7 +1,9 @@
 """
+print('PESQUISA COM RETRY')
 Hook para realizar operações de consultas à API do Diário Oficial da União.
 """
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime, timedelta, time
 from enum import Enum
 import json
 import requests
@@ -91,12 +93,21 @@ class DOUHook(BaseHook):
         elif search_date == SearchDate.ANO:
             return (publish_to_date - timedelta(days=364))
 
+    def _request_with_retry(self, payload: list):
+        try:
+            return requests.get(self.IN_API_BASE_URL, params=payload)
+        except ConnectionError:
+            logging.info('Sleep for 30 seconds before retry requests.get().')
+            time.sleep(30)
+            return requests.get(self.IN_API_BASE_URL, params=payload)
+
     def search_text(self, search_term: str,
                           sections: [Section],
                           reference_date:datetime=datetime.now(),
                           search_date=SearchDate.DIA,
                           field=Field.TUDO,
-                          is_exact_search=True):
+                          is_exact_search=True,
+                          with_retry=True):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -120,7 +131,10 @@ class DOUHook(BaseHook):
         for section in sections:
             payload.append(('s', section.value))
 
-        page = requests.get(self.IN_API_BASE_URL, params=payload)
+        if with_retry:
+            page = self._request_with_retry(payload=payload)
+        else:
+            page = requests.get(self.IN_API_BASE_URL, params=payload)
         soup = BeautifulSoup(page.content, 'html.parser')
 
         script_tag = soup.find(
