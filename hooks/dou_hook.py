@@ -96,7 +96,7 @@ class DOUHook(BaseHook):
     def _request_with_retry(self, payload: list):
         try:
             return requests.get(self.IN_API_BASE_URL, params=payload)
-        except ConnectionError:
+        except requests.exceptions.ConnectionError:
             logging.info('Sleep for 30 seconds before retry requests.get().')
             time.sleep(30)
             return requests.get(self.IN_API_BASE_URL, params=payload)
