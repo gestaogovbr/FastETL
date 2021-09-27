@@ -3,7 +3,8 @@ print('PESQUISA COM RETRY')
 Hook para realizar operações de consultas à API do Diário Oficial da União.
 """
 import logging
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
+import time
 from enum import Enum
 import json
 import requests
