@@ -23,7 +23,7 @@ class Section(Enum):
     EDICAO_EXTRA = 'doe'
     EDICAO_EXTRA_A = 'do1_extra_a'
     EDICAO_EXTRA_B = 'do1_extra_b'
-    EDICAO_EXTRA_B = 'do1_extra_d'
+    EDICAO_EXTRA_D = 'do1_extra_d'
     EDICAO_SUPLEMENTAR = 'do1a'
     TODOS = 'todos'
 
