@@ -57,7 +57,7 @@
         AIRFLOW__WEBSERVER__WORKERS: 1
       volumes:
         - ../:/opt/airflow/plugins/FastETL
-        - ../tests:/opt/airflow/tests
+        - ../db_to_db_hook_test.py:/opt/airflow/db_to_db_hook_test.py
       user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
       depends_on:
         postgres:
