@@ -44,4 +44,15 @@ def test_replicate_table_full():
     insert_initial_source_data(table_name, oltp_hook)
     insert_initial_dest_empty_table(table_name, olap_hook)
 
+    hook = DbToDbHook(
+        source_conn_id=source_conn_id,
+        destination_conn_id=destination_conn_id,
+        source_provider='PG',
+        destination_provider='PG'
+        )
+    hook.full_copy(
+        source_table=f'public.{table_name}',
+        destination_table=f'public.{table_name}',
+        )
+
     assert True
