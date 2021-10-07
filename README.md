@@ -23,6 +23,43 @@ Este framework é mantido por uma rede de desenvolvedores de diversas equipes do
 
 O FastETL implementa os padrões de plugins do Airflow e para ser instalado basta que ele seja copiado para o diretório `plugins` no ambiente da instalação do Airflow. Conheça e utilize também nosso ambiente airflow local (o [airflow-docker-local](https://github.com/economiagovbr/airflow-docker-local/)) que já possui o FastETL integrado.
 
+# Testes
+
+A suíte de testes usa contêineres Docker para simular um ambiente
+completo de uso, inclusive com o Airflow e os bancos de dados. Por isso,
+para executar os testes, é necessário primeiro instalar o Docker e o
+docker-compose.
+
+Para quem usa Ubuntu 20.04, basta digitar no terminal:
+
+```bash
+snap install docker
+```
+
+Para outras versões e sistemas operacionais, consulte a
+[documentação oficial do Docker](https://docs.docker.com/get-docker/).
+
+Primeiro é necessário criar o arquivo `.env` que contém variáveis de
+ambiente importantes para o Airflow:
+
+```bash
+echo -e "AIRFLOW_UID=$(id -u)\nAIRFLOW_GID=0" > .env
+```
+
+Para rodar os testes execute:
+
+```bash
+make setup && make tests
+```
+
+isso irá baixar e construir os contêineres e executar todos os testes.
+
+Para desmontar o ambiente execute:
+
+```bash
+make down
+```
+
 # Exemplo de uso
 
 # Como colaborar
