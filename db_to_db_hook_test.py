@@ -1,6 +1,7 @@
 from datetime import datetime
 import pytest
 import pandas as pd
+from pandas._testing import assert_frame_equal
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from plugins.FastETL.hooks.db_to_db_hook import DbToDbHook
@@ -54,4 +55,7 @@ def test_replicate_table_full():
         destination_table=f'public.{table_name}',
         )
 
-    assert True
+    oltp_data = oltp_hook.get_pandas_df(f'select * from {table_name}')
+    olap_data = olap_hook.get_pandas_df(f'select * from {table_name}')
+
+    assert_frame_equal(oltp_data, olap_data)
