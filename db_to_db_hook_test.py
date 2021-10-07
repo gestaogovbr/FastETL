@@ -49,8 +49,7 @@ def test_replicate_table_full():
         destination_conn_id=destination_conn_id,
         source_provider='PG',
         destination_provider='PG'
-        )
-    hook.full_copy(
+        ).full_copy(
         source_table=f'public.{table_name}',
         destination_table=f'public.{table_name}',
         )
