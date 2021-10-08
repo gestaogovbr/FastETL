@@ -19,7 +19,7 @@ jobs:
         path: FastETL
 
     - name: Setup environment
-      run: make setup
+      run: cd FastETL && make setup
 
     - name: Run Tests
       run: make tests
