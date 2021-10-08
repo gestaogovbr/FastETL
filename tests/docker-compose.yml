@@ -56,9 +56,10 @@
         AIRFLOW__WEBSERVER__SECRET_KEY: '42'
         AIRFLOW__WEBSERVER__WORKERS: 1
       volumes:
-        - ../:/opt/airflow/plugins/FastETL
-        - ../db_to_db_hook_test.py:/opt/airflow/db_to_db_hook_test.py
-        - ../conftest.py:/opt/airflow/conftest.py
+        - ../custom_functions:/opt/airflow/plugins/FastETL/custom_functions
+        - ../hooks:/opt/airflow/plugins/FastETL/hooks
+        - ../operators:/opt/airflow/plugins/FastETL/operators
+        - ../tests:/opt/airflow/tests
       depends_on:
         postgres:
           condition: service_healthy
