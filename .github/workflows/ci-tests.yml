@@ -19,7 +19,9 @@ jobs:
         path: FastETL
 
     - name: Setup environment
-      run: cd FastETL && make setup
+      working-directory: ./FastETL
+      run: make setup
 
     - name: Run Tests
+      working-directory: ./FastETL
       run: make tests
