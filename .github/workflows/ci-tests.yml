@@ -1,0 +1,25 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout FastETL
+      uses: actions/checkout@v2
+      with:
+        path: FastETL
+
+    - name: Setup environment
+      run: make setup
+
+    - name: Run Tests
+      run: make tests
