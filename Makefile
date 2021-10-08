@@ -1,5 +1,3 @@
-include .env
-
 .PHONY: setup
 setup:
 	docker-compose -f tests/docker-compose.yml up -d --force-recreate --remove-orphans
