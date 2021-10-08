@@ -39,11 +39,11 @@ snap install docker
 Para outras versões e sistemas operacionais, consulte a
 [documentação oficial do Docker](https://docs.docker.com/get-docker/).
 
-Primeiro é necessário criar o arquivo `.env` que contém variáveis de
-ambiente importantes para o Airflow:
+
+Para construir os contêineres:
 
 ```bash
-echo -e "AIRFLOW_UID=$(id -u)\nAIRFLOW_GID=0" > .env
+make setup
 ```
 
 Para rodar os testes execute:
@@ -51,8 +51,6 @@ Para rodar os testes execute:
 ```bash
 make setup && make tests
 ```
-
-isso irá baixar e construir os contêineres e executar todos os testes.
 
 Para desmontar o ambiente execute:
 
