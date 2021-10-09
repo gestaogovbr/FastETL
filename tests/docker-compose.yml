@@ -37,46 +37,41 @@
 # Feel free to modify this file to suit your needs.
 ---
     version: '3'
-    x-airflow-common:
-      &airflow-common
-      image: ghcr.io/economiagovbr/airflow2-docker:latest
-      environment:
-        &airflow-common-env
-        AIRFLOW__CORE__EXECUTOR: LocalExecutor
-        AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-        AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
-        AIRFLOW__CORE__FERNET_KEY: 'Uqv6pwYWJn7xifR3QAkifMTkupos8mkxaQL2Q7Ydsqw='
-        AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-        AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-        AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
-        AIRFLOW__CORE__DEFAULT_TIMEZONE: 'America/Sao_Paulo'
-        AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: 'America/Sao_Paulo'
-        AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_RETRY: 'false'
-        AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_FAILURE: 'false'
-        AIRFLOW__WEBSERVER__SECRET_KEY: '42'
-        AIRFLOW__WEBSERVER__WORKERS: 1
-      volumes:
-        - ../custom_functions:/opt/airflow/plugins/FastETL/custom_functions
-        - ../hooks:/opt/airflow/plugins/FastETL/hooks
-        - ../operators:/opt/airflow/plugins/FastETL/operators
-        - ../tests:/opt/airflow/tests
-      depends_on:
-        postgres:
-          condition: service_healthy
-
     services:
-      postgres:
-        image: postgres:13
+      airflow:
+        image: ghcr.io/economiagovbr/airflow2-docker:latest
         environment:
-          POSTGRES_USER: airflow
-          POSTGRES_PASSWORD: airflow
-          POSTGRES_DB: airflow
+          AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+          AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
+          AIRFLOW__CORE__FERNET_KEY: 'Uqv6pwYWJn7xifR3QAkifMTkupos8mkxaQL2Q7Ydsqw='
+          AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+          AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+          AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+          AIRFLOW__CORE__DEFAULT_TIMEZONE: 'America/Sao_Paulo'
+          AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: 'America/Sao_Paulo'
+          AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_RETRY: 'false'
+          AIRFLOW__EMAIL__DEFAULT_EMAIL_ON_FAILURE: 'false'
+          AIRFLOW__WEBSERVER__SECRET_KEY: '42'
+          AIRFLOW__WEBSERVER__WORKERS: 1
+          _AIRFLOW_WWW_USER_CREATE: 'true'
+          _AIRFLOW_WWW_USER_USERNAME: airflow
+          _AIRFLOW_WWW_USER_PASSWORD: airflow
+        volumes:
+          - ../custom_functions:/opt/airflow/plugins/FastETL/custom_functions
+          - ../hooks:/opt/airflow/plugins/FastETL/hooks
+          - ../operators:/opt/airflow/plugins/FastETL/operators
+          - ../tests:/opt/airflow/tests
+        container_name: airflow
+        command: webserver
+        ports:
+          - 8080:8080
         healthcheck:
-          test: ["CMD", "pg_isready", "-U", "airflow"]
-          interval: 5s
+          test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+          interval: 10s
+          timeout: 10s
           retries: 5
         restart: always
-
+        command: 'bash -c "airflow db init && airflow webserver -D && airflow scheduler -D"'
 
       oltp-db:
         image: postgres:11.4-alpine
@@ -99,32 +94,3 @@
           - POSTGRES_USER=root
           - POSTGRES_PASSWORD=root
           - POSTGRES_DB=olap
-
-
-      airflow:
-        <<: *airflow-common
-        container_name: airflow
-        command: webserver
-        ports:
-          - 8080:8080
-        healthcheck:
-          test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-          interval: 10s
-          timeout: 10s
-          retries: 5
-        restart: always
-
-      airflow-scheduler:
-        <<: *airflow-common
-        command: scheduler
-        restart: always
-
-      airflow-init:
-        <<: *airflow-common
-        command: version
-        environment:
-          <<: *airflow-common-env
-          _AIRFLOW_DB_UPGRADE: 'true'
-          _AIRFLOW_WWW_USER_CREATE: 'true'
-          _AIRFLOW_WWW_USER_USERNAME: airflow
-          _AIRFLOW_WWW_USER_PASSWORD: airflow
