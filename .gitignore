@@ -136,3 +136,5 @@ old.sql
 dags/raiox/credenciais/token.pickle
 test_notrack/
 **/.DS_Store
+.pre-commit-config.yaml
+pyproject.toml
