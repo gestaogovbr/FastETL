@@ -71,7 +71,6 @@
           timeout: 10s
           retries: 5
         restart: always
-        command: 'bash -c "airflow db init && airflow webserver -D && airflow scheduler -D"'
 
       oltp-db:
         image: postgres:11.4-alpine
