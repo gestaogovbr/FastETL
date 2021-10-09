@@ -10,4 +10,4 @@ down:
 
 .PHONY: tests
 tests:
-	docker exec airflow pytest --ignore=plugins -v
+	docker exec airflow pytest -vv
