@@ -36,18 +36,18 @@ def insert_initial_dest_empty_table(tablename, hook):
 
 
 def test_replicate_table_full():
-    source_conn_id = 'oltp'
-    destination_conn_id = 'olap'
+    source_conn_id = 'pg-source'
+    dest_conn_id = 'pg-destination'
     table_name = 'example_table'
 
-    oltp_hook = PostgresHook(source_conn_id)
-    olap_hook = PostgresHook(destination_conn_id)
-    insert_initial_source_data(table_name, oltp_hook)
-    insert_initial_dest_empty_table(table_name, olap_hook)
+    source_hook = PostgresHook(source_conn_id)
+    dest_hook = PostgresHook(dest_conn_id)
+    insert_initial_source_data(table_name, source_hook)
+    insert_initial_dest_empty_table(table_name, dest_hook)
 
     hook = DbToDbHook(
         source_conn_id=source_conn_id,
-        destination_conn_id=destination_conn_id,
+        destination_conn_id=dest_conn_id,
         source_provider='PG',
         destination_provider='PG'
         ).full_copy(
@@ -55,7 +55,7 @@ def test_replicate_table_full():
         destination_table=f'public.{table_name}',
         )
 
-    oltp_data = oltp_hook.get_pandas_df(f'select * from {table_name}')
-    olap_data = olap_hook.get_pandas_df(f'select * from {table_name}')
+    source_data = source_hook.get_pandas_df(f'select * from {table_name}')
+    dest_data = dest_hook.get_pandas_df(f'select * from {table_name}')
 
-    assert_frame_equal(oltp_data, olap_data)
+    assert_frame_equal(source_data, dest_data)

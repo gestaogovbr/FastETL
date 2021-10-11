@@ -72,24 +72,25 @@
           retries: 5
         restart: always
 
-      oltp-db:
+      pg-source:
         image: postgres:11.4-alpine
         restart: always
-        container_name: oltp-db
+        container_name: pg-source
         ports:
           - 54320:54320
         environment:
           - POSTGRES_USER=root
           - POSTGRES_PASSWORD=root
-          - POSTGRES_DB=oltp
+          - POSTGRES_DB=db
 
-      olap-db:
+      pg-destination:
         image: postgres:11.4-alpine
         restart: always
-        container_name: olap-db
+        container_name: pg-destination
         ports:
           - 54321:54321
         environment:
           - POSTGRES_USER=root
           - POSTGRES_PASSWORD=root
-          - POSTGRES_DB=olap
+          - POSTGRES_DB=db
+

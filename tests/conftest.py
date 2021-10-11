@@ -19,14 +19,14 @@ def pytest_configure(config):
     # define some models to get the tests to pass.
     db.merge_conn(
         models.Connection(
-            conn_id='oltp', conn_type='postgresql',
-            host='oltp-db', schema='oltp',
+            conn_id='pg-source', conn_type='postgresql',
+            host='pg-source', schema='db',
             login='root', password='root')
     )
     db.merge_conn(
         models.Connection(
-            conn_id='olap', conn_type='postgresql',
-            host='olap-db', schema='olap',
+            conn_id='pg-destination', conn_type='postgresql',
+            host='pg-destination', schema='db',
             login='root', password='root')
     )
 
