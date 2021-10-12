@@ -19,15 +19,30 @@ def pytest_configure(config):
     # define some models to get the tests to pass.
     db.merge_conn(
         models.Connection(
-            conn_id='pg-source', conn_type='postgresql',
+            conn_id='pg-source-conn', conn_type='postgresql',
             host='pg-source', schema='db',
             login='root', password='root')
     )
     db.merge_conn(
         models.Connection(
-            conn_id='pg-destination', conn_type='postgresql',
+            conn_id='pg-destination-conn', conn_type='postgresql',
             host='pg-destination', schema='db',
             login='root', password='root')
+    )
+
+    db.merge_conn(
+        models.Connection(
+            conn_id='mssql-source-conn', conn_type='ODBC',
+            host='mssql-source', schema='master', port=1433,
+            login='sa', password='ForaBozo2021',
+            extra='{"Driver": "ODBC Driver 17 for SQL Server"}')
+    )
+    db.merge_conn(
+        models.Connection(
+            conn_id='mssql-destination-conn', conn_type='ODBC',
+            host='mssql-destination', schema='master', port=1433,
+            login='sa', password='ForaBozo2021',
+            extra='{"Driver": "ODBC Driver 17 for SQL Server"}')
     )
 
 
