@@ -64,11 +64,13 @@ def test_full_table_replication_various_db_types(
     dest_hook_cls: DbApiHook,
     destination_provider: str):
 
-    table_name = 'example_table'
+    source_table_name = 'origin_table'
+    dest_table_name = 'destination_table'
     source_hook = source_hook_cls(source_conn_id)
     dest_hook = dest_hook_cls(dest_conn_id)
-    _insert_initial_source_data(table_name, source_hook)
-    _create_initial_table(table_name, dest_hook)
+
+    _insert_initial_source_data(source_table_name, source_hook)
+    _create_initial_table(dest_table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
@@ -79,11 +81,11 @@ def test_full_table_replication_various_db_types(
         source_provider=source_provider,
         destination_provider=destination_provider
         ).full_copy(
-        source_table=f'{source_schema}.{table_name}',
-        destination_table=f'{destination_schema}.{table_name}',
+        source_table=f'{source_schema}.{source_table_name}',
+        destination_table=f'{destination_schema}.{dest_table_name}',
         )
 
-    source_data = source_hook.get_pandas_df(f'select * from {table_name}')
-    dest_data = dest_hook.get_pandas_df(f'select * from {table_name}')
+    source_data = source_hook.get_pandas_df(f'select * from {source_table_name}')
+    dest_data = dest_hook.get_pandas_df(f'select * from {dest_table_name}')
 
     assert_frame_equal(source_data, dest_data)
