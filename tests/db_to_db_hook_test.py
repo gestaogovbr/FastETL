@@ -47,6 +47,8 @@ def _insert_initial_dest_empty_table(tablename, hook):
     [
         ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
         ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
+        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
     ])
 def test_full_table_replication_various_db_types(
     source_conn_id: str,
