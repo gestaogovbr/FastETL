@@ -3,6 +3,7 @@ import pytest
 import pandas as pd
 from pandas._testing import assert_frame_equal
 
+from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
 
@@ -41,49 +42,37 @@ def _insert_initial_dest_empty_table(tablename, hook):
     _insert_data(tablename, hook, data)
 
 
-def test_replicate_table_full_postgres():
-    source_conn_id = 'pg-source-conn'
-    dest_conn_id = 'pg-destination-conn'
-    table_name = 'example_table'
+@pytest.mark.parametrize(
+    'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider',
+    [
+        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
+    ])
+def test_full_table_replication_various_db_types(
+    source_conn_id: str,
+    source_hook_cls: BaseHook,
+    source_provider: str,
+    dest_conn_id: str,
+    dest_hook_cls: BaseHook,
+    destination_provider: str):
 
-    source_hook = PostgresHook(source_conn_id)
-    dest_hook = PostgresHook(dest_conn_id)
+    table_name = 'example_table'
+    source_hook = source_hook_cls(source_conn_id)
+    dest_hook = dest_hook_cls(dest_conn_id)
     _insert_initial_source_data(table_name, source_hook)
     _insert_initial_dest_empty_table(table_name, dest_hook)
+
+    source_schema = 'public' if source_provider == 'PG' else 'dbo'
+    destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
 
     hook = DbToDbHook(
         source_conn_id=source_conn_id,
         destination_conn_id=dest_conn_id,
-        source_provider='PG',
-        destination_provider='PG'
+        source_provider=source_provider,
+        destination_provider=destination_provider
         ).full_copy(
-        source_table=f'public.{table_name}',
-        destination_table=f'public.{table_name}',
-        )
-
-    source_data = source_hook.get_pandas_df(f'select * from {table_name}')
-    dest_data = dest_hook.get_pandas_df(f'select * from {table_name}')
-
-    assert_frame_equal(source_data, dest_data)
-
-def test_replicate_table_full_mssql():
-    source_conn_id = 'mssql-source-conn'
-    dest_conn_id = 'mssql-destination-conn'
-    table_name = 'example_table'
-
-    source_hook = OdbcHook(source_conn_id)
-    dest_hook = OdbcHook(dest_conn_id)
-    _insert_initial_source_data(table_name, source_hook)
-    _insert_initial_dest_empty_table(table_name, dest_hook)
-
-    hook = DbToDbHook(
-        source_conn_id=source_conn_id,
-        destination_conn_id=dest_conn_id,
-        source_provider='MSSQL',
-        destination_provider='MSSQL'
-        ).full_copy(
-        source_table=f'dbo.{table_name}',
-        destination_table=f'dbo.{table_name}',
+        source_table=f'{source_schema}.{table_name}',
+        destination_table=f'{destination_schema}.{table_name}',
         )
 
     source_data = source_hook.get_pandas_df(f'select * from {table_name}')
