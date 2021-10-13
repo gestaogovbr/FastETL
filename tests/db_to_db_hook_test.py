@@ -2,7 +2,7 @@ from datetime import datetime
 import pytest
 import pandas as pd
 from pandas._testing import assert_frame_equal
-from sqlalchemy import Table, Column, Integer, String, Date, MetaData
+from sqlalchemy import Table, Column, Integer, String, Date, Float, MetaData
 
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -23,6 +23,7 @@ def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
         table_name, meta,
         Column('Name', String),
         Column('Age', Integer),
+        Column('Weight', Float),
         Column('Birth', Date)
     )
     meta.create_all(hook.get_sqlalchemy_engine())
@@ -32,6 +33,7 @@ def _insert_initial_source_data(table_name: str, hook: DbApiHook) -> None:
     _create_initial_table(table_name, hook)
     data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
             'Age':[27, 38, 1000, 33],
+            'Weight':[1000.0, 75.33, 333.33, 12345.54321],
             'Birth': [
                 _date('1942-11-27'),
                 _date('1983-06-02'),
