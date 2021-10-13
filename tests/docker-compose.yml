@@ -100,7 +100,7 @@
         ports:
           - 1433:1433
         environment:
-          SA_PASSWORD: ForaBozo2021
+          SA_PASSWORD: ozoBaroF2021
           ACCEPT_EULA: Y
 
       mssql-destination:
@@ -109,5 +109,5 @@
         ports:
           - 1434:1433
         environment:
-          SA_PASSWORD: ForaBozo2021
+          SA_PASSWORD: ozoBaroF2021
           ACCEPT_EULA: Y
