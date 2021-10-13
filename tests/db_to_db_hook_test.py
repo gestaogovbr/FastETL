@@ -37,6 +37,7 @@ def _create_initial_table(tablename: str, hook: DbApiHook) -> None:
 
 
 def _insert_initial_source_data(tablename, hook):
+    _create_initial_table(table_name, hook)
     data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
             'Age':[27, 38, 1000, 33],
             'Birth': [
