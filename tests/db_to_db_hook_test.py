@@ -3,6 +3,8 @@ import pytest
 import pandas as pd
 from pandas._testing import assert_frame_equal
 from sqlalchemy import Table, Column, Integer, String, Date, Float, MetaData
+from sqlalchemy.exc import ProgrammingError
+import logging
 
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -16,7 +18,7 @@ def _date(date_: str) -> datetime:
     return datetime.strptime(date_, '%Y-%m-%d').date()
 
 
-def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
+def _create_table_metadata(table_name: str) -> MetaData:
     meta = MetaData()
 
     test_table = Table(
@@ -26,7 +28,20 @@ def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
         Column('Weight', Float),
         Column('Birth', Date)
     )
-    meta.create_all(hook.get_sqlalchemy_engine())
+    return meta
+
+
+def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
+    try:
+        _create_table_metadata(table_name).\
+            tables[table_name].\
+            drop(hook.get_sqlalchemy_engine())
+    except ProgrammingError as e:
+        logging.info(e.orig)
+
+
+def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
+    _create_table_metadata(table_name).create_all(hook.get_sqlalchemy_engine())
 
 
 def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> None:
@@ -73,12 +88,17 @@ def test_full_table_replication_various_db_types(
     source_hook = source_hook_cls(source_conn_id)
     dest_hook = dest_hook_cls(dest_conn_id)
 
+    # Setup
+    _try_drop_table(source_table_name, source_hook)
     _insert_initial_source_table_n_data(source_table_name, source_hook)
+
+    _try_drop_table(dest_table_name, dest_hook)
     _insert_initial_dest_table(dest_table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
 
+    # Run
     hook = DbToDbHook(
         source_conn_id=source_conn_id,
         destination_conn_id=dest_conn_id,
@@ -89,6 +109,7 @@ def test_full_table_replication_various_db_types(
         destination_table=f'{destination_schema}.{dest_table_name}',
         )
 
+    # Assert
     source_data = source_hook.get_pandas_df(f'select * from {source_table_name}')
     dest_data = dest_hook.get_pandas_df(f'select * from {dest_table_name}')
 
