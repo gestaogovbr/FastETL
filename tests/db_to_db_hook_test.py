@@ -29,7 +29,7 @@ def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
     meta.create_all(hook.get_sqlalchemy_engine())
 
 
-def _insert_initial_source_data(table_name: str, hook: DbApiHook) -> None:
+def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> None:
     _create_initial_table(table_name, hook)
     data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
             'Age':[27, 38, 1000, 33],
@@ -46,6 +46,10 @@ def _insert_initial_source_data(table_name: str, hook: DbApiHook) -> None:
                        con=hook.get_sqlalchemy_engine(),
                        if_exists='replace',
                        index=False)
+
+
+def _insert_initial_dest_table(table_name: str, hook: DbApiHook) -> None:
+    _create_initial_table(table_name, hook)
 
 
 @pytest.mark.parametrize(
@@ -69,8 +73,8 @@ def test_full_table_replication_various_db_types(
     source_hook = source_hook_cls(source_conn_id)
     dest_hook = dest_hook_cls(dest_conn_id)
 
-    _insert_initial_source_data(source_table_name, source_hook)
-    _create_initial_table(dest_table_name, dest_hook)
+    _insert_initial_source_table_n_data(source_table_name, source_hook)
+    _insert_initial_dest_table(dest_table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
