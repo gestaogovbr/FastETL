@@ -2,33 +2,25 @@ from datetime import datetime
 import pytest
 import pandas as pd
 from pandas._testing import assert_frame_equal
+from sqlalchemy import Table, Column, Integer, String, Date, MetaData
 
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
 
 from plugins.FastETL.hooks.db_to_db_hook import DbToDbHook
 
 
-def _insert_data(tablename, hook, data):
-    """This script will populate database with initial data to run job"""
-    sample_data = pd.DataFrame(data)
-
-    sample_data.to_sql(name=tablename,
-                       con=hook.get_sqlalchemy_engine(),
-                       if_exists='replace',
-                       index=False)
-
 
 def _date(date_: str) -> datetime:
     return datetime.strptime(date_, '%Y-%m-%d').date()
 
 
-def _create_initial_table(tablename: str, hook: DbApiHook) -> None:
+def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
     meta = MetaData()
 
     test_table = Table(
-        tablename, meta,
+        table_name, meta,
         Column('Name', String),
         Column('Age', Integer),
         Column('Birth', Date)
@@ -36,7 +28,7 @@ def _create_initial_table(tablename: str, hook: DbApiHook) -> None:
     meta.create_all(hook.get_sqlalchemy_engine())
 
 
-def _insert_initial_source_data(tablename, hook):
+def _insert_initial_source_data(table_name: str, hook: DbApiHook) -> None:
     _create_initial_table(table_name, hook)
     data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
             'Age':[27, 38, 1000, 33],
@@ -45,14 +37,13 @@ def _insert_initial_source_data(tablename, hook):
                 _date('1983-06-02'),
                 _date('3227-06-23'),
                 _date('0001-12-27')]}
-    _insert_data(tablename, hook, data)
 
+    sample_data = pd.DataFrame(data)
 
-def _insert_initial_dest_empty_table(tablename, hook):
-    data = {'Name':['string'],
-            'Age':[1],
-            'Birth':[_date('0001-12-27')]}
-    _insert_data(tablename, hook, data)
+    sample_data.to_sql(name=table_name,
+                       con=hook.get_sqlalchemy_engine(),
+                       if_exists='replace',
+                       index=False)
 
 
 @pytest.mark.parametrize(
@@ -65,10 +56,10 @@ def _insert_initial_dest_empty_table(tablename, hook):
     ])
 def test_full_table_replication_various_db_types(
     source_conn_id: str,
-    source_hook_cls: BaseHook,
+    source_hook_cls: DbApiHook,
     source_provider: str,
     dest_conn_id: str,
-    dest_hook_cls: BaseHook,
+    dest_hook_cls: DbApiHook,
     destination_provider: str):
 
     table_name = 'example_table'
