@@ -24,6 +24,18 @@ def _date(date_: str) -> datetime:
     return datetime.strptime(date_, '%Y-%m-%d').date()
 
 
+def _create_initial_table(tablename: str, hook: DbApiHook) -> None:
+    meta = MetaData()
+
+    test_table = Table(
+        tablename, meta,
+        Column('Name', String),
+        Column('Age', Integer),
+        Column('Birth', Date)
+    )
+    meta.create_all(hook.get_sqlalchemy_engine())
+
+
 def _insert_initial_source_data(tablename, hook):
     data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
             'Age':[27, 38, 1000, 33],
@@ -62,7 +74,7 @@ def test_full_table_replication_various_db_types(
     source_hook = source_hook_cls(source_conn_id)
     dest_hook = dest_hook_cls(dest_conn_id)
     _insert_initial_source_data(table_name, source_hook)
-    _insert_initial_dest_empty_table(table_name, dest_hook)
+    _create_initial_table(table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
