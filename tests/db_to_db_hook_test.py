@@ -32,6 +32,7 @@ def _create_table_metadata(table_name: str) -> MetaData:
 
 
 def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
+    logging.info(f'Tentando apagar a tabela {table_name}.')
     try:
         _create_table_metadata(table_name).\
             tables[table_name].\
@@ -75,13 +76,13 @@ def _insert_initial_dest_table(table_name: str, hook: DbApiHook) -> None:
         ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
         ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
     ])
-def test_full_table_replication_various_db_types(
-    source_conn_id: str,
-    source_hook_cls: DbApiHook,
-    source_provider: str,
-    dest_conn_id: str,
-    dest_hook_cls: DbApiHook,
-    destination_provider: str):
+def test_full_table_replication_with_dest_table_various_db_types(
+        source_conn_id: str,
+        source_hook_cls: DbApiHook,
+        source_provider: str,
+        dest_conn_id: str,
+        dest_hook_cls: DbApiHook,
+        destination_provider: str):
 
     source_table_name = 'origin_table'
     dest_table_name = 'destination_table'
@@ -120,17 +121,17 @@ def test_full_table_replication_various_db_types(
     'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider',
     [
         ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
-        # ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
         # ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
         # ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
     ])
 def test_full_table_replication_without_dest_table_various_db_types(
-    source_conn_id: str,
-    source_hook_cls: DbApiHook,
-    source_provider: str,
-    dest_conn_id: str,
-    dest_hook_cls: DbApiHook,
-    destination_provider: str):
+        source_conn_id: str,
+        source_hook_cls: DbApiHook,
+        source_provider: str,
+        dest_conn_id: str,
+        dest_hook_cls: DbApiHook,
+        destination_provider: str):
 
     source_table_name = 'origin_table'
     dest_table_name = 'destination_table'
@@ -142,7 +143,6 @@ def test_full_table_replication_without_dest_table_various_db_types(
     _insert_initial_source_table_n_data(source_table_name, source_hook)
 
     _try_drop_table(dest_table_name, dest_hook)
-    # _insert_initial_dest_table(dest_table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'

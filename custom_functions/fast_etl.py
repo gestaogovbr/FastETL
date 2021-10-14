@@ -16,11 +16,16 @@ from sqlalchemy import create_engine
 import ctds
 import ctds.pool
 import pandas as pd
+from pandas.io.sql import DatabaseError
+from sqlalchemy import Table, Column, MetaData, types
+import logging
 
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.mysql_hook import MySqlHook
+from airflow.providers.odbc.hooks.odbc import OdbcHook
 from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.dbapi import DbApiHook
 
 
 class DbConnection():
@@ -232,6 +237,49 @@ def compare_source_dest_rows(source_cur,
                       f'Origem: {source_row_count} linhas. ' \
                       f'Destino: {destination_row_count} linhas')
 
+def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
+    if provider == 'MSSQL':
+        hook = OdbcHook(conn_in)
+    elif provider == 'PG':
+        hook = PostgresHook(conn_in)
+    elif provider == 'MYSQL':
+        hook = MySqlHook(conn_in)
+    return hook
+
+def create_table_if_not_exist(source_table: str,
+                              source_conn_id: str,
+                              source_provider: str,
+                              destination_table: str,
+                              destination_conn_id: str,
+                              destination_provider: str
+                              ):
+    source_hook = get_hook_by_provider(
+        source_provider, source_conn_id)
+    destination_hook = get_hook_by_provider(
+        destination_provider, destination_conn_id)
+    try:
+        destination_hook.get_pandas_df(
+            f'select * from {destination_table} where 1=2')
+    except DatabaseError:
+        # Tabela não existe
+        logging.info(f'Criando tabela {destination_table}.')
+        source_eng = source_hook.get_sqlalchemy_engine()
+        source_meta = MetaData()
+        s_schema, s_table = source_table.split('.')
+        src_table = Table(s_table, source_meta,
+                        schema=s_schema,
+                        autoload_with=source_eng)
+
+        destination_eng = destination_hook.get_sqlalchemy_engine()
+        destination_meta = MetaData(bind=destination_eng)
+        d_schema, d_table = destination_table.split('.')
+        dest_table = Table(d_table, destination_meta, schema=d_schema)
+        for column in src_table.columns:
+            dest_table.append_column(column.copy())
+
+        destination_meta.create_all(destination_eng)
+
+
 def copy_db_to_db(destination_table: str,
                   source_conn_id: str,
                   source_provider: str,
@@ -292,6 +340,15 @@ def copy_db_to_db(destination_table: str,
 
     # validate db string
     validate_db_string(source_table, destination_table, select_sql)
+
+    # create table if not exists in destination db
+    create_table_if_not_exist(
+        source_table,
+        source_conn_id,
+        source_provider,
+        destination_table,
+        destination_conn_id,
+        destination_provider)
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
