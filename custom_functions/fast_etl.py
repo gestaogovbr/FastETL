@@ -249,8 +249,14 @@ def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
 
 
 def convert_to_generic_column(specific_col: Column) -> Column:
-    return Column(specific_col['name'],
-                  specific_col['type']._type_affinity())
+    # import ipdb; ipdb.set_trace()
+    import sqlalchemy
+    if isinstance(specific_col['type']._type_affinity(), sqlalchemy.sql.sqltypes.Numeric):
+        return Column(specific_col['name'],
+                      sqlalchemy.sql.sqltypes.Numeric(38, 13))
+    else:
+        return Column(specific_col['name'],
+                      specific_col['type']._type_affinity())
 
 
 def create_table_if_not_exist(source_table: str,
