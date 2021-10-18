@@ -2,7 +2,7 @@ from datetime import datetime
 import pytest
 import pandas as pd
 from pandas._testing import assert_frame_equal
-from sqlalchemy import Table, Column, Integer, String, Date, Float, MetaData
+from sqlalchemy import Table, Column, Integer, String, Date, Float, Boolean, MetaData
 from sqlalchemy.exc import ProgrammingError
 import logging
 
@@ -26,7 +26,8 @@ def _create_table_metadata(table_name: str) -> MetaData:
         Column('Name', String),
         Column('Age', Integer),
         Column('Weight', Float),
-        Column('Birth', Date)
+        Column('Birth', Date),
+        Column('Active', Boolean),
     )
     return meta
 
@@ -49,12 +50,13 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> Non
     _create_initial_table(table_name, hook)
     data = {'Name':['hendrix', 'nitai', 'krishna', 'jesus'],
             'Age':[27, 38, 1000, 33],
-            'Weight':[1000.0, 75.33, 333.33, 12345.54321],
-            'Birth': [
+            'Weight':[1000.0111111111111, 75.33, 333.33, 12345.54320091],
+            'Birth':[
                 _date('1942-11-27'),
                 _date('1983-06-02'),
                 _date('3227-06-23'),
-                _date('0001-12-27')]}
+                _date('0001-12-27')],
+            'Active':[False, True, True, True]}
 
     sample_data = pd.DataFrame(data)
 
