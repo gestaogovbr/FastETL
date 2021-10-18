@@ -12,12 +12,13 @@ import warnings
 import urllib
 from typing import List, Union
 import pyodbc
-from sqlalchemy import create_engine
 import ctds
 import ctds.pool
 import pandas as pd
 from pandas.io.sql import DatabaseError
-from sqlalchemy import Table, Column, MetaData, types
+from sqlalchemy import create_engine
+from sqlalchemy import Table, Column, MetaData
+from sqlalchemy.engine import reflection
 import logging
 
 from airflow.hooks.postgres_hook import PostgresHook
@@ -246,6 +247,12 @@ def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
         hook = MySqlHook(conn_in)
     return hook
 
+
+def convert_to_generic_column(specific_col: Column) -> Column:
+    return Column(specific_col['name'],
+                  specific_col['type']._type_affinity())
+
+
 def create_table_if_not_exist(source_table: str,
                               source_conn_id: str,
                               source_provider: str,
@@ -261,21 +268,19 @@ def create_table_if_not_exist(source_table: str,
         destination_hook.get_pandas_df(
             f'select * from {destination_table} where 1=2')
     except DatabaseError:
-        # Tabela não existe
-        logging.info(f'Criando tabela {destination_table}.')
+        # Table doens'n exist so creates it
         source_eng = source_hook.get_sqlalchemy_engine()
-        source_meta = MetaData()
+        source_eng.echo = True
+        insp = reflection.Inspector.from_engine(source_eng)
         s_schema, s_table = source_table.split('.')
-        src_table = Table(s_table, source_meta,
-                        schema=s_schema,
-                        autoload_with=source_eng)
 
         destination_eng = destination_hook.get_sqlalchemy_engine()
         destination_meta = MetaData(bind=destination_eng)
         d_schema, d_table = destination_table.split('.')
-        dest_table = Table(d_table, destination_meta, schema=d_schema)
-        for column in src_table.columns:
-            dest_table.append_column(column.copy())
+
+        generic_columns = insp.get_columns(s_table, s_schema)
+        dest_columns = [convert_to_generic_column(c) for c in generic_columns]
+        Table(d_table, destination_meta, *dest_columns, schema=d_schema)
 
         destination_meta.create_all(destination_eng)
 
