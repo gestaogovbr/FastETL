@@ -19,6 +19,7 @@ from pandas.io.sql import DatabaseError
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.engine import reflection
+from sqlalchemy.sql import sqltypes as sa_types
 import logging
 
 from airflow.hooks.postgres_hook import PostgresHook
@@ -238,6 +239,7 @@ def compare_source_dest_rows(source_cur,
                       f'Origem: {source_row_count} linhas. ' \
                       f'Destino: {destination_row_count} linhas')
 
+
 def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
     if provider == 'MSSQL':
         hook = OdbcHook(conn_in)
@@ -249,14 +251,14 @@ def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
 
 
 def convert_to_generic_column(specific_col: Column) -> Column:
-    # import ipdb; ipdb.set_trace()
-    import sqlalchemy
-    if isinstance(specific_col['type']._type_affinity(), sqlalchemy.sql.sqltypes.Numeric):
-        return Column(specific_col['name'],
-                      sqlalchemy.sql.sqltypes.Numeric(38, 13))
-    else:
-        return Column(specific_col['name'],
-                      specific_col['type']._type_affinity())
+    type_mapping = {
+        'NUMERIC': sa_types.Numeric(38, 13),
+        'BIT': sa_types.Boolean(),
+    }
+    return Column(specific_col['name'],
+                  type_mapping.get(
+                      str(specific_col['type']._type_affinity()),
+                      specific_col['type']._type_affinity()))
 
 
 def create_table_if_not_exist(source_table: str,
@@ -265,7 +267,7 @@ def create_table_if_not_exist(source_table: str,
                               destination_table: str,
                               destination_conn_id: str,
                               destination_provider: str
-                              ):
+                              ) -> None:
     source_hook = get_hook_by_provider(
         source_provider, source_conn_id)
     destination_hook = get_hook_by_provider(
