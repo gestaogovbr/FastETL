@@ -121,9 +121,9 @@ def test_full_table_replication_with_dest_table_various_db_types(
     'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider',
     [
         ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
+        # ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
         # ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
-        # ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
     ])
 def test_full_table_replication_without_dest_table_various_db_types(
         source_conn_id: str,
