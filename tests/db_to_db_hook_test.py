@@ -47,7 +47,7 @@ def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
 
 def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> None:
     _create_initial_table(table_name, hook)
-    data = {'Name':['hendrix', 'nitai', 'krish', 'jesus'],
+    data = {'Name':['hendrix', 'nitai', 'krishna', 'jesus'],
             'Age':[27, 38, 1000, 33],
             'Weight':[1000.0, 75.33, 333.33, 12345.54321],
             'Birth': [
@@ -83,7 +83,6 @@ def test_full_table_replication_with_dest_table_various_db_types(
         dest_conn_id: str,
         dest_hook_cls: DbApiHook,
         destination_provider: str):
-
     source_table_name = 'origin_table'
     dest_table_name = 'destination_table'
     source_hook = source_hook_cls(source_conn_id)
@@ -154,8 +153,8 @@ def test_full_table_replication_without_dest_table_various_db_types(
         source_provider=source_provider,
         destination_provider=destination_provider
         ).full_copy(
-        source_table=f'{source_schema}.{source_table_name}',
-        destination_table=f'{destination_schema}.{dest_table_name}',
+            source_table=f'{source_schema}.{source_table_name}',
+            destination_table=f'{destination_schema}.{dest_table_name}',
         )
 
     # Assert
