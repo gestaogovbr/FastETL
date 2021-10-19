@@ -1,14 +1,16 @@
-from datetime import datetime
-import pytest
-import pandas as pd
-from pandas._testing import assert_frame_equal
-from sqlalchemy import Table, Column, Integer, String, Date, Float, Boolean, MetaData
-from sqlalchemy.exc import ProgrammingError
+from datetime import datetime, time
 import logging
+import pytest
 
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
+
+import pandas as pd
+from pandas._testing import assert_frame_equal
+from sqlalchemy import Table, Column, Integer, String, Date, Float, Boolean, MetaData
+from pyodbc import ProgrammingError
+from psycopg2.errors import UndefinedTable
 
 from plugins.FastETL.hooks.db_to_db_hook import DbToDbHook
 
@@ -18,36 +20,24 @@ def _date(date_: str) -> datetime:
     return datetime.strptime(date_, '%Y-%m-%d').date()
 
 
-def _create_table_metadata(table_name: str) -> MetaData:
-    meta = MetaData()
-
-    test_table = Table(
-        table_name, meta,
-        Column('Name', String),
-        Column('Age', Integer),
-        Column('Weight', Float),
-        Column('Birth', Date),
-        Column('Active', Boolean),
-    )
-    return meta
-
-
 def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
-    logging.info(f'Tentando apagar a tabela {table_name}.')
+    logging.info('Tentando apagar a tabela %s.', table_name)
     try:
-        _create_table_metadata(table_name).\
-            tables[table_name].\
-            drop(hook.get_sqlalchemy_engine())
-    except ProgrammingError as e:
-        logging.info(e.orig)
+        hook.run(f'DROP TABLE {table_name};')
+    except (UndefinedTable, ProgrammingError) as e:
+        logging.info(e)
 
 
-def _create_initial_table(table_name: str, hook: DbApiHook) -> None:
-    _create_table_metadata(table_name).create_all(hook.get_sqlalchemy_engine())
+def _create_initial_table(table_name: str, hook: DbApiHook,
+                          db_provider: str) -> None:
+    filename = f'create_table_{db_provider.lower()}.sql'
+    sql_stmt = open(f'/opt/airflow/tests/sql/init/{filename}').read()
+    hook.run(sql_stmt.format(table_name=table_name))
 
 
-def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> None:
-    _create_initial_table(table_name, hook)
+def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
+                                        db_provider: str) -> None:
+    _create_initial_table(table_name, hook, db_provider)
     data = {'Name':['hendrix', 'nitai', 'krishna', 'jesus'],
             'Age':[27, 38, 1000, 33],
             'Weight':[1000.0111111111111, 75.33, 333.33, 12345.54320091],
@@ -58,16 +48,15 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook) -> Non
                 _date('0001-12-27')],
             'Active':[False, True, True, True]}
 
-    sample_data = pd.DataFrame(data)
-
-    sample_data.to_sql(name=table_name,
-                       con=hook.get_sqlalchemy_engine(),
-                       if_exists='replace',
-                       index=False)
+    pd.DataFrame(data).to_sql(name=table_name,
+                              con=hook.get_sqlalchemy_engine(),
+                              if_exists='replace',
+                              index=False)
 
 
-def _insert_initial_dest_table(table_name: str, hook: DbApiHook) -> None:
-    _create_initial_table(table_name, hook)
+def _create_initial_dest_table(table_name: str, hook: DbApiHook,
+                               db_provider: str) -> None:
+    _create_initial_table(table_name, hook, db_provider)
 
 
 @pytest.mark.parametrize(
@@ -97,11 +86,15 @@ def test_full_table_replication_various_db_types(
 
     # Setup
     _try_drop_table(source_table_name, source_hook)
-    _insert_initial_source_table_n_data(source_table_name, source_hook)
+    _insert_initial_source_table_n_data(source_table_name,
+                                        source_hook,
+                                        source_provider)
 
     _try_drop_table(dest_table_name, dest_hook)
     if has_dest_table:
-        _insert_initial_dest_table(dest_table_name, dest_hook)
+        _create_initial_dest_table(dest_table_name,
+                                   dest_hook,
+                                   destination_provider)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
@@ -113,8 +106,8 @@ def test_full_table_replication_various_db_types(
         source_provider=source_provider,
         destination_provider=destination_provider
         ).full_copy(
-        source_table=f'{source_schema}.{source_table_name}',
-        destination_table=f'{destination_schema}.{dest_table_name}',
+            source_table=f'{source_schema}.{source_table_name}',
+            destination_table=f'{destination_schema}.{dest_table_name}',
         )
 
     # Assert
