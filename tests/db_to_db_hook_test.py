@@ -71,20 +71,25 @@ def _insert_initial_dest_table(table_name: str, hook: DbApiHook) -> None:
 
 
 @pytest.mark.parametrize(
-    'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider',
+    'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider, has_dest_table',
     [
-        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
-        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
+        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG', True),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL', True),
+        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL', True),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG', True),
+        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG', False),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL', False),
+        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL', False),
+        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG', False),
     ])
-def test_full_table_replication_with_dest_table_various_db_types(
+def test_full_table_replication_various_db_types(
         source_conn_id: str,
         source_hook_cls: DbApiHook,
         source_provider: str,
         dest_conn_id: str,
         dest_hook_cls: DbApiHook,
-        destination_provider: str):
+        destination_provider: str,
+        has_dest_table: bool):
     source_table_name = 'origin_table'
     dest_table_name = 'destination_table'
     source_hook = source_hook_cls(source_conn_id)
@@ -95,7 +100,8 @@ def test_full_table_replication_with_dest_table_various_db_types(
     _insert_initial_source_table_n_data(source_table_name, source_hook)
 
     _try_drop_table(dest_table_name, dest_hook)
-    _insert_initial_dest_table(dest_table_name, dest_hook)
+    if has_dest_table:
+        _insert_initial_dest_table(dest_table_name, dest_hook)
 
     source_schema = 'public' if source_provider == 'PG' else 'dbo'
     destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
@@ -109,54 +115,6 @@ def test_full_table_replication_with_dest_table_various_db_types(
         ).full_copy(
         source_table=f'{source_schema}.{source_table_name}',
         destination_table=f'{destination_schema}.{dest_table_name}',
-        )
-
-    # Assert
-    source_data = source_hook.get_pandas_df(f'select * from {source_table_name}')
-    dest_data = dest_hook.get_pandas_df(f'select * from {dest_table_name}')
-
-    assert_frame_equal(source_data, dest_data)
-
-
-@pytest.mark.parametrize(
-    'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider',
-    [
-        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG'),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
-        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL'),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG'),
-    ])
-def test_full_table_replication_without_dest_table_various_db_types(
-        source_conn_id: str,
-        source_hook_cls: DbApiHook,
-        source_provider: str,
-        dest_conn_id: str,
-        dest_hook_cls: DbApiHook,
-        destination_provider: str):
-
-    source_table_name = 'origin_table'
-    dest_table_name = 'destination_table'
-    source_hook = source_hook_cls(source_conn_id)
-    dest_hook = dest_hook_cls(dest_conn_id)
-
-    # Setup
-    _try_drop_table(source_table_name, source_hook)
-    _insert_initial_source_table_n_data(source_table_name, source_hook)
-
-    _try_drop_table(dest_table_name, dest_hook)
-
-    source_schema = 'public' if source_provider == 'PG' else 'dbo'
-    destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
-
-    # Run
-    hook = DbToDbHook(
-        source_conn_id=source_conn_id,
-        destination_conn_id=dest_conn_id,
-        source_provider=source_provider,
-        destination_provider=destination_provider
-        ).full_copy(
-            source_table=f'{source_schema}.{source_table_name}',
-            destination_table=f'{destination_schema}.{dest_table_name}',
         )
 
     # Assert
