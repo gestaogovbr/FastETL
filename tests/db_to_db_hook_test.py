@@ -15,11 +15,6 @@ from psycopg2.errors import UndefinedTable
 from plugins.FastETL.hooks.db_to_db_hook import DbToDbHook
 
 
-
-def _date(date_: str) -> datetime:
-    return datetime.strptime(date_, '%Y-%m-%d').date()
-
-
 def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
     logging.info('Tentando apagar a tabela %s.', table_name)
     try:
@@ -33,6 +28,10 @@ def _create_initial_table(table_name: str, hook: DbApiHook,
     filename = f'create_table_{db_provider.lower()}.sql'
     sql_stmt = open(f'/opt/airflow/tests/sql/init/{filename}').read()
     hook.run(sql_stmt.format(table_name=table_name))
+
+
+def _date(date_: str) -> datetime:
+    return datetime.strptime(date_, '%Y-%m-%d').date()
 
 
 def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
