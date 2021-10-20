@@ -20,6 +20,8 @@ from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes as sa_types
+import sqlalchemy.dialects as sa_dialects
+
 import logging
 
 from airflow.hooks.postgres_hook import PostgresHook
@@ -250,15 +252,18 @@ def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
     return hook
 
 
-def convert_to_generic_column(specific_col: Column) -> Column:
+def _convert_column(old_col: Column, db_provider: str) -> Column:
     type_mapping = {
         'NUMERIC': sa_types.Numeric(38, 13),
         'BIT': sa_types.Boolean(),
     }
-    return Column(specific_col['name'],
+    if db_provider.upper() == 'MSSQL':
+        type_mapping['DATETIME'] = sa_dialects.mssql.DATETIME2()
+
+    return Column(old_col['name'],
                   type_mapping.get(
-                      str(specific_col['type']._type_affinity()),
-                      specific_col['type']._type_affinity()))
+                      str(old_col['type']._type_affinity()),
+                      old_col['type']._type_affinity()))
 
 
 def create_table_if_not_exist(source_table: str,
@@ -283,11 +288,12 @@ def create_table_if_not_exist(source_table: str,
         s_schema, s_table = source_table.split('.')
 
         destination_eng = destination_hook.get_sqlalchemy_engine()
+        generic_columns = insp.get_columns(s_table, s_schema)
+        dest_columns = [_convert_column(c, destination_provider)
+                        for c in generic_columns]
+
         destination_meta = MetaData(bind=destination_eng)
         d_schema, d_table = destination_table.split('.')
-
-        generic_columns = insp.get_columns(s_table, s_schema)
-        dest_columns = [convert_to_generic_column(c) for c in generic_columns]
         Table(d_table, destination_meta, *dest_columns, schema=d_schema)
 
         destination_meta.create_all(destination_eng)
