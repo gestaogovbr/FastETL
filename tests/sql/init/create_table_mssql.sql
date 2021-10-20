@@ -1,8 +1,9 @@
 CREATE TABLE {table_name} (
-	Name    varchar(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-	Age     bigint NULL,
-	Weight  float NULL,
-	Birth   date NULL,
-	Active  bit NULL
+	Name      VARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS,
+	Age       BIGINT,
+	Weight    FLOAT,
+	Birth     DATE,
+	Active    BIT,
+	date_time DATETIME2
 );
 

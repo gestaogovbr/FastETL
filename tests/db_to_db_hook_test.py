@@ -30,8 +30,8 @@ def _create_initial_table(table_name: str, hook: DbApiHook,
     hook.run(sql_stmt.format(table_name=table_name))
 
 
-def _date(date_: str) -> datetime:
-    return datetime.strptime(date_, '%Y-%m-%d').date()
+def _datetime(date_: str) -> datetime:
+    return datetime.strptime(f'{date_} 00:00:01', '%Y-%m-%d %H:%M:%S')
 
 
 def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
@@ -41,15 +41,21 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
             'Age':[27, 38, 1000, 33],
             'Weight':[1000.0111111111111, 75.33, 333.33, 12345.54320091],
             'Birth':[
-                _date('1942-11-27'),
-                _date('1983-06-02'),
-                _date('3227-06-23'),
-                _date('0001-12-27')],
-            'Active':[False, True, True, True]}
+                _datetime('1942-11-27').date(),
+                _datetime('1983-06-02').date(),
+                _datetime('3227-06-23').date(),
+                _datetime('0001-12-27').date()],
+            'Active':[False, True, True, True],
+            'date_time':[
+                _datetime('1942-11-27'),
+                _datetime('1983-06-02'),
+                _datetime('3227-06-23'),
+                _datetime('0001-12-27')],
+            }
 
     pd.DataFrame(data).to_sql(name=table_name,
                               con=hook.get_sqlalchemy_engine(),
-                              if_exists='replace',
+                              if_exists='append',
                               index=False)
 
 

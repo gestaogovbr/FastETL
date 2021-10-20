@@ -1,7 +1,8 @@
 CREATE TABLE {table_name} (
-    "Name"     text,
-	"Age"      INTEGER,
-	"Weight"   float,
-	"Birth"    date,
-	"Active"   bool
+    "Name"       TEXT,
+	"Age"        INTEGER,
+	"Weight"     FLOAT,
+	"Birth"      DATE,
+	"Active"     BOOL,
+    "date_time"  TIMESTAMP
 );
