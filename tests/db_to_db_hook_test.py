@@ -66,11 +66,6 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
                               index=False)
 
 
-def _create_initial_dest_table(table_name: str, hook: DbApiHook,
-                               db_provider: str) -> None:
-    _create_initial_table(table_name, hook, db_provider)
-
-
 @pytest.mark.parametrize(
     'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider, has_dest_table',
     [
@@ -104,14 +99,14 @@ def test_full_table_replication_various_db_types(
 
     _try_drop_table(dest_table_name, dest_hook)
     if has_dest_table:
-        _create_initial_dest_table(dest_table_name,
-                                   dest_hook,
-                                   destination_provider)
+        _create_initial_table(dest_table_name,
+                              dest_hook,
+                              destination_provider)
 
     # source_schema = 'public' if source_provider == 'PG' else 'dbo'
     # destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
 
-    # Run
+    # # Run
     # DbToDbHook(
     #     source_conn_id=source_conn_id,
     #     destination_conn_id=dest_conn_id,
