@@ -19,7 +19,7 @@ with DAG(
         for dest_conf in db_confs:
             CopyDbToDbOperator(
                 task_id=f'test_from_{source_conf[0]}_to_{dest_conf[0]}',
-                source_table=f'{source_conf[1]}.origin_table',
+                source_table=f'{source_conf[1]}.source_table',
                 destination_table=f'{dest_conf[1]}.destination_table',
                 source_conn_id=f'{source_conf[0]}-source-conn',
                 source_provider=source_conf[0].upper(),
