@@ -1,4 +1,5 @@
 CREATE TABLE {table_name} (
+	"id"           INTEGER,
     "Name"         VARCHAR(10),
     "Description"  TEXT,
     "Description2" VARCHAR,
