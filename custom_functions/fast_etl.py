@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.io.sql import DatabaseError
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData
-from sqlalchemy.engine import reflection
+from sqlalchemy.engine import reflection, Engine
 from sqlalchemy.sql import sqltypes as sa_types
 import sqlalchemy.dialects as sa_dialects
 
@@ -242,14 +242,20 @@ def compare_source_dest_rows(source_cur,
                       f'Destino: {destination_row_count} linhas')
 
 
-def get_hook_by_provider(provider: str, conn_in: str) -> DbApiHook:
+def get_hook_and_engine_by_provider(
+        provider: str,
+        conn_id: str) -> [DbApiHook, Engine]:
     if provider == 'MSSQL':
-        hook = OdbcHook(conn_in)
+        hook = MsSqlHook(conn_id)
+        engine = get_mssql_odbc_engine(conn_id)
     elif provider == 'PG':
-        hook = PostgresHook(conn_in)
+        hook = PostgresHook(conn_id)
+        engine = hook.get_sqlalchemy_engine()
     elif provider == 'MYSQL':
-        hook = MySqlHook(conn_in)
-    return hook
+        hook = MySqlHook(conn_id)
+        engine = hook.get_sqlalchemy_engine()
+
+    return hook, engine
 
 
 def _convert_column(old_col: Column, db_provider: str) -> Column:
@@ -273,21 +279,26 @@ def create_table_if_not_exist(source_table: str,
                               destination_conn_id: str,
                               destination_provider: str
                               ) -> None:
-    source_hook = get_hook_by_provider(
+    _, source_eng = get_hook_and_engine_by_provider(
         source_provider, source_conn_id)
-    destination_hook = get_hook_by_provider(
+    destination_hook, destination_eng = get_hook_and_engine_by_provider(
         destination_provider, destination_conn_id)
     try:
         destination_hook.get_pandas_df(
             f'select * from {destination_table} where 1=2')
     except DatabaseError:
         # Table doens'n exist so creates it
-        source_eng = source_hook.get_sqlalchemy_engine()
         source_eng.echo = True
-        insp = reflection.Inspector.from_engine(source_eng)
+        try:
+            insp = reflection.Inspector.from_engine(source_eng)
+        except AssertionError as e:
+            raise Exception("Não é possível criar tabela automaticamente "
+                            "a partir deste banco de dados. Crie a tabela "
+                            "manualmente para executar a cópia dos dados. "
+                            f"Error msg: {e}")
+
         s_schema, s_table = source_table.split('.')
 
-        destination_eng = destination_hook.get_sqlalchemy_engine()
         generic_columns = insp.get_columns(s_table, s_schema)
         dest_columns = [_convert_column(c, destination_provider)
                         for c in generic_columns]
