@@ -61,6 +61,7 @@
           - ../hooks:/opt/airflow/plugins/FastETL/hooks
           - ../operators:/opt/airflow/plugins/FastETL/operators
           - ../tests:/opt/airflow/tests
+          - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
         container_name: airflow
         command: webserver
         ports:
@@ -77,7 +78,7 @@
         restart: always
         container_name: pg-source
         ports:
-          - 54320:54320
+          - 54321:5432
         environment:
           - POSTGRES_USER=root
           - POSTGRES_PASSWORD=root
@@ -88,7 +89,7 @@
         restart: always
         container_name: pg-destination
         ports:
-          - 54321:54321
+          - 54322:5432
         environment:
           - POSTGRES_USER=root
           - POSTGRES_PASSWORD=root

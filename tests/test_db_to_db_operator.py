@@ -121,21 +121,11 @@ def test_full_table_replication_various_db_types(
                               dest_hook,
                               destination_provider)
 
-    # source_schema = 'public' if source_provider == 'PG' else 'dbo'
-    # destination_schema = 'public' if destination_provider == 'PG' else 'dbo'
-
-    # # Run
-    # DbToDbHook(
-    #     source_conn_id=source_conn_id,
-    #     destination_conn_id=dest_conn_id,
-    #     source_provider=source_provider,
-    #     destination_provider=destination_provider
-    #     ).full_copy(
-    #         source_table=f'{source_schema}.{source_table_name}',
-    #         destination_table=f'{destination_schema}.{dest_table_name}',
-    #     )
+    # Run
     task_id = f'test_from_{source_provider}_to_{destination_provider}'.lower()
-    subprocess.run(['airflow', 'tasks', 'test', 'test_dag', task_id, '2021-01-01'])
+    subprocess.run(
+        ['airflow', 'tasks', 'test', 'test_dag', task_id, '2021-01-01'],
+        check=True)
 
     # Assert
     source_data = source_hook.get_pandas_df(f'select * from {source_table_name} order by id asc;')
