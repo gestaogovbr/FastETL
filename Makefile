@@ -9,4 +9,4 @@ down:
 
 .PHONY: tests
 tests:
-	docker exec airflow pytest -vv
+	docker exec airflow pytest -vvv
