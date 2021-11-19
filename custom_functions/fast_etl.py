@@ -451,6 +451,7 @@ def sync_db_2_db(source_conn_id: str,
                  source_schema: str,
                  destination_schema: str,
                  increment_schema: str,
+                 select_sql: str = None,
                  sync_exclusions: bool = False,
                  source_exc_schema: str = None,
                  source_exc_table: str = None,
@@ -488,6 +489,9 @@ def sync_db_2_db(source_conn_id: str,
         increment_schema (str): Esquema no banco utilizado para tabelas
         temporárias. Caso esta variável seja None, esta tabela será
         criada no mesmo schema com sufixo '_alteracoes'
+        select_sql (str): select customizado para utilizar na carga ao invés
+        de replicar as colunas da tabela origem. Não deve ser utilizado com
+        JOINS, apenas para uma única tabela.
         sync_exclusions (bool): opção de sincronizar exclusões.
         Default = False.
         source_exc_schema (str): esquema da tabela na origem onde estão
@@ -546,9 +550,11 @@ def sync_db_2_db(source_conn_id: str,
     print(f"Total de linhas novas ou modificadas: {new_rows_count}.")
 
     # Guarda as alterações e inclusões necessárias
-    select_sql = build_select_sql(f"{source_table_name}", col_list)
+    if not select_sql:
+        select_sql = build_select_sql(f"{source_table_name}", col_list)
     select_diff = f"{select_sql} WHERE {where_condition}"
     print(f"SELECT para espelhamento: {select_diff}")
+
     copy_db_to_db(destination_table=f"{inc_table_name}",
                   source_conn_id=source_conn_id,
                   source_provider='PG',
