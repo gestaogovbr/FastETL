@@ -178,8 +178,12 @@ def test_breaks_with_wrong_credentials(
     _insert_initial_source_table_n_data(source_table_name,
                                         source_hook,
                                         source_provider)
-
+    #   the same data will already exist on the destination
     _try_drop_table(dest_table_name, dest_hook)
+    _insert_initial_source_table_n_data(dest_table_name,
+                                        dest_hook,
+                                        destination_provider)
+    #   change the connection passwords so that it will be wrong
     original_password = _get_conn_password(dest_conn_id)
     fake_password = _get_conn_password(dest_fake_conn_id)
     _set_conn_password(dest_conn_id, fake_password)
@@ -195,4 +199,6 @@ def test_breaks_with_wrong_credentials(
     _set_conn_password(dest_conn_id, original_password)
 
     # Check
-    assert ERROR_LOGIN[destination_provider] in str(process.stderr)
+    stderr = str(process.stderr)
+    logging.info('Task error output: %s', stderr)
+    assert ERROR_LOGIN[destination_provider] in stderr
