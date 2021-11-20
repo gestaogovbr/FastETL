@@ -8,6 +8,8 @@ from random import sample, randint, uniform
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
+from airflow import settings
+from airflow.models import Connection
 
 import pandas as pd
 from pandas._testing import assert_frame_equal
@@ -31,6 +33,19 @@ def _create_initial_table(table_name: str, hook: DbApiHook,
     filename = f'create_{table_name}_{db_provider.lower()}.sql'
     sql_stmt = open(f'/opt/airflow/tests/sql/init/{filename}').read()
     hook.run(sql_stmt.format(table_name=table_name))
+
+def _get_conn_password(conn_id: str) -> str:
+    "Gets the password from an Airflow connection."
+    session = settings.Session()
+    conn = session.query(Connection).filter_by(conn_id=conn_id).one()
+    return conn.password
+
+def _set_conn_password(conn_id: str, password: str) -> None:
+    "Sets the password of an Airflow connection."
+    session = settings.Session()
+    conn = session.query(Connection).filter_by(conn_id=conn_id).one()
+    conn.password = password
+    session.commit()
 
 NAMES = ['hendrix', 'nitai', 'krishna', 'jesus', 'Danielle', 'Augusto']
 DESCRIPTIONS = [
@@ -132,3 +147,52 @@ def test_full_table_replication_various_db_types(
     dest_data = dest_hook.get_pandas_df(f'select * from {dest_table_name} order by id asc;')
 
     assert_frame_equal(source_data, dest_data)
+
+@pytest.mark.parametrize(
+    'dest_conn_id, dest_fake_conn_id, dest_hook_cls, destination_provider',
+    [
+        ('pg-destination-conn', 'pg-destination-fake-conn', PostgresHook,
+            'PG'),
+        ('mssql-destination-conn', 'mssql-destination-fake-conn', OdbcHook,
+            'MSSQL'),
+    ])
+def test_breaks_with_wrong_credentials(
+        dest_conn_id: str,
+        dest_fake_conn_id: str,
+        dest_hook_cls: DbApiHook,
+        destination_provider: str):
+    ERROR_LOGIN = {
+        'PG': 'password authentication failed for user',
+        'MSSQL': 'Login failed for user',
+    }
+    source_table_name = 'source_table'
+    dest_table_name = 'destination_table'
+    source_conn_id = 'pg-source-conn'
+    source_hook_cls = PostgresHook
+    source_provider = 'PG'
+    source_hook = source_hook_cls(source_conn_id)
+    dest_hook = dest_hook_cls(dest_conn_id)
+
+    # Setup
+    _try_drop_table(source_table_name, source_hook)
+    _insert_initial_source_table_n_data(source_table_name,
+                                        source_hook,
+                                        source_provider)
+
+    _try_drop_table(dest_table_name, dest_hook)
+    original_password = _get_conn_password(dest_conn_id)
+    fake_password = _get_conn_password(dest_fake_conn_id)
+    _set_conn_password(dest_conn_id, fake_password)
+
+    # Run
+    task_id = f'test_from_{source_provider}_to_{destination_provider}'.lower()
+    # should raise an exception for invalid credentials
+    process = subprocess.run(
+        ['airflow', 'tasks', 'test', 'test_dag', task_id, '2021-01-01'],
+        capture_output=True)
+
+    # Tear down
+    _set_conn_password(dest_conn_id, original_password)
+
+    # Check
+    assert ERROR_LOGIN[destination_provider] in str(process.stderr)
