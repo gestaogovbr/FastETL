@@ -29,6 +29,12 @@ def pytest_configure(config):
             host='pg-destination', schema='db',
             login='root', password='root')
     )
+    db.merge_conn(
+        models.Connection(
+            conn_id='pg-destination-fake-conn', conn_type='postgresql',
+            host='pg-destination', schema='db',
+            login='fake', password='fake')
+    )
 
     db.merge_conn(
         models.Connection(
@@ -42,6 +48,13 @@ def pytest_configure(config):
             conn_id='mssql-destination-conn', conn_type='odbc',
             host='mssql-destination', schema='master', port=1433,
             login='sa', password='ozoBaroF2021',
+            extra='{"Driver": "ODBC Driver 17 for SQL Server"}')
+    )
+    db.merge_conn(
+        models.Connection(
+            conn_id='mssql-destination-fake-conn', conn_type='odbc',
+            host='mssql-destination', schema='master', port=1433,
+            login='fake', password='fake',
             extra='{"Driver": "ODBC Driver 17 for SQL Server"}')
     )
 
