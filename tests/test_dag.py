@@ -6,10 +6,12 @@ from FastETL.operators.copy_db_to_db_operator import CopyDbToDbOperator
 default_args = {
     'owner': 'nitai',
     'start_date': datetime(2020, 8, 20),
+    'depends_on_past': False,
 }
 with DAG(
         "test_dag",
         default_args=default_args,
+        catchup=False,
     ) as dag:
     db_confs = [
         ('mssql', 'dbo'),
