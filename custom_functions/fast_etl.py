@@ -294,18 +294,16 @@ def create_table_if_not_exist(source_table: str,
             f'select * from {destination_table} where 1=2')
     except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
         if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
-            raise Exception("Não é possível acessar o banco de dados de "
-                            "destino. "
-                            "Error msg: {}".format(db_error))
+            raise db_error
         # Table does not exist so we create it
         source_eng.echo = True
         try:
             insp = reflection.Inspector.from_engine(source_eng)
         except AssertionError as e:
-            raise Exception("Não é possível criar tabela automaticamente "
-                            "a partir deste banco de dados. Crie a tabela "
-                            "manualmente para executar a cópia dos dados. "
-                            "Error msg: {}".format(e))
+            logging.ERROR("Não é possível criar tabela automaticamente "
+                        "a partir deste banco de dados. Crie a tabela "
+                        "manualmente para executar a cópia dos dados. ")
+            raise e
 
         s_schema, s_table = source_table.split('.')
 
