@@ -16,6 +16,8 @@ import ctds
 import ctds.pool
 import pandas as pd
 from pandas.io.sql import DatabaseError
+from psycopg2 import OperationalError
+from sqlalchemy.exc import NoSuchModuleError
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.engine import reflection, Engine
@@ -279,6 +281,10 @@ def create_table_if_not_exist(source_table: str,
                               destination_conn_id: str,
                               destination_provider: str
                               ) -> None:
+    ERROR_TABLE_DOES_NOT_EXIST = {
+        'MSSQL': 'Invalid object name',
+        'PG': 'does not exist',
+    }
     _, source_eng = get_hook_and_engine_by_provider(
         source_provider, source_conn_id)
     destination_hook, destination_eng = get_hook_and_engine_by_provider(
@@ -286,8 +292,12 @@ def create_table_if_not_exist(source_table: str,
     try:
         destination_hook.get_pandas_df(
             f'select * from {destination_table} where 1=2')
-    except DatabaseError:
-        # Table doens'n exist so creates it
+    except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
+        if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
+            raise Exception("Não é possível acessar o banco de dados de "
+                            "destino. "
+                            "Error msg: {}".format(db_error))
+        # Table does not exist so we create it
         source_eng.echo = True
         try:
             insp = reflection.Inspector.from_engine(source_eng)
@@ -295,7 +305,7 @@ def create_table_if_not_exist(source_table: str,
             raise Exception("Não é possível criar tabela automaticamente "
                             "a partir deste banco de dados. Crie a tabela "
                             "manualmente para executar a cópia dos dados. "
-                            f"Error msg: {e}")
+                            "Error msg: {}".format(e))
 
         s_schema, s_table = source_table.split('.')
 
