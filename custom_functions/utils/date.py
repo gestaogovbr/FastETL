@@ -93,14 +93,14 @@ def last_day_of_last_month(the_date: date):
 
 # apenas para compor os templates abaixo, não usar em dags
 base_template_reference_date = '''
-{% if dag_run.conf is not none %}
-    {% if dag_run.conf["reference_date"] is defined %}
-        {% set the_date = macros.datetime.fromisoformat(dag_run.conf["reference_date"]) %}
-    {% else %}
-        {{ raise_exception_fazer_trigger_dag_somente_com_a_configuracao_reference_date }}
-    {% endif %}
+{% if dag_run.conf["reference_date"] is defined %}
+    {% set the_date = macros.datetime.fromisoformat(dag_run.conf["reference_date"]) %}
 {% else %}
-    {% set the_date = execution_date %}
+    {% if dag_run.external_trigger %}
+        {{ raise_exception_fazer_trigger_dag_somente_com_a_configuracao_reference_date }}
+    {% else %}
+        {% set the_date = execution_date %}
+    {% endif %}
 {% endif %}
 '''.replace('\n', '')
 
