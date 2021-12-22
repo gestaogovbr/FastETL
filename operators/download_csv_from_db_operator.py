@@ -42,6 +42,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
                  conn_id,
                  target_file_dir,
                  file_name,
+                 compression=None,
                  select_sql=None,
                  table_name=None,
                  table_scheme=None,
@@ -59,6 +60,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
         self.int_columns = int_columns
         self.target_file_dir = target_file_dir
         self.file_name = file_name
+        self.compression = compression
 
     def select_all_sql(self):
         cols = get_table_cols_name(self.conn_id, self.table_scheme, self.table_name)
@@ -106,5 +108,5 @@ class DownloadCSVFromDbOperator(BaseOperator):
             os.mkdir(self.target_file_dir)
 
         file_path = os.path.join(self.target_file_dir, self.file_name)
-        df.to_csv(file_path, index=False)
+        df.to_csv(file_path, index=False, compression=self.compression)
         return self.file_name
