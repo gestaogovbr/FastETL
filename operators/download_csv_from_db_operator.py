@@ -46,6 +46,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
                  select_sql=None,
                  table_name=None,
                  table_scheme=None,
+                 characters_to_remove=None,
                  columns_to_remove: []=None,
                  int_columns=None,
                  *args,
@@ -56,6 +57,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
         self.select_sql = select_sql
         self.table_name = table_name
         self.table_scheme = table_scheme
+        self.characters_to_remove = characters_to_remove
         self.columns_to_remove = columns_to_remove
         self.int_columns = int_columns
         self.target_file_dir = target_file_dir
@@ -95,6 +97,12 @@ class DownloadCSVFromDbOperator(BaseOperator):
         if self.int_columns:
             for col in self.int_columns:
                 df[col] = df[col].astype("Int64")
+
+        # Remove specified characters
+        if self.characters_to_remove:
+            str_cols = df.select_dtypes(['object']).columns
+            for col in str_cols:
+                df[col] = df[col].str.replace(self.characters_to_remove, '')
 
         # Remove specified columns
         if self.columns_to_remove:
