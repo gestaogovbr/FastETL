@@ -29,7 +29,7 @@ def get_reference_date(context: dict) -> datetime:
         context["dag_run"].conf is not None and \
         "reference_date" not in context["dag_run"].conf:
         raise ValueError(
-            'Para executar esta DAG manualmente é necessário incluir o'+
+            'Para executar esta DAG manualmente é necessário incluir o '
             'parâmetro reference_date no JSON das configurações.')
 
     reference_date: datetime = (
