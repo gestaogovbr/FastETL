@@ -413,6 +413,10 @@ def copy_db_to_db(destination_table: str,
                     if not select_sql:
                         select_sql = build_select_sql(source_table, col_list)
 
+                    # Remove as aspas na query para compatibilidade com o MYSQL
+                    if source_provider == 'MYSQL':
+                       select_sql = select_sql.replace('"', '')
+
                     # truncate stg
                     if destination_truncate:
                         destination_cur.execute(truncate)
