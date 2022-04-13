@@ -5,7 +5,7 @@ planilhas do Google através de sua API (google sheets).
 
 import json
 import os
-from datetime import date, datetime
+from datetime import datetime
 
 import pandas as pd
 
@@ -22,6 +22,9 @@ from FastETL.custom_functions.utils.string_formatting import slugify_column_name
 from FastETL.custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
 
 class GSheetHook(BaseHook):
+    """
+    Hook for handling Google Spreadsheets in Apache Airflow.
+    """
 
     @apply_defaults
     def __init__(self,
@@ -52,8 +55,9 @@ class GSheetHook(BaseHook):
         key_str = BaseHook.get_connection(self.conn_id).password
         try:
             key_value = json.loads(key_str)
-        except:
-            raise Exception("Erro na leitura da conexão. Tem que copiar o conteúdo de Extra para Password.")
+        except Exception as error:
+            raise Exception("Erro na leitura da conexão. Tem que copiar o "
+                "conteúdo de Extra para Password.") from error
 
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_value, scopes=scopes)
 
@@ -62,8 +66,8 @@ class GSheetHook(BaseHook):
             # service = build(api_name, api_version, credentials=credentials)
             http_auth = credentials.authorize(Http())
             service = discovery.build(api_name, api_version, http=http_auth)
-        except:
-            raise AirflowException('Erro ao conectar Google Drive API')
+        except Exception as error:
+            raise AirflowException('Erro ao conectar Google Drive API') from error
 
         return service
 
@@ -221,10 +225,7 @@ class GSheetHook(BaseHook):
 
         print(f'Última atualização do arquivo em: {update_date}')
 
-        if update_date.date() >= until_date.date():
-            return True
-        else:
-            return False
+        return bool(update_date.date() >= until_date.date())
 
     def batchUpdate(self, updates: str):
         """
