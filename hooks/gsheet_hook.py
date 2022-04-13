@@ -5,6 +5,8 @@ planilhas do Google através de sua API (google sheets).
 
 import json
 import os
+from datetime import date, datetime
+
 import pandas as pd
 
 from airflow import AirflowException
@@ -23,14 +25,17 @@ class GSheetHook(BaseHook):
 
     @apply_defaults
     def __init__(self,
-                 conn_id,
-                 spreadsheet_id,
+                 conn_id: str,
+                 spreadsheet_id: str,
                   *args,
                   **kwargs):
         self.conn_id = conn_id
         self.spreadsheet_id = spreadsheet_id
 
-    def get_google_service(self, api_name, api_version, scopes):
+    def get_google_service(self,
+        api_name: str,
+        api_version: str,
+        scopes: str) -> discovery.Resource:
         """
         Get a service that communicates to the Google API.
 
@@ -40,7 +45,7 @@ class GSheetHook(BaseHook):
             - scopes: A list auth scopes to authorize for the application.
 
         Return:
-            - A service that is connected to the specified API.
+            - results (discovery.Resource): A service that is connected to the specified API.
         """
 
         # Transform key_id to json
@@ -62,7 +67,7 @@ class GSheetHook(BaseHook):
 
         return service
 
-    def _get_gsheet_modifiedTime(self):
+    def _get_gsheet_modifiedTime(self) -> datetime:
         """
         Retorna data de última alteração de arquivo no Google Drive.
 
@@ -86,13 +91,14 @@ class GSheetHook(BaseHook):
 
         return convert_gsheets_str_to_datetime(results['modifiedTime'])
 
-    def _get_gsheet_api_service(self):
+    def _get_gsheet_api_service(self) -> discovery.Resource:
         """
-        Get a service that communicates to the Spreadsheet Google API v4 having
-        read and write permissions.
+        Get a service that communicates to the Spreadsheet Google API v4
+        having read and write permissions.
 
         Return:
-            - A service that is connected to the Spreadsheet API v4 for read and
+            - results (discovery.Resource): A service that is connected
+              to the Spreadsheet API v4 for read and
             write permissions.
         """
 
@@ -103,7 +109,9 @@ class GSheetHook(BaseHook):
             api_version='v4',
             scopes=scopes)
 
-    def get_gsheet_df(self, sheet_name: str, first_row_as_header: bool=True):
+    def get_gsheet_df(self,
+        sheet_name: str,
+        first_row_as_header: bool = True) -> pd.DataFrame:
         """
         Extract data from google spreadsheet and return as a Pandas
         Dataframe.
@@ -111,7 +119,7 @@ class GSheetHook(BaseHook):
         Args:
             - sheet_name (str): Name of the specific sheet in the
             spreadsheet.
-            - first_row_as_header (str): If use first row to name
+            - first_row_as_header (bool): If use first row to name
             columns. Default= True.
 
         Return:
@@ -139,10 +147,10 @@ class GSheetHook(BaseHook):
 
         return df
 
-    def _get_worksheet(self, sheet_name: str):
+    def _get_worksheet(self, sheet_name: str) -> pygsheets.worksheet:
         """
-        Get Worksheet object wrapper of pygsheets lib refering the spreadsheet_id
-        and sheet_name specifieds.
+        Get Worksheet object wrapper of pygsheets lib refering the
+        spreadsheet_id and sheet_name specified.
 
         Args:
             - sheet_name (str): Name of the specific sheet in the
@@ -181,7 +189,7 @@ class GSheetHook(BaseHook):
         wst.clear()
         wst.set_dataframe(df=df, start='A1', copy_head=copy_head, extend=True)
 
-    def get_sheet_id(self, sheet_name: str):
+    def get_sheet_id(self, sheet_name: str) -> int:
         """
         Get the identifier of a specific worksheet (sheet_id) from its name in a
         Google spreadsheet.
@@ -197,13 +205,13 @@ class GSheetHook(BaseHook):
 
         return wst.jsonSheet['properties']['sheetId']
 
-    def check_gsheet_file_update(self, until_date):
+    def check_gsheet_file_update(self, until_date: datetime):
         """
         Pega última atualização do arquivo GoogleSheets e compara com a
         data recebida.
 
         Args:
-            - until_date (date): data limite para atualização do arquivo
+            - until_date (datetime): data limite para atualização do arquivo
 
         Return:
             Booleano da comparação das datas
@@ -220,11 +228,13 @@ class GSheetHook(BaseHook):
 
     def batchUpdate(self, updates: str):
         """
-        Realiza alterações em lote na planilha seguindo padrão do próprio.
+        Realiza alterações em lote na planilha seguindo padrão do
+        próprio.
 
         Args:
             - updates (str): string json contendo as alterações a serem
-            executadas na planilha seguindo o formato XXXXXX TODO: completar aqui
+            executadas na planilha seguindo o formato XXXXXX TODO:
+            completar aqui
         """
         service = self._get_gsheet_api_service()
         service.spreadsheets().batchUpdate(
