@@ -23,7 +23,19 @@ Este framework é mantido por uma rede de desenvolvedores de diversas equipes do
 
 # Instalação no Airflow
 
-O FastETL implementa os padrões de plugins do Airflow e para ser instalado basta que ele seja copiado para o diretório `plugins` no ambiente da instalação do Airflow. Conheça e utilize também nosso ambiente airflow local (o [airflow-docker-local](https://github.com/economiagovbr/airflow-docker-local/)) que já possui o FastETL integrado.
+O FastETL implementa os padrões de plugins do Airflow e para ser
+instalado basta que ele seja copiado para o diretório `plugins` no
+ambiente da instalação do Airflow.
+
+Atualmente o FastETL depende do nosso ambiente do Airflow com Docker
+definido no repositório
+[airflow2-docker](https://github.com/economiagovbr/airflow2-docker).
+Caso utilize esse ambiente, o FastETl já vem integrado.
+
+No futuro pretendemos transformá-lo em um plugin independente de um
+ambiente específico, contendo instruções para instalado em qualquer
+ambiente. O primeiro passo para isso será
+[documentar as suas dependências](https://github.com/economiagovbr/FastETL/issues/5).
 
 # Testes
 
