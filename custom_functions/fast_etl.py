@@ -1176,10 +1176,10 @@ def load_env_var(
     conn_name: str,
     conn_id: str):
     """
-    # Atribui a string de conexão para uma variável de ambiente em execução
-    # Útil para executar o Great Expectations através de uma DAG, utilizando
-    # as credenciais das connections do próprio airflow e referenciando
-    # nas variaveis setadas no arquivo great_expectations.yml
+    Atribui a string de conexão para uma variável de ambiente em execução.
+    Útil para executar o Great Expectations através de uma DAG, utilizando
+    as credenciais das connections do próprio airflow e referenciando
+    nas variáveis setadas no arquivo `great_expectations.yml`.
 
     Exemplo:
         load_env_var("pgg_stage", "mssql_srv_30_pgg_stage")
