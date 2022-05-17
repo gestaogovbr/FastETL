@@ -8,7 +8,7 @@ from airflow.hooks.base_hook import BaseHook
 
 from ckanapi import RemoteCKAN
 
-USER_AGENT = "airflow-fastetl/0.1 (+https://github.com/economiagovbr/FastETL)"
+from FastETL.custom_functions.config import USER_AGENT
 
 class CKANHook(BaseHook):
     """Provides access to the CKAN API.
