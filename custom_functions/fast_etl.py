@@ -1200,3 +1200,4 @@ def load_env_var(
 
     # Grava o valor em variavel de ambiente na execução
     os.environ[conn_name] = connection_string
+    
