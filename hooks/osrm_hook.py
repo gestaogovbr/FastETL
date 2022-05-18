@@ -50,7 +50,8 @@ class OSRMHook(BaseHook):
 
         response = requests.get(
             url,
-            params={'steps': 'true'}
+            params={'steps': 'true'},
+            headers={'User-Agent': USER_AGENT}
         )
 
         if response.status_code != requests.codes.ok:
