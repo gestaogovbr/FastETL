@@ -8,7 +8,7 @@ from airflow import settings
 from airflow.models import Connection
 from airflow.utils.email import send_email
 from airflow.utils.decorators import apply_defaults
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 
 from FastETL.custom_functions.fast_etl import copy_db_to_db
 

@@ -11,7 +11,7 @@ import pandas as pd
 
 from airflow import AirflowException
 from airflow.utils.decorators import apply_defaults
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient import discovery

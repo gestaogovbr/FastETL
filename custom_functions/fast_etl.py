@@ -31,7 +31,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.hooks.dbapi import DbApiHook
 
 
