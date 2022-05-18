@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 import pandas as pd
 from smb.SMBConnection import SMBConnection
 
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 
 from FastETL.custom_functions.utils.string_formatting import slugify_column_names
 

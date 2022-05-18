@@ -10,7 +10,7 @@ import json
 import requests
 
 from airflow.utils.decorators import apply_defaults
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 
 from bs4 import BeautifulSoup
 

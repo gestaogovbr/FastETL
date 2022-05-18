@@ -27,7 +27,7 @@ import os
 from airflow.models.baseoperator import BaseOperator
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.postgres_hook import PostgresHook
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.utils.decorators import apply_defaults
 
 from FastETL.custom_functions.fast_etl import get_table_cols_name
