@@ -21,9 +21,15 @@ class Section(Enum):
     SECAO_2 = 'do2'
     SECAO_3 = 'do3'
     EDICAO_EXTRA = 'doe'
-    EDICAO_EXTRA_A = 'do1_extra_a'
-    EDICAO_EXTRA_B = 'do1_extra_b'
-    EDICAO_EXTRA_D = 'do1_extra_d'
+    EDICAO_EXTRA_1A = 'do1_extra_a'
+    EDICAO_EXTRA_1B = 'do1_extra_b'
+    EDICAO_EXTRA_1D = 'do1_extra_d'
+    EDICAO_EXTRA_2A = 'do2_extra_a'
+    EDICAO_EXTRA_2B = 'do2_extra_b'
+    EDICAO_EXTRA_2D = 'do2_extra_d'
+    EDICAO_EXTRA_3A = 'do3_extra_a'
+    EDICAO_EXTRA_3B = 'do3_extra_b'
+    EDICAO_EXTRA_3D = 'do3_extra_d'
     EDICAO_SUPLEMENTAR = 'do1a'
     TODOS = 'todos'
 
@@ -50,9 +56,15 @@ class DOUHook(BaseHook):
         Section.SECAO_2.value: 'Seção 2',
         Section.SECAO_3.value: 'Seção 3',
         Section.EDICAO_EXTRA.value: 'Edição Extra',
-        Section.EDICAO_EXTRA_A.value: 'Seção: 1 - Extra A',
-        Section.EDICAO_EXTRA_B.value: 'Seção: 1 - Extra B',
-        Section.EDICAO_EXTRA_D.value: 'Seção: 1 - Extra D',
+        Section.EDICAO_EXTRA_1A.value: 'Seção: 1 - Extra A',
+        Section.EDICAO_EXTRA_1B.value: 'Seção: 1 - Extra B',
+        Section.EDICAO_EXTRA_1D.value: 'Seção: 1 - Extra D',
+        Section.EDICAO_EXTRA_2A.value: 'Seção: 2 - Extra A',
+        Section.EDICAO_EXTRA_2B.value: 'Seção: 2 - Extra B',
+        Section.EDICAO_EXTRA_2D.value: 'Seção: 2 - Extra D',
+        Section.EDICAO_EXTRA_3A.value: 'Seção: 3 - Extra A',
+        Section.EDICAO_EXTRA_3B.value: 'Seção: 3 - Extra B',
+        Section.EDICAO_EXTRA_3D.value: 'Seção: 3 - Extra D',
         Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar',
         Section.TODOS.value: 'Todas'
     }
