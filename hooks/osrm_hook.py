@@ -28,6 +28,13 @@ class OSRMHook(BaseHook):
         >>> hook = OSRMHook(conn_id='osrm_api')
         >>> isinstance(hook, OSRMHook)
         True
+        >>> route = hook.get_route(
+                origin=(-15.799114,-47.871450),
+                destination=(-15.870442,-47.921462)
+            )
+        >>> distance = get_shortest_distance(route)
+        >>> print(distance)
+        15.4438
     """
 
     @apply_defaults
