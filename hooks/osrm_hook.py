@@ -2,7 +2,6 @@
 calculate routes and distances.
 """
 import urllib
-import requests
 from functools import cached_property
 from typing import Tuple
 
@@ -96,17 +95,16 @@ class OSRMHook(BaseHook):
 
         return response.json()
 
-    @staticmethod
-    def get_shortest_distance(data: dict) -> float:
-        """Gets the distance of the shortest route using the OSRM API.
+def get_shortest_distance(data: dict) -> float:
+    """Gets the distance of the shortest route using the OSRM API.
 
-        Args:
-            data (dict): The route data returned by `get_route`.
+    Args:
+        data (dict): The route data returned by `get_route`.
 
-        Returns:
-            float: The distance, in kilometers, of the first (shortest)
-                route.
-        """
-        if data['code'] == 'Ok':
-            return data['routes'][0]['distance'] / 1000.0
-        return None
+    Returns:
+        float: The distance, in kilometers, of the first (shortest)
+            route.
+    """
+    if data['code'] == 'Ok':
+        return data['routes'][0]['distance'] / 1000.0
+    return None
