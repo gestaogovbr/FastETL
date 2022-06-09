@@ -6,6 +6,8 @@ import requests
 from functools import cached_property
 from typing import Tuple
 
+import requests
+
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
