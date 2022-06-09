@@ -64,9 +64,9 @@ class OSRMHook(BaseHook):
         origin and destination point, using the specified profile.
 
         Args:
-            origin (Tuple[float, float]): The point of origin for the
+            origin (float, float): The point of origin for the
                 route, as a tuple of latitude, longitude.
-            destination (Tuple[float, float]): The point of destination
+            destination (float, float): The point of destination
                 for the route, as a tuple of latitude, longitude.
             profile (:obj:`str`, optional): The profile for calculating
                 the route (e.g.) 'bike' or 'foot'. Defaults to 'driving'.
