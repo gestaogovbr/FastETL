@@ -42,8 +42,7 @@ class OSRMDistanceDbOperator(BaseOperator):
             to, with the calculated shortest route distance, in
             kilometers.
     """
-    ui_color = '#006d1d'
-    ui_fgcolor = '#cf9bb2'
+    ui_color = '#90d572'
 
     @apply_defaults
     def __init__(self,
