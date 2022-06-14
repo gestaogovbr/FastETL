@@ -106,5 +106,10 @@ def get_shortest_distance(data: dict) -> float:
             route.
     """
     if data['code'] == 'Ok':
-        return data['routes'][0]['distance'] / 1000.0
+        if (
+            len(data['routes']) > 0  # has at least one route
+            and data['routes'][0].get('geometry', None) is not None
+            and data['routes'][0]['distance'] > 0
+        ):
+            return data['routes'][0]['distance'] / 1000.0
     return None

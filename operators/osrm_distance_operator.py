@@ -190,7 +190,7 @@ class OSRMDistanceDbOperator(BaseOperator):
                     origin=(origin_latitude, origin_longitude),
                     destination=(destination_latitude, destination_longitude)
                 )
-            )
+            ) or 'NULL' # use NULL if the function returns None
         )
 
     def execute(self, context: dict):
