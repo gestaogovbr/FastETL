@@ -63,7 +63,6 @@ class OSRMDistanceDbOperator(BaseOperator):
         self.destination_columns = destination_columns
         self.distance_column = distance_column
         self.chunksize = chunksize
-        self.conn_type: Connection = None
         self.osrm_hook: BaseHook = None
         if not (
             (isinstance(origin_columns, Iterable) and len(origin_columns) == 2)
@@ -137,6 +136,10 @@ class OSRMDistanceDbOperator(BaseOperator):
                 for column in self.destination_columns))
 
         query += f'FROM {self.table_scheme}.{self.table_name} '
+
+        if self.db_conn_type == 'mssql':
+            query += 'WITH (NOLOCK) '
+
         query += where + ';'
 
         return query
