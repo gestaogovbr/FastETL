@@ -38,6 +38,10 @@ class OSRMDistanceDbOperator(BaseOperator):
             to, with the calculated shortest route distance, in
             kilometers.
         chunksize (int): Size of the chunk read from the database.
+        overwrite_existing (bool): If true, will always overwrite the
+            contents of the distance column. If false, will only
+            calculate distances and fill in for lines that have NULL
+            values in that column.
     """
     ui_color = '#90d572'
 
@@ -52,6 +56,7 @@ class OSRMDistanceDbOperator(BaseOperator):
         destination_columns: Union[Tuple[str, str], str],
         distance_column: str,
         chunksize: int = 100,
+        overwrite_existing: bool = True,
         **kwargs):
         super().__init__(**kwargs)
         self.db_conn_id = db_conn_id
@@ -63,6 +68,7 @@ class OSRMDistanceDbOperator(BaseOperator):
         self.destination_columns = destination_columns
         self.distance_column = distance_column
         self.chunksize = chunksize
+        self.overwrite_existing = overwrite_existing
         self.osrm_hook: BaseHook = None
         if not (
             (isinstance(origin_columns, Iterable) and len(origin_columns) == 2)
@@ -116,8 +122,9 @@ class OSRMDistanceDbOperator(BaseOperator):
                 f'{self.origin_columns[0]} AS origin_latitude, '
                 f'{self.origin_columns[1]} AS origin_longitude, '
             )
-            where += ' AND '.join(
-                (f'{column} IS NOT NULL ' for column in self.origin_columns))
+            where += (' AND '.join((
+                f'{column} IS NOT NULL ' for column in self.origin_columns
+                )) + ' ')
 
         # add the destination coordinate columns
         if isinstance(self.destination_columns, str): # geometry type column
@@ -125,20 +132,23 @@ class OSRMDistanceDbOperator(BaseOperator):
                 f'{self.destination_columns}.Lat AS destination_latitude, '
                 f'{self.destination_columns}.Long AS destination_longitude '
             )
-            where += f'AND {self.destination_columns} IS NOT NULL;'
+            where += f'AND {self.destination_columns} IS NOT NULL '
         else: # latitude and longitude float columns
             query += (
                 f'{self.destination_columns[0]} AS destination_latitude, '
                 f'{self.destination_columns[1]} AS destination_longitude '
             )
-            where += 'AND ' + ' AND '.join((
-                f'{column} IS NOT NULL '
-                for column in self.destination_columns))
+            where += ('AND ' + ' AND '.join((
+                f'{column} IS NOT NULL ' for column in self.destination_columns
+                )) + ' ')
 
         query += f'FROM {self.table_scheme}.{self.table_name} '
 
         if self.db_conn_type == 'mssql':
             query += 'WITH (NOLOCK) '
+
+        if not self.overwrite_existing:
+            where += f'AND {self.distance_column} IS NOT NULL '
 
         query += where + ';'
 
