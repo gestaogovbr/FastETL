@@ -58,7 +58,8 @@ class OSRMHook(BaseHook):
     def get_route(self,
         origin: Tuple[float, float],
         destination: Tuple[float, float],
-        profile: str = 'driving') -> dict:
+        profile: str = 'driving',
+        steps: bool = True) -> dict:
         """Gets the calculated routes from the OSRM API from the defined
         origin and destination point, using the specified profile.
 
@@ -69,6 +70,8 @@ class OSRMHook(BaseHook):
                 for the route, as a tuple of latitude, longitude.
             profile (:obj:`str`, optional): The profile for calculating
                 the route (e.g.) 'bike' or 'foot'. Defaults to 'driving'.
+            steps (bool): Include a step by step description of the
+                route.
 
         Returns:
             dict: A `dict` with the data returned from the call to the
@@ -86,7 +89,7 @@ class OSRMHook(BaseHook):
 
         response = requests.get(
             url,
-            params={'steps': 'true'},
+            params={'steps': str(steps).lower()},
             headers={'User-Agent': USER_AGENT}
         )
 
