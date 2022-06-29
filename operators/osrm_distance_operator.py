@@ -201,7 +201,8 @@ class OSRMDistanceDbOperator(BaseOperator):
             get_shortest_distance(
                 self.osrm_hook.get_route(
                     origin=(origin_latitude, origin_longitude),
-                    destination=(destination_latitude, destination_longitude)
+                    destination=(destination_latitude, destination_longitude),
+                    steps=False
                 )
             ) or 'NULL' # use NULL if the function returns None
         )
