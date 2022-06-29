@@ -3,7 +3,9 @@ Machine (OSRM) API and enrich data.
 """
 from functools import cached_property
 from collections.abc import Iterable
-from typing import Union, Any, Tuple
+from typing import Union, Tuple
+
+import pandas as pd
 
 from airflow.hooks.base import BaseHook
 from airflow.models.connection import Connection
@@ -148,64 +150,76 @@ class OSRMDistanceDbOperator(BaseOperator):
             query += 'WITH (NOLOCK) '
 
         if not self.overwrite_existing:
-            where += f'AND {self.distance_column} IS NOT NULL '
+            where += f'AND {self.distance_column} IS NULL '
 
         query += where + ';'
 
         return query
 
-    def update_sql(self, pk_values: Tuple[Any, ...], distance: float) -> str:
+    def update_sql(self, data: pd.DataFrame) -> str:
         """Creates the UPDATE SQL query to record the calculated
         distance.
 
         Args:
-            pk_values (Any, ...): The values of the primary keys to use
-                for building the UPDATE query.
-            distance (float): The value of the distance to be recorded
-                in the column.
+            data (pd.DataFrame): The data for building the UPDATE query,
+                composed of columns for the primary keys and the
+                calculated distances.
 
         Returns:
             str: The SQL query for the UPDATE.
         """
-        if len(pk_values) != len(self.pk_columns):
-            raise ValueError(f'Got {len(pk_values)} primary key values, '
-                f'but there {len(self.pk_columns)} primary keys.')
+        if len(data.columns) - 1 != len(self.pk_columns):
+            raise ValueError(f'Got {len(data.columns) - 1} primary key '
+                'values, but there are '
+                f'{len(self.pk_columns)} primary keys.')
 
-        query = f'''UPDATE {self.table_scheme}.{self.table_name}
-        SET {self.distance_column} = {distance}
-        '''
-
-        query += 'WHERE ' + ' AND '.join(
-            f"{column} = '{pk_values[index]}'"
-            for index, column in enumerate(self.pk_columns)
+        query = (
+            f'UPDATE {self.table_scheme}.{self.table_name} ' +
+            f'SET {self.distance_column} = r.calculated_distance ' +
+            f'FROM {self.table_scheme}.{self.table_name} s ' +
+            'JOIN (' +
+            ' UNION ALL '.join((
+                'SELECT ' +
+                ', '.join((
+                    f"'{getattr(row, primary_key)}' AS {primary_key}"
+                    for primary_key in self.pk_columns
+                )) +
+                f', {row.calculated_distance} AS calculated_distance'
+                    for row in data.itertuples()
+            )) +
+            ') r ' +
+            'ON ' +
+            ' AND '.join((
+                f's.{primary_key} = r.{primary_key} '
+                for primary_key in self.pk_columns
+            )) + ';'
         )
-
-        query += ';'
 
         return query
 
-    def _update_row(self, row: list) -> str:
+    def _update_rows(self, rows: pd.DataFrame) -> str:
         """Get the value for the distance for a given row.
 
         Args:
-            row (list): The database row returned by the SELECT query.
+            rows (List[List[object]]): A list of database rows returned
+            by the SELECT query.
 
         Returns:
             str: The UPDATE query for this particular row.
         """
-        origin_latitude, origin_longitude = row[-4: -2]
-        destination_latitude, destination_longitude = row[-2:]
-        primary_keys = row[:len(self.pk_columns)]
-        return self.update_sql(
-            primary_keys,
+        rows['calculated_distance'] = rows.apply(
+            lambda row:
             get_shortest_distance(
                 self.osrm_hook.get_route(
-                    origin=(origin_latitude, origin_longitude),
-                    destination=(destination_latitude, destination_longitude),
+                    origin=(row.origin_latitude, row.origin_longitude),
+                    destination=(row.destination_latitude,
+                        row.destination_longitude),
                     steps=False
                 )
-            ) or 'NULL' # use NULL if the function returns None
+            ) or 'NULL', # use NULL if the function returns None
+            axis=1
         )
+        return self.update_sql(rows[list(self.pk_columns) + ['calculated_distance']])
 
     def execute(self, context: dict):
         """Execute the operator."""
@@ -216,10 +230,10 @@ class OSRMDistanceDbOperator(BaseOperator):
             with DbConnection(
                     conn_id=self.db_conn_id,
                     provider=self.db_conn_type.upper()) as write_db_conn:
-                with read_db_conn.cursor() as select_cursor:
-                    select_cursor.execute(self.select_sql)
-                    while rows := select_cursor.fetchmany(self.chunksize):
-                        for row in rows:
-                            with write_db_conn.cursor() as update_cursor:
-                                update_cursor.execute(self._update_row(row))
-                                update_cursor.commit()
+                for rows in pd.read_sql(
+                        self.select_sql,
+                        con=read_db_conn,
+                        chunksize=self.chunksize):
+                    with write_db_conn.cursor() as update_cursor:
+                        update_cursor.execute(self._update_rows(rows))
+                        update_cursor.commit()
