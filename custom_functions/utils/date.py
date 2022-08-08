@@ -49,7 +49,7 @@ def get_trigger_date(context: dict) -> datetime:
         (é igual a execution_date + o schedule_interval).
 
         Caso seja feita ativação manual (trigger DAG), poderá ser
-        passado o parâmetro reference_date no JSON de configuração.
+        passado o parâmetro trigger_date no JSON de configuração.
         Nesse caso, valerá esta. O parâmetro deve ser passado no
         formato ISO (ex.: 2021-01-02T12:00):
 
