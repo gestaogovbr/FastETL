@@ -7,12 +7,12 @@ from dateutil.relativedelta import relativedelta
 def get_reference_date(context: dict) -> datetime:
     """ Calcula a data de referência execução da DAG.
 
-        Caso seja uma execução de agendada, será execution_date,
+        Caso seja uma execução agendada, será execution_date,
         que no Airflow é a data do início do intervalo de execução da
         DAG.
 
         Caso seja feita ativação manual (trigger DAG), poderá ser
-        passado o parâmtero reference_date no JSON de configuração.
+        passado o parâmetro reference_date no JSON de configuração.
         Nesse caso, valerá esta. O parâmetro deve ser passado no
         formato ISO (ex.: 2021-01-02T12:00):
 
@@ -44,12 +44,12 @@ def get_reference_date(context: dict) -> datetime:
 def get_trigger_date(context: dict) -> datetime:
     """ Calcula a data de disparo da execução da DAG.
 
-        Caso seja uma execução de agendada, será next_execution_date,
+        Caso seja uma execução agendada, será next_execution_date,
         que no Airflow é a data esperada em que a DAG seja executada
         (é igual a execution_date + o schedule_interval).
 
         Caso seja feita ativação manual (trigger DAG), poderá ser
-        passado o parâmtero reference_date no JSON de configuração.
+        passado o parâmetro reference_date no JSON de configuração.
         Nesse caso, valerá esta. O parâmetro deve ser passado no
         formato ISO (ex.: 2021-01-02T12:00):
 
