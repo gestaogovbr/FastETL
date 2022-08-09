@@ -12,10 +12,9 @@ import pandas as pd
 from airflow import AirflowException
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
-
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2 import service_account
 from apiclient import discovery
-from httplib2 import Http
+
 import pygsheets
 
 from FastETL.custom_functions.utils.string_formatting import slugify_column_names
@@ -59,13 +58,11 @@ class GSheetHook(BaseHook):
             raise Exception("Erro na leitura da conexão. Tem que copiar o "
                 "conteúdo de Extra para Password.") from error
 
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_value, scopes=scopes)
+        credentials = service_account.Credentials.from_service_account_info(key_value, scopes=scopes)
 
         # Build the service object
         try:
-            # service = build(api_name, api_version, credentials=credentials)
-            http_auth = credentials.authorize(Http())
-            service = discovery.build(api_name, api_version, http=http_auth)
+            service = discovery.build(api_name, api_version, cache_discovery=False, credentials=credentials)
         except Exception as error:
             raise AirflowException('Erro ao conectar Google Drive API') from error
 
@@ -115,7 +112,7 @@ class GSheetHook(BaseHook):
 
     def get_gsheet_df(self,
         sheet_name: str,
-        first_row_as_header: bool = True) -> pd.DataFrame:
+        has_header: bool = True) -> pd.DataFrame:
         """
         Extract data from google spreadsheet and return as a Pandas
         Dataframe.
@@ -123,7 +120,7 @@ class GSheetHook(BaseHook):
         Args:
             - sheet_name (str): Name of the specific sheet in the
             spreadsheet.
-            - first_row_as_header (bool): If use first row to name
+            - has_header (bool): If use first row to name
             columns. Default= True.
 
         Return:
@@ -132,22 +129,13 @@ class GSheetHook(BaseHook):
             first line as column names.
         """
 
-        # Authenticate and construct service
-        service = self._get_gsheet_api_service()
+        wst = self._get_worksheet(sheet_name=sheet_name)
 
-        sheets = service.spreadsheets()
-        result = sheets.values().get(spreadsheetId=self.spreadsheet_id,
-                                        range=sheet_name).execute()
-        data_values = result.get('values', [])
-        df = pd.DataFrame(data_values)
+        df = wst.get_as_df(has_header=has_header)
 
-        if first_row_as_header:
-            new_header = df.iloc[0]
-            df = df[1:]
-        else:
+        if has_header:
             new_header = pd.Series(df.columns)
-
-        df.columns = new_header.apply(slugify_column_names)
+            df.columns = new_header.apply(slugify_column_names)
 
         return df
 
@@ -227,17 +215,30 @@ class GSheetHook(BaseHook):
 
         return bool(update_date.date() >= until_date.date())
 
-    def batchUpdate(self, updates: str):
+    def format_sheet(self, sheet_name: str, start: str, end: str, fields: str, 
+        cell_json:str, model_cell: str = "A1"):
         """
-        Realiza alterações em lote na planilha seguindo padrão do
-        próprio.
+        Altera a formatação do intervalo de células da planilha.
 
         Args:
-            - updates (str): string json contendo as alterações a serem
-            executadas na planilha seguindo o formato XXXXXX TODO:
-            completar aqui
+            - sheet_name (str): nome da Worksheet
+            - start (str): endereço da célula de início de intervalo
+                (Ex.: "A1")
+            - end (str): endereço da célula de final de intervalo
+                (Ex.: "A10")
+            - fields (str): lista de nomes de campos para aplicar à 
+                formatação de célula (Consulte doc. Pygsheets)
+            - cell_json (str): JSON de formatação para aplicar à
+                célula (Consulte doc. Pygsheets)
+            - model_cell (:obj:`str`, optional): célula para ser 
+                utilizada como modelo de formatação
         """
-        service = self._get_gsheet_api_service()
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=self.spreadsheet_id,
-            body=updates).execute()
+
+        cell = pygsheets.Cell(model_cell)
+
+        wst = self._get_worksheet(sheet_name=sheet_name)
+
+        data_range = pygsheets.DataRange(start=start, end=end, worksheet=wst)
+
+        data_range.apply_format(cell=cell, fields=fields, 
+            cell_json=cell_json)
