@@ -201,7 +201,7 @@ class OSRMDistanceDbOperator(BaseOperator):
         """Get the value for the distance for a given row.
 
         Args:
-            rows (List[List[object]]): A list of database rows returned
+            rows (pd.DataFrame): A dataframe of database rows returned
             by the SELECT query.
 
         Returns:
