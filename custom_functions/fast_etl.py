@@ -498,12 +498,30 @@ def _build_increm_filter(col_list: list, dest_hook: MsSqlHook,
     return where_condition
 
 
-# New func: Distingue se a coluna para obtenção do max() e montagem do
-#           filtro (where) é uma "data/hora alteração" ou é um número
-#           sequencial (id, pk, etc): 'date_column' ou 'key_column'.
-def _build_filter_condition(dest_hook: MsSqlHook,
-                table: str, date_column: str, key_column: str):
 
+def _build_filter_condition(dest_hook: MsSqlHook,
+                table: str, date_column: str, key_column: str) -> str:
+    """Monta o filtro (where) obtenção o valor max() da tabela,
+    distinguindo se a coluna é a "data ou data/hora de atualização"
+    (date_column) ou outro número sequencial (key_column), por exemplo
+    id, pk, etc.
+
+    Exemplo:
+        _build_filter_condition(dest_hook: hook,
+                        table=table,
+                        date_column=date_column,
+                        key_column=key_column)
+        
+    Args:
+        dest_hook (str): hook de conexão do DB de destino
+        table (str): tabela a ser sincronizada
+        date_column (str): nome da coluna a ser utilizado para
+        identificação dos registros atualizados.
+        key_column (str): nome da coluna a ser utilizado como chave na
+        etapa de atualização dos registros antigos que sofreram
+        atualizações na origem.
+
+    """
     if date_column:
         sql = f"SELECT MAX({date_column}) FROM {table}"
     else:
