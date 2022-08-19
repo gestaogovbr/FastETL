@@ -7,7 +7,7 @@ guilty: Vitor Bellini, Nitai Bezerra
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, date
 import warnings
 import urllib
 from typing import List, Union
@@ -512,7 +512,12 @@ def _build_filter_condition(dest_hook: MsSqlHook,
     max_value = dest_hook.get_first(sql)[0]
 
     if date_column:
-        max_value = max_value.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        # Verifica se o formato do campo max_value é date ou datetime
+        if (type(max_value) == date):
+            max_value = max_value.strftime("%Y-%m-%d")
+        elif (type(max_value) == datetime):
+            max_value = max_value.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        
         where_condition = f"{date_column} > '{max_value}'"
     else:
         max_value = str(max_value)
