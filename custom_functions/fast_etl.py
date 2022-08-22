@@ -520,6 +520,10 @@ def _build_filter_condition(dest_hook: MsSqlHook,
         key_column (str): nome da coluna a ser utilizado como chave na
         etapa de atualização dos registros antigos que sofreram
         atualizações na origem.
+        
+        Returns:
+                Tuple[str, str]: Tupla contendo o valor máximo e a condição
+                        where da query sql.
 
     """
     if date_column:
