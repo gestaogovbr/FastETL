@@ -500,7 +500,7 @@ def _build_increm_filter(col_list: list, dest_hook: MsSqlHook,
 
 
 def _build_filter_condition(dest_hook: MsSqlHook,
-                table: str, date_column: str, key_column: str) -> str:
+                table: str, date_column: str, key_column: str) -> Tuple[str, str]:
     """Monta o filtro (where) obtenção o valor max() da tabela,
     distinguindo se a coluna é a "data ou data/hora de atualização"
     (date_column) ou outro número sequencial (key_column), por exemplo
