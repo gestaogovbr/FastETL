@@ -10,7 +10,7 @@ import time
 from datetime import datetime, date
 import warnings
 import urllib
-from typing import List, Union
+from typing import List, Union, Tuple
 import pyodbc
 import ctds
 import ctds.pool
