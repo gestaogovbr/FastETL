@@ -12,7 +12,7 @@ def remove_template_indentation(text: str) -> str:
 def get_reference_date(context: dict) -> datetime:
     """ Calcula a data de referência execução da DAG.
 
-        Caso seja uma execução agendada, será execution_date,
+        Caso seja uma execução agendada, será logical_date,
         que no Airflow é a data do início do intervalo de execução da
         DAG.
 
@@ -42,7 +42,7 @@ def get_reference_date(context: dict) -> datetime:
             context["dag_run"].conf["reference_date"]
         )
     ) if context["dag_run"].conf \
-        else context["execution_date"] # execução agendada da dag
+        else context["logical_date"] # execução agendada da dag
 
     return reference_date
 
@@ -51,7 +51,7 @@ def get_trigger_date(context: dict) -> datetime:
 
         Caso seja uma execução agendada, será data_interval_end,
         que no Airflow é a data esperada em que a DAG seja executada
-        (é igual a execution_date + o schedule_interval).
+        (é igual a logical_date + o schedule_interval).
 
         Caso seja feita ativação manual (trigger DAG), poderá ser
         passado o parâmetro trigger_date no JSON de configuração.
@@ -63,7 +63,7 @@ def get_trigger_date(context: dict) -> datetime:
         }
 
         Caso seja feita a ativação manual (trigger DAG) sem passar
-        esse parâmetro, será considerada a execution_date, que
+        esse parâmetro, será considerada a logical_date, que
         no caso é a data em que foi realizado o trigger (data atual).
     """
 
@@ -79,7 +79,7 @@ def get_trigger_date(context: dict) -> datetime:
         if trigger_date_conf: # execução manual com configuração
             trigger_date: datetime = datetime.fromisoformat(trigger_date_conf)
         else: # execução manual sem configuração
-            trigger_date: datetime = context["execution_date"]
+            trigger_date: datetime = context["logical_date"]
     else: # execução agendada
         trigger_date: datetime = context["data_interval_end"]
 
@@ -108,7 +108,7 @@ base_template_reference_date = '''
     {% if dag_run.external_trigger %}
         {{ raise_exception_fazer_trigger_dag_somente_com_a_configuracao_reference_date }}
     {% else %}
-        {% set the_date = execution_date %}
+        {% set the_date = logical_date %}
     {% endif %}
 {% endif %}
 '''
@@ -166,7 +166,7 @@ base_template_trigger_date = '''
         {% if dag_run.conf["trigger_date"] is defined %}
             {% set the_date = macros.datetime.fromisoformat(dag_run.conf["trigger_date"]) %}
         {% else %}
-            {% set the_date = execution_date %}
+            {% set the_date = logical_date %}
         {% endif %}
     {% endif %}
 {% else %}
