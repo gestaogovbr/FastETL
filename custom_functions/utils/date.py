@@ -111,7 +111,7 @@ base_template_reference_date = '''
         {% set the_date = execution_date %}
     {% endif %}
 {% endif %}
-'''.replace('\n', '')
+'''
 
 # para ser usado em dags
 template_reference_date = remove_template_indentation(
