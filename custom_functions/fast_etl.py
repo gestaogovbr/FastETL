@@ -500,38 +500,45 @@ def _build_increm_filter(col_list: list, dest_hook: MsSqlHook,
 
 
 def _build_filter_condition(dest_hook: MsSqlHook,
-                table: str, date_column: str, key_column: str) -> Tuple[str, str]:
+                table: str, date_column: str, key_column: str,
+                since_datetime: datetime = None) -> Tuple[str, str]:
     """Monta o filtro (where) obtenção o valor max() da tabela,
     distinguindo se a coluna é a "data ou data/hora de atualização"
     (date_column) ou outro número sequencial (key_column), por exemplo
-    id, pk, etc.
+    id, pk, etc. Se o parâmetro "since_datetime" for recebido, será
+    considerado em vez do valor max() da tabela.
 
     Exemplo:
         _build_filter_condition(dest_hook: hook,
                         table=table,
                         date_column=date_column,
                         key_column=key_column)
-        
+
     Args:
         dest_hook (str): hook de conexão do DB de destino
         table (str): tabela a ser sincronizada
         date_column (str): nome da coluna a ser utilizado para
-        identificação dos registros atualizados.
+            identificação dos registros atualizados.
         key_column (str): nome da coluna a ser utilizado como chave na
-        etapa de atualização dos registros antigos que sofreram
-        atualizações na origem.
-        
+            etapa de atualização dos registros antigos que sofreram
+            atualizações na origem.
+        since_datetime (datetime): data/hora a partir do qual o filtro será
+            montado, em vez de usar o max() da tabela.
+
         Returns:
                 Tuple[str, str]: Tupla contendo o valor máximo e a condição
                         where da query sql.
 
     """
-    if date_column:
-        sql = f"SELECT MAX({date_column}) FROM {table}"
+    if since_datetime:
+        max_value = since_datetime
     else:
-        sql = f"SELECT MAX({key_column}) FROM {table}"
+        if date_column:
+            sql = f"SELECT MAX({date_column}) FROM {table}"
+        else:
+            sql = f"SELECT MAX({key_column}) FROM {table}"
 
-    max_value = dest_hook.get_first(sql)[0]
+        max_value = dest_hook.get_first(sql)[0]
 
     if date_column:
         # Verifica se o formato do campo max_value é date ou datetime
@@ -539,7 +546,7 @@ def _build_filter_condition(dest_hook: MsSqlHook,
             max_value = max_value.strftime("%Y-%m-%d")
         elif (type(max_value) == datetime):
             max_value = max_value.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-        
+
         where_condition = f"{date_column} > '{max_value}'"
     else:
         max_value = str(max_value)
@@ -579,18 +586,19 @@ def sync_db_2_db(source_conn_id: str,
                  destination_schema: str,
                  increment_schema: str,
                  select_sql: str = None,
+                 since_datetime: datetime = None,
                  sync_exclusions: bool = False,
                  source_exc_schema: str = None,
                  source_exc_table: str = None,
                  source_exc_column: str = None,
                  chunksize: int = 1000) -> None:
     """ Realiza a atualização incremental de uma tabela. A sincronização
-    é realizada em 3 etapas. 1-Envia s alterações necessárias para uma
+    é realizada em 3 etapas. 1-Envia as alterações necessárias para uma
     tabela intermediária localizada no esquema `increment_schema`.
-    2-Realiza os Updates. 3-Realiza os Insertes. Apenas as colunas que
+    2-Realiza os Updates. 3-Realiza os Inserts. Apenas as colunas que
     existam na tabela no BD destino serão sincronizadas. Funciona com
-    Postgres na origem e MsSql no destino. O algoritmo também realiza
-    sincronização de exclusões.
+    Postgres na origem e MsSql no destino. O algoritmo também realiza,
+    opcionalmente, sincronização de exclusões.
 
     Exemplo:
         sync_db_2_db(source_conn_id=SOURCE_CONN_ID,
@@ -607,26 +615,28 @@ def sync_db_2_db(source_conn_id: str,
         destination_conn_id (str): string de conexão airflow do DB destino
         table (str): tabela a ser sincronizada
         date_column (str): nome da coluna a ser utilizado para
-        identificação dos registros atualizados na origem.
+            identificação dos registros atualizados na origem.
         key_column (str): nome da coluna a ser utilizado como chave na
-        etapa de atualização dos registros antigos que sofreram
-        atualizações na origem.
+            etapa de atualização dos registros antigos que sofreram
+            atualizações na origem.
         source_eschema (str): esquema do BD na origem
         destination_schema (str): esquema do BD no destino
         increment_schema (str): Esquema no banco utilizado para tabelas
-        temporárias. Caso esta variável seja None, esta tabela será
-        criada no mesmo schema com sufixo '_alteracoes'
+            temporárias. Caso esta variável seja None, esta tabela será
+            criada no mesmo schema com sufixo '_alteracoes'
         select_sql (str): select customizado para utilizar na carga ao invés
-        de replicar as colunas da tabela origem. Não deve ser utilizado com
-        JOINS, apenas para uma única tabela.
+            de replicar as colunas da tabela origem. Não deve ser utilizado com
+            JOINS, apenas para uma única tabela.
+        since_datetime (datetime): data/hora a partir da qual o incremento
+            será realizado, sobrepondo-se à data/hora máxima da tabela destino
         sync_exclusions (bool): opção de sincronizar exclusões.
-        Default = False.
+            Default = False.
         source_exc_schema (str): esquema da tabela na origem onde estão
-        registradas exclusões
+            registradas exclusões
         source_exc_table (str): tabela na origem onde estão registradas
-        exclusões
+            exclusões
         source_exc_column (str): coluna na tabela na origem onde estão
-        registradas exclusões
+            registradas exclusões
         chunksize (int): tamanho do bloco de leitura na origem.
         Default = 1000 linhas
 
@@ -670,7 +680,8 @@ def sync_db_2_db(source_conn_id: str,
     ref_value, where_condition = _build_filter_condition(dest_hook,
                                                          dest_table_name,
                                                          date_column,
-                                                         key_column)
+                                                         key_column,
+                                                         since_datetime)
     new_rows_count = _table_rows_count(source_hook,
                                        source_table_name,
                                        where_condition)
@@ -1227,4 +1238,3 @@ def load_env_var(
 
     # Grava o valor em variavel de ambiente na execução
     os.environ[conn_name] = connection_string
-    
