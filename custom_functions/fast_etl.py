@@ -459,12 +459,12 @@ def copy_db_to_db(
                     rows = source_cur.fetchmany(chunksize)
                     rows_inserted = 0
 
-                    print(f"Inserindo linhas na tabela [{destination_table}].")
+                    logging.info("Inserindo linhas na tabela [%s].", destination_table)
                     while rows:
                         destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
-                        print(f"{rows_inserted} linhas inseridas!!")
+                        logging.info("%d linhas inseridas!!", rows_inserted)
 
                     destination_conn.commit()
 
@@ -476,9 +476,9 @@ def copy_db_to_db(
                     #                           source_table,
                     #                           destination_table)
 
-                    print('Tempo load: {:.4f} segundos'.format(delta_time))
-                    print('Linhas inseridas: {}'.format(rows_inserted))
-                    print('linhas/segundo: {}'.format(rows_inserted / delta_time))
+                    logging.info("Tempo load: %f segundos", delta_time)
+                    logging.info("Linhas inseridas: %d", rows_inserted)
+                    logging.info("linhas/segundo: %f", rows_inserted / delta_time)
 
 
 def _table_rows_count(db_hook, table: str, where_condition: str = None):
@@ -708,7 +708,7 @@ def sync_db_2_db(
     col_list = get_table_cols_name(destination_conn_id, destination_schema, table)
 
     dest_rows_count = _table_rows_count(dest_hook, dest_table_name)
-    print(f"Total de linhas atualmente na tabela destino: {dest_rows_count}.")
+    logging.info("Total de linhas atualmente na tabela destino: %d.", dest_rows_count)
     # If de tabela vazia separado para evitar erro na _build_filter_condition()
     if dest_rows_count == 0:
         raise Exception("Tabela destino vazia! Utilize carga full!")
@@ -717,13 +717,13 @@ def sync_db_2_db(
         dest_hook, dest_table_name, date_column, key_column, since_datetime
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
-    print(f"Total de linhas novas ou modificadas: {new_rows_count}.")
+    logging.info("Total de linhas novas ou modificadas: %d.", new_rows_count)
 
     # Guarda as alterações e inclusões necessárias
     if not select_sql:
         select_sql = build_select_sql(f"{source_table_name}", col_list)
     select_diff = f"{select_sql} WHERE {where_condition}"
-    print(f"SELECT para espelhamento: {select_diff}")
+    logging.info("SELECT para espelhamento: %s", select_diff)
 
     copy_db_to_db(
         destination_table=f"{inc_table_name}",
@@ -745,7 +745,7 @@ def sync_db_2_db(
 
     dest_hook.run(sql)
 
-    print(f"Iniciando carga incremental na tabela {dest_table_name}.")
+    logging.info("Iniciando carga incremental na tabela %s.", dest_table_name)
     updates_sql, inserts_sql = _build_incremental_sqls(
         dest_table=f"{dest_table_name}",
         source_table=f"{inc_table_name}",
@@ -772,8 +772,9 @@ def sync_db_2_db(
                 WHERE {key_column} IN ({ids})
             """
             dest_hook.run(sql)
-        print("Quantidade de linhas possivelmente excluídas:", len(ids_to_del))
-
+        logging.info(
+            "Quantidade de linhas possivelmente excluídas: %d", len(ids_to_del)
+        )
 
 
 def write_ctds(table, rows, conn_id):
@@ -806,7 +807,7 @@ def write_ctds(table, rows, conn_id):
             # batch_size=300000,
         )
         ftime = time.perf_counter()
-        print(f"{linhas} linhas inseridas em {ftime - itime} segundos.")
+        logging.info("%d linhas inseridas em %f segundos.", linhas, ftime - itime)
 
 
 def copy_by_key_interval(
@@ -912,14 +913,13 @@ def copy_by_key_interval(
                         source_cur.execute(select_sql, (key_begin, key_end))
                         rows = source_cur.fetchall()  # psycopg2
                     except Exception as e:
-                        print(
-                            "Erro origem: ",
+                        logging.info(
+                            "Erro origem: %s. Key interval: %s-%s",
                             str(e),
-                            "Key interval: ",
                             key_begin,
-                            "-",
                             key_end,
                         )
+
                         return False, key_begin
 
                     last_sleep = datetime.now()
@@ -934,10 +934,9 @@ def copy_by_key_interval(
                     # while rows:
                     while key_begin <= max_id and max_id > 0:
                         if (datetime.now() - last_sleep).seconds > run_step:
-                            print(
-                                f"Roda por {run_step} segundos e dorme por"
-                                   " 20 segundos para evitar o erro"
-                                " Negsignal.SIGKILL do Airflow!"
+                            logging.info(
+                                "Roda por %d segundos e dorme por 20 segundos para evitar o erro Negsignal.SIGKILL do Airflow!",
+                                run_step,
                             )
                             time.sleep(20)
                             last_sleep = datetime.now()
@@ -948,14 +947,13 @@ def copy_by_key_interval(
                                 destination_cur.executemany(insert, rows)
                                 destination_conn.commit()
                             except Exception as e:
-                                print(
-                                    "Erro destino: ",
+                                logging.info(
+                                    "Erro destino: %s. Key interval: %s-%s",
                                     str(e),
-                                    "Key interval: ",
                                     key_begin,
-                                    "-",
                                     key_end,
                                 )
+
                                 return False, key_begin
 
                         rows_inserted += len(rows)
@@ -967,22 +965,21 @@ def copy_by_key_interval(
                             source_cur.execute(select_sql, (key_begin, key_end))
                             rows = source_cur.fetchall()  # psycopg2
                         except Exception as e:
-                            print(
-                                "Erro origem: ",
+                            logging.info(
+                                "Erro origem: %s. Key interval: %s-%s",
                                 str(e),
-                                "Key interval: ",
                                 key_begin,
-                                "-",
                                 key_end,
                             )
+
                             return False, key_begin
 
                     destination_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
-                    print('Tempo load: {:.4f} segundos'.format(delta_time))
-                    print('Linhas inseridas: {}'.format(rows_inserted))
-                    print('linhas/segundo: {}'.format(rows_inserted / delta_time))
+                    logging.info("Tempo load: %f segundos", delta_time)
+                    logging.info("Linhas inseridas: %d", rows_inserted)
+                    logging.info("linhas/segundo: %f", rows_inserted / delta_time)
 
                     return True, None
 
@@ -1056,9 +1053,9 @@ def copy_by_key_with_retry(
     )
 
     while not succeeded and (retry <= retries):
-        print("Falha na function copy_by_key_interval !!!")
+        logging.info("Falha na function copy_by_key_interval !!!")
         retry += 1
-        print("Tentando retry", retry, "em", retry_delay, "segundos...")
+        logging.info("Tentando retry %d em %d segundos...", retry, retry_delay)
         time.sleep(retry_delay)
         succeeded, next_key = copy_by_key_interval(
                         source_provider=source_provider,
@@ -1074,9 +1071,9 @@ def copy_by_key_with_retry(
         )
 
     if succeeded:
-        print("Término com sucesso!")
+        logging.info("Término com sucesso!")
     else:
-        print("Término com erro após", retries, "tentativas!")
+        logging.info("Término com erro após %d tentativas!", retries)
 
 
 def copy_by_limit_offset(
@@ -1168,9 +1165,10 @@ def copy_by_limit_offset(
                     destination_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
-                    print('Tempo load: {:.4f} segundos'.format(delta_time))
-                    print('Linhas inseridas: {}'.format(rows_inserted))
-                    print('linhas/segundo: {}'.format(rows_inserted / delta_time))
+                    logging.info("Tempo load: %f segundos", delta_time)
+                    logging.info("Linhas inseridas: %d", rows_inserted)
+                    logging.info("linhas/segundo: %f", rows_inserted / delta_time)
+
 
 def search_key_gaps(
                     source_provider: str,
@@ -1258,15 +1256,22 @@ def search_key_gaps(
                         ).fetchone()
                         # psycopg2: destination_cur.execute(compare_sql, (key_begin, key_end))
                         # psycopg2: rowsdest = destination_cur.fetchone()
-                        print("Key interval:", key_begin, " to ", key_end,
-                                time.strftime('%H:%M:%S', time.localtime()))
+                        logging.info(
+                            "Key interval: %d to %d. %s",
+                            key_begin,
+                            key_end,
+                            time.strftime("%H:%M:%S", time.localtime()),
+                        )
                         # pyodbc: count_source = rows.count_source
                         count_source = rows[0]  # psycopg2
                         if count_source != rowsdest.count_dest:
                             dif = count_source - rowsdest.count_dest
-                            print("Gap!!! Source keys:", count_source,
-                                    "Dest keys:", rowsdest.count_dest,
-                                    "Difference:", dif)
+                            logging.info(
+                                "Gap!!! Source keys: %d. Dest keys: %d. Difference: %d.",
+                                count_source,
+                                rowsdest.count_dest,
+                                dif,
+                            )
                             gaps += 1
                             totdif += dif
                         key_begin = key_end + 1
@@ -1278,8 +1283,10 @@ def search_key_gaps(
                         rows = source_cur.fetchone()
 
                     delta_time = time.perf_counter() - start_time
-                    print('Tempo do compare: {:.4f} segundos'.format(delta_time))
-                    print("Resumo: ", gaps, "gaps, ", totdif, "rows faltam no destino!")
+                    logging.info("Tempo do compare: %f segundos", delta_time)
+                    logging.info(
+                        "Resumo: %d gaps, %d rows faltam no destino!", gaps, totdif
+                    )
 
 
 def load_env_var(conn_name: str, conn_id: str):
