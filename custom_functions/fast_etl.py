@@ -1,11 +1,9 @@
 # Thanks to Jedi Wash! *.*
 """
-Módulo cópia de dados entre Postgres e MsSql.
-
-last update: 20/06/2020
-guilty: Vitor Bellini, Nitai Bezerra
+Módulo cópia de dados entre Postgres e MsSql e outras coisas
 """
 
+import os
 import time
 from datetime import datetime, date
 import warnings
@@ -14,6 +12,7 @@ from typing import List, Union, Tuple
 import pyodbc
 import ctds
 import ctds.pool
+import logging
 import pandas as pd
 import os
 from pandas.io.sql import DatabaseError
@@ -35,7 +34,7 @@ from airflow.hooks.base import BaseHook
 from airflow.hooks.dbapi import DbApiHook
 
 
-class DbConnection():
+class DbConnection:
     """
     Gera as conexões origem e destino dependendo do tipo de provider.
     Providers disponíveis: 'MSSQL', 'PG' e 'MYSQL'
@@ -47,9 +46,9 @@ class DbConnection():
         assert provider.upper() in providers, 'Provider não suportado '\
                                               '(utilize MSSQL, PG ou MYSQL) :P'
 
-        if provider.upper() == 'MSSQL':
+        if provider == "MSSQL":
             conn_values = BaseHook.get_connection(conn_id)
-            driver = '{ODBC Driver 17 for SQL Server}'
+            driver = "{ODBC Driver 17 for SQL Server}"
             server = conn_values.host
             port = conn_values.port
             database = conn_values.schema
@@ -60,82 +59,85 @@ class DbConnection():
                 Database={database};\
                 Uid={user};\
                 Pwd={password};"""
-        elif provider.upper() == 'PG':
+        elif provider == "PG" or provider == "POSTGRES":
             self.pg_hook = PostgresHook(postgres_conn_id=conn_id)
-        elif provider.upper() == 'MYSQL':
+        elif provider == "MYSQL":
             self.msql_hook = MySqlHook(mysql_conn_id=conn_id)
         self.provider = provider
 
     def __enter__(self):
-        if self.provider == 'MSSQL':
+        if self.provider == "MSSQL":
             try:
                 self.conn = pyodbc.connect(self.mssql_conn_string)
             except:
-                raise Exception('MsSql connection failed.')
-        elif self.provider == 'PG':
+                raise Exception("MsSql connection failed.")
+        elif self.provider == "PG" or self.provider == "POSTGRES":
             try:
                 self.conn = self.pg_hook.get_conn()
             except:
-                raise Exception('PG connection failed.')
-        elif self.provider == 'MYSQL':
+                raise Exception("PG connection failed.")
+        elif self.provider == "MYSQL":
             try:
                 self.conn = self.msql_hook.get_conn()
             except:
-                raise Exception('MYSQL connection failed.')
+                raise Exception("MYSQL connection failed.")
         return self.conn
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.conn.close()
 
-def build_select_sql(source_table: str,
-                     column_list: str) -> str:
+
+def build_select_sql(source_table: str, column_list: str) -> str:
     """
     Monta a string do select da origem
     """
 
-    columns = ', '.join(col for col in column_list)
+    columns = ", ".join(col for col in column_list)
 
-    return f'SELECT {columns} FROM {source_table}'
+    return f"SELECT {columns} FROM {source_table}"
 
-def build_dest_sqls(destination_table: str, column_list: str,
-                    wildcard_symbol: str) -> Union[str, str, str]:
+
+def build_dest_sqls(
+    destination_table: str, column_list: str, wildcard_symbol: str
+) -> Union[str, str, str]:
     """
     Monta a string do insert do destino
     Monta a string de truncate do destino
     """
 
-    columns = ', '.join(col for col in column_list)
+    columns = ", ".join(col for col in column_list)
 
     values = ", ".join([wildcard_symbol for i in range(len(column_list))])
-    insert = f'INSERT INTO {destination_table} ({columns}) ' \
-             f'VALUES ({values})'
+    insert = f"INSERT INTO {destination_table} ({columns}) " f"VALUES ({values})"
 
-    truncate = f'TRUNCATE TABLE {destination_table}'
+    truncate = f"TRUNCATE TABLE {destination_table}"
 
     return insert, truncate
 
-def get_cols_name(cur,
-                  destination_provider: str,
-                  destination_table: str,
-                  columns_to_ignore: list=[]) -> List[str]:
+
+def get_cols_name(
+    cur, destination_provider: str, destination_table: str, columns_to_ignore: list = []
+) -> List[str]:
     """
     Obtem as colunas da tabela de destino
     """
 
-    if destination_provider.upper() == 'MSSQL':
+    if destination_provider.upper() == "MSSQL":
         colnames = []
-        cur.execute(f'SELECT * FROM {destination_table} WHERE 1 = 2')
-        for col in cur.columns(schema=destination_table.split('.')[0], \
-            table=destination_table.split('.')[1]):
+        cur.execute(f"SELECT * FROM {destination_table} WHERE 1 = 2")
+        for col in cur.columns(
+            schema=destination_table.split(".")[0],
+            table=destination_table.split(".")[1],
+        ):
             colnames.append(col.column_name)
-    elif destination_provider.upper() == 'PG':
-        cur.execute(f'SELECT * FROM {destination_table} WHERE 1 = 2')
+    elif destination_provider.upper() == "PG":
+        cur.execute(f"SELECT * FROM {destination_table} WHERE 1 = 2")
         colnames = [desc[0] for desc in cur.description]
 
-    colnames = [n for n in colnames
-                    if n not in columns_to_ignore]
+    colnames = [n for n in colnames if n not in columns_to_ignore]
 
     return [f'"{n}"' for n in colnames]
+
 
 def get_table_cols_name(conn_id: str, schema: str, table: str):
     """
@@ -143,26 +145,27 @@ def get_table_cols_name(conn_id: str, schema: str, table: str):
     """
     conn_values = BaseHook.get_connection(conn_id)
 
-    if conn_values.conn_type == 'mssql':
+    if conn_values.conn_type == "mssql":
         db_hook = MsSqlHook(mssql_conn_id=conn_id)
-    elif conn_values.conn_type == 'postgres':
+    elif conn_values.conn_type == "postgres":
         db_hook = PostgresHook(postgres_conn_id=conn_id)
     else:
-        raise Exception('Conn_type not implemented.')
+        raise Exception("Conn_type not implemented.")
 
     with db_hook.get_conn() as db_conn:
         with db_conn.cursor() as db_cur:
-            db_cur.execute(f'SELECT * FROM {schema}.{table} WHERE 1=2')
+            db_cur.execute(f"SELECT * FROM {schema}.{table} WHERE 1=2")
             column_names = [tup[0] for tup in db_cur.description]
 
     return column_names
+
 
 def get_mssql_odbc_conn_str(conn_id: str):
     """
     Cria uma string de conexão com banco SQL Server usando driver pyodbc.
     """
     conn_values = BaseHook.get_connection(conn_id)
-    driver = '{ODBC Driver 17 for SQL Server}'
+    driver = "{ODBC Driver 17 for SQL Server}"
     server = conn_values.host
     port = conn_values.port
     database = conn_values.schema
@@ -174,7 +177,8 @@ def get_mssql_odbc_conn_str(conn_id: str):
 
     quoted_conn_str = urllib.parse.quote_plus(mssql_conn)
 
-    return f'mssql+pyodbc:///?odbc_connect={quoted_conn_str}'
+    return f"mssql+pyodbc:///?odbc_connect={quoted_conn_str}"
+
 
 def get_mssql_odbc_engine(conn_id: str):
     """
@@ -182,8 +186,14 @@ def get_mssql_odbc_engine(conn_id: str):
     """
     return create_engine(get_mssql_odbc_conn_str(conn_id))
 
-def insert_df_to_db(df: pd.DataFrame, conn_id: str, schema: str,
-                    table: str, reflect_col_table: bool = True):
+
+def insert_df_to_db(
+    df: pd.DataFrame,
+    conn_id: str,
+    schema: str,
+    table: str,
+    reflect_col_table: bool = True,
+):
     """
     Insere os registros do DataFrame df na tabela especificada. Insere
     apenas as colunas que existem na tabela.
@@ -192,69 +202,75 @@ def insert_df_to_db(df: pd.DataFrame, conn_id: str, schema: str,
     """
     if reflect_col_table:
         # Filter existing table columns
-        cols = get_table_cols_name(conn_id=conn_id,
-                                   schema=schema,
-                                   table=table)
+        cols = get_table_cols_name(conn_id=conn_id, schema=schema, table=table)
         cols = [col.lower() for col in cols]
         df.columns = df.columns.str.lower()
         df = df[cols]
 
-    df.to_sql(name=table,
+    df.to_sql(
+        name=table,
               schema=schema,
               con=get_mssql_odbc_engine(conn_id),
-              if_exists='append',
-              index=False)
+        if_exists="append",
+        index=False,
+    )
 
-def validate_db_string(source_table: str, destination_table: str,
-                       select_sql: str) -> None:
+
+def validate_db_string(
+    source_table: str, destination_table: str, select_sql: str
+) -> None:
     """
     Valida se string do banco está no formato schema.table e se tabelas de
     origem e destino possuem o mesmo nome. Se possui select_sql não valida a
     source_table
     """
 
-    assert destination_table.count('.') == 1, 'Estrutura tabela destino ' \
-                                              'deve ser str: schema.table'
+    assert (
+        destination_table.count(".") == 1
+    ), "Estrutura tabela destino deve ser str: schema.table"
 
     if not select_sql:
-        assert source_table.count('.') == 1, 'Estrutura tabela origem deve ' \
-                                            'ser str: schema.table'
+        assert (
+            source_table.count(".") == 1
+        ), "Estrutura tabela origem deve ser str: schema.table"
 
-        if source_table.split('.')[1] != destination_table.split('.')[1]:
-            warnings.warn('Tabelas de origem e destino com nomes diferentes')
+        if source_table.split(".")[1] != destination_table.split(".")[1]:
+            warnings.warn("Tabelas de origem e destino com nomes diferentes")
 
-def compare_source_dest_rows(source_cur,
-                             destination_cur,
-                             source_table: str,
-                             destination_table: str) -> None:
+
+def compare_source_dest_rows(
+    source_cur, destination_cur, source_table: str, destination_table: str
+) -> None:
     """
     Compara quantidade de linhas na tabela origem e destino após o ETL.
     Caso diferente, imprime warning. Quando a tabela de origem está
     diretamente ligada ao sistema transacional justifica-se a diferença.
     """
 
-    source_cur.execute(f'SELECT COUNT(*) FROM {source_table}')
-    destination_cur.execute(f'SELECT COUNT(*) FROM {destination_table}')
+    source_cur.execute(f"SELECT COUNT(*) FROM {source_table}")
+    destination_cur.execute(f"SELECT COUNT(*) FROM {destination_table}")
 
     source_row_count = source_cur.fetchone()[0]
     destination_row_count = destination_cur.fetchone()[0]
 
     if source_row_count != destination_row_count:
-        warnings.warn('Quantidade de linhas diferentes na origem e destino. ' \
-                      f'Origem: {source_row_count} linhas. ' \
-                      f'Destino: {destination_row_count} linhas')
+        warnings.warn(
+            "Quantidade de linhas diferentes na origem e destino. "
+            f"Origem: {source_row_count} linhas. "
+            f"Destino: {destination_row_count} linhas"
+        )
 
 
-def get_hook_and_engine_by_provider(
+def get_hook_and_engine_by_provider(provider: str, conn_id: str) -> [DbApiHook, Engine]:
         provider: str,
         conn_id: str) -> [DbApiHook, Engine]:
-    if provider == 'MSSQL':
+    if provider == "MSSQL":
         hook = MsSqlHook(conn_id)
         engine = get_mssql_odbc_engine(conn_id)
     elif provider == 'PG':
         hook = PostgresHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
-    elif provider == 'MYSQL':
+    elif provider == "MYSQL":
         hook = MySqlHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
 
@@ -263,16 +279,18 @@ def get_hook_and_engine_by_provider(
 
 def _convert_column(old_col: Column, db_provider: str) -> Column:
     type_mapping = {
-        'NUMERIC': sa_types.Numeric(38, 13),
-        'BIT': sa_types.Boolean(),
+        "NUMERIC": sa_types.Numeric(38, 13),
+        "BIT": sa_types.Boolean(),
     }
-    if db_provider.upper() == 'MSSQL':
-        type_mapping['DATETIME'] = sa_dialects.mssql.DATETIME2()
+    if db_provider.upper() == "MSSQL":
+        type_mapping["DATETIME"] = sa_dialects.mssql.DATETIME2()
 
-    return Column(old_col['name'],
+    return Column(
+        old_col["name"],
                   type_mapping.get(
-                      str(old_col['type']._type_affinity()),
-                      old_col['type']._type_affinity()))
+            str(old_col["type"]._type_affinity()), old_col["type"]._type_affinity()
+        ),
+    )
 
 
 def create_table_if_not_exist(source_table: str,
@@ -391,37 +409,41 @@ def copy_db_to_db(destination_table: str,
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(destination_conn_id, destination_provider) \
-            as destination_conn:
+        with DbConnection(
+            destination_conn_id, destination_provider
+        ) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
                     # Fast etl
-                    if destination_provider == 'MSSQL':
+                    if destination_provider == "MSSQL":
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
-                        wildcard_symbol = '?'
+                        wildcard_symbol = "?"
                     else:
-                        wildcard_symbol = '%s'
+                        wildcard_symbol = "%s"
 
                     # gera queries
-                    col_list = get_cols_name(destination_cur,
+                    col_list = get_cols_name(
+                        destination_cur,
                                              destination_provider,
                                              destination_table,
-                                             columns_to_ignore)
+                        columns_to_ignore,
+                    )
 
-                    insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list, wildcard_symbol)
+                    insert, truncate = build_dest_sqls(
+                        destination_table, col_list, wildcard_symbol
+                    )
                     if not select_sql:
                         select_sql = build_select_sql(source_table, col_list)
 
                     # Remove as aspas na query para compatibilidade com o MYSQL
-                    if source_provider == 'MYSQL':
-                       select_sql = select_sql.replace('"', '')
+                    if source_provider == "MYSQL":
+                        select_sql = select_sql.replace('"', "")
 
                     # truncate stg
                     if destination_truncate:
                         destination_cur.execute(truncate)
-                        if destination_provider == 'MSSQL':
+                        if destination_provider == "MSSQL":
                             destination_cur.commit()
 
                     # download data
@@ -430,12 +452,12 @@ def copy_db_to_db(destination_table: str,
                     rows = source_cur.fetchmany(chunksize)
                     rows_inserted = 0
 
-                    print(f'Inserindo linhas na tabela [{destination_table}].')
+                    print(f"Inserindo linhas na tabela [{destination_table}].")
                     while rows:
                         destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
-                        print(f'{rows_inserted} linhas inseridas!!')
+                        print(f"{rows_inserted} linhas inseridas!!")
 
                     destination_conn.commit()
 
@@ -451,44 +473,46 @@ def copy_db_to_db(destination_table: str,
                     print('Linhas inseridas: {}'.format(rows_inserted))
                     print('linhas/segundo: {}'.format(rows_inserted / delta_time))
 
-def _table_rows_count(db_hook,
-                     table: str,
-                     where_condition: str = None):
-    """ Calcula a quantidade de linhas na tabela (table) e utiliza a
+
+def _table_rows_count(db_hook, table: str, where_condition: str = None):
+    """Calcula a quantidade de linhas na tabela (table) e utiliza a
     condição (where_condition) caso seja passada como parâmetro.
     """
     sql = f"SELECT COUNT(*) FROM {table}"
     sql += f" WHERE {where_condition};" if where_condition is not None else ";"
     return db_hook.get_first(sql)[0]
 
+
 # TODO: Propor ao Wash de passarmos a definir explicitamente a coluna
 # 'dataalteracao' na variável airflow de configurações sempre que for o
 # caso, e assim pararmos de checar se a coluna 'dataalteracao' está na
 # lista de colunas. Consultá-lo sobre drawbacks.
 
+
 def _table_column_max_string(db_hook: MsSqlHook, table: str, column: str):
-    """ Calcula o valor máximo da coluna (column) na tabela (table). Se
+    """Calcula o valor máximo da coluna (column) na tabela (table). Se
     a coluna for 'dataalteracao' a string retornada é formatada.
     """
     sql = f"SELECT MAX({column}) FROM {table};"
     max_value = db_hook.get_first(sql)[0]
     # TODO: Descobrir se é data pelo tipo do BD
-    if column == 'dataalteracao':
-        return max_value.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    if column == "dataalteracao":
+        return max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     else:
         return str(max_value)
 
 
-def _build_increm_filter(col_list: list, dest_hook: MsSqlHook,
-                table: str, key_column: str) -> str:
-    """ Constrói a condição where (where_condition) a ser utilizada para
+def _build_increm_filter(
+    col_list: list, dest_hook: MsSqlHook, table: str, key_column: str
+) -> str:
+    """Constrói a condição where (where_condition) a ser utilizada para
     calcular e identificar as linhas da tabela no BD origem (Quartzo/Serpro)
     que devem ser sincronizadas com aquela tabela no BD destino. Se a
     tabela não possuir a coluna 'dataalteracao' será utilizada a coluna
     (key_column).
     """
     col_list = [col.lower() for col in col_list]
-    if 'dataalteracao' in col_list:
+    if "dataalteracao" in col_list:
         key = "dataalteracao"
     else:
         key = key_column
@@ -498,10 +522,13 @@ def _build_increm_filter(col_list: list, dest_hook: MsSqlHook,
     return where_condition
 
 
-
-def _build_filter_condition(dest_hook: MsSqlHook,
-                table: str, date_column: str, key_column: str,
-                since_datetime: datetime = None) -> Tuple[str, str]:
+def _build_filter_condition(
+    dest_hook: MsSqlHook,
+    table: str,
+    date_column: str,
+    key_column: str,
+    since_datetime: datetime = None,
+) -> Tuple[str, str]:
     """Monta o filtro (where) obtenção o valor max() da tabela,
     distinguindo se a coluna é a "data ou data/hora de atualização"
     (date_column) ou outro número sequencial (key_column), por exemplo
@@ -542,10 +569,10 @@ def _build_filter_condition(dest_hook: MsSqlHook,
 
     if date_column:
         # Verifica se o formato do campo max_value é date ou datetime
-        if (type(max_value) == date):
+        if type(max_value) == date:
             max_value = max_value.strftime("%Y-%m-%d")
-        elif (type(max_value) == datetime):
-            max_value = max_value.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        elif type(max_value) == datetime:
+            max_value = max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
         where_condition = f"{date_column} > '{max_value}'"
     else:
@@ -555,9 +582,10 @@ def _build_filter_condition(dest_hook: MsSqlHook,
     return max_value, where_condition
 
 
-def _build_incremental_sqls(dest_table: str, source_table: str,
-                           key_column: str, column_list: str):
-    """ Constrói as queries SQLs que realizam os Updates dos registros
+def _build_incremental_sqls(
+    dest_table: str, source_table: str, key_column: str, column_list: str
+):
+    """Constrói as queries SQLs que realizam os Updates dos registros
     atualizados desde a última sincronização e os Inserts das novas
     linhas.
     """
@@ -577,7 +605,9 @@ def _build_incremental_sqls(dest_table: str, source_table: str,
             """
     return updates_sql, inserts_sql
 
-def sync_db_2_db(source_conn_id: str,
+
+def sync_db_2_db(
+    source_conn_id: str,
                  destination_conn_id: str,
                  table: str,
                  date_column: str,
@@ -591,8 +621,9 @@ def sync_db_2_db(source_conn_id: str,
                  source_exc_schema: str = None,
                  source_exc_table: str = None,
                  source_exc_column: str = None,
-                 chunksize: int = 1000) -> None:
-    """ Realiza a atualização incremental de uma tabela. A sincronização
+    chunksize: int = 1000,
+) -> None:
+    """Realiza a atualização incremental de uma tabela. A sincronização
     é realizada em 3 etapas. 1-Envia as alterações necessárias para uma
     tabela intermediária localizada no esquema `increment_schema`.
     2-Realiza os Updates. 3-Realiza os Inserts. Apenas as colunas que
@@ -660,16 +691,14 @@ def sync_db_2_db(source_conn_id: str,
     source_hook = PostgresHook(postgres_conn_id=source_conn_id, autocommit=True)
 
     conn_values = BaseHook.get_connection(destination_conn_id)
-    if conn_values.conn_type == 'mssql':
+    if conn_values.conn_type == "mssql":
         dest_hook = MsSqlHook(mssql_conn_id=destination_conn_id)
-        destination_provider = 'MSSQL'
-    elif conn_values.conn_type == 'postgres':
+        destination_provider = "MSSQL"
+    elif conn_values.conn_type == "postgres":
         dest_hook = PostgresHook(postgres_conn_id=destination_conn_id)
-        destination_provider = 'PG'
+        destination_provider = "PG"
 
-    col_list = get_table_cols_name(destination_conn_id,
-                                   destination_schema,
-                                   table)
+    col_list = get_table_cols_name(destination_conn_id, destination_schema, table)
 
     dest_rows_count = _table_rows_count(dest_hook, dest_table_name)
     print(f"Total de linhas atualmente na tabela destino: {dest_rows_count}.")
@@ -677,14 +706,10 @@ def sync_db_2_db(source_conn_id: str,
     if dest_rows_count == 0:
         raise Exception("Tabela destino vazia! Utilize carga full!")
 
-    ref_value, where_condition = _build_filter_condition(dest_hook,
-                                                         dest_table_name,
-                                                         date_column,
-                                                         key_column,
-                                                         since_datetime)
-    new_rows_count = _table_rows_count(source_hook,
-                                       source_table_name,
-                                       where_condition)
+    ref_value, where_condition = _build_filter_condition(
+        dest_hook, dest_table_name, date_column, key_column, since_datetime
+    )
+    new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
     print(f"Total de linhas novas ou modificadas: {new_rows_count}.")
 
     # Guarda as alterações e inclusões necessárias
@@ -693,20 +718,22 @@ def sync_db_2_db(source_conn_id: str,
     select_diff = f"{select_sql} WHERE {where_condition}"
     print(f"SELECT para espelhamento: {select_diff}")
 
-    copy_db_to_db(destination_table=f"{inc_table_name}",
+    copy_db_to_db(
+        destination_table=f"{inc_table_name}",
                   source_conn_id=source_conn_id,
-                  source_provider='PG',
+        source_provider="PG",
                   destination_conn_id=destination_conn_id,
                   destination_provider=destination_provider,
                   source_table=None,
                   select_sql=select_diff,
                   destination_truncate=True,
-                  chunksize=chunksize)
+        chunksize=chunksize,
+    )
 
     # Reconstrói índices
-    if conn_values.conn_type == 'mssql':
+    if conn_values.conn_type == "mssql":
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
-    elif conn_values.conn_type == 'postgres':
+    elif conn_values.conn_type == "postgres":
         sql = f"REINDEX TABLE {inc_table_name}"
 
     dest_hook.run(sql)
@@ -716,7 +743,8 @@ def sync_db_2_db(source_conn_id: str,
         dest_table=f"{dest_table_name}",
         source_table=f"{inc_table_name}",
         key_column=key_column,
-        column_list=col_list)
+        column_list=col_list,
+    )
     # Realiza updates
     dest_hook.run(updates_sql)
     # Realiza inserts de novas linhas
@@ -758,7 +786,7 @@ def write_ctds(table, rows, conn_id):
         "ntlmv2": True,
         "user": conn_values.login,
         "password": conn_values.password,
-        "timeout": 300
+        "timeout": 300,
     }
 
     pool = ctds.pool.ConnectionPool(ctds, dbconfig)
@@ -773,6 +801,7 @@ def write_ctds(table, rows, conn_id):
         ftime = time.perf_counter()
         print(f"{linhas} linhas inseridas em {ftime - itime} segundos.")
 
+
 def copy_by_key_interval(
                     source_provider: str,
                     source_conn_id: str,
@@ -783,7 +812,8 @@ def copy_by_key_interval(
                     key_column: str,
                     key_start: int = 0,
                     key_interval: int = 10000,
-                    destination_truncate: bool = True):
+    destination_truncate: bool = True,
+):
     """
     Carrega dado do Postgres/MSSQL para Postgres/MSSQL com psycopg2 e pyodbc
     copiando todas as colunas já existentes na tabela de destino usando
@@ -833,25 +863,27 @@ def copy_by_key_interval(
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(destination_conn_id, destination_provider) \
-            as destination_conn:
+        with DbConnection(
+            destination_conn_id, destination_provider
+        ) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
 
                     # Fast etl
-                    if destination_provider == 'MSSQL':
+                    if destination_provider == "MSSQL":
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
-                        wildcard_symbol = '?'
+                        wildcard_symbol = "?"
                     else:
-                        wildcard_symbol = '%s'
+                        wildcard_symbol = "%s"
 
                     # gera queries
-                    col_list = get_cols_name(destination_cur,
-                                             destination_provider,
-                                             destination_table)
-                    insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list, wildcard_symbol)
+                    col_list = get_cols_name(
+                        destination_cur, destination_provider, destination_table
+                    )
+                    insert, truncate = build_dest_sqls(
+                        destination_table, col_list, wildcard_symbol
+                    )
                     select_sql = build_select_sql(source_table, col_list)
                     # pyodbc: select_sql = f"{select_sql} WHERE {key_column} BETWEEN ? AND ?"
                     select_sql = f"{select_sql} WHERE {key_column} BETWEEN %s AND %s"
@@ -871,16 +903,23 @@ def copy_by_key_interval(
                     try:
                         # pyodbc: rows = source_cur.execute(select_sql, key_begin, key_end).fetchall()
                         source_cur.execute(select_sql, (key_begin, key_end))
-                        rows = source_cur.fetchall()    # psycopg2
+                        rows = source_cur.fetchall()  # psycopg2
                     except Exception as e:
-                        print("Erro origem: ", str(e), "Key interval: ", key_begin, "-", key_end)
+                        print(
+                            "Erro origem: ",
+                            str(e),
+                            "Key interval: ",
+                            key_begin,
+                            "-",
+                            key_end,
+                        )
                         return False, key_begin
 
                     last_sleep = datetime.now()
-                    run_step = 60 * 30 # 30 minutos
+                    run_step = 60 * 30  # 30 minutos
 
                     # Consulta max id na origem
-                    db_hook = PostgresHook( postgres_conn_id=source_conn_id)
+                    db_hook = PostgresHook(postgres_conn_id=source_conn_id)
                     max_id_sql = f"""select COALESCE(max({key_column}),0)
                                         FROM {source_table}"""
                     max_id = int(db_hook.get_first(max_id_sql)[0])
@@ -888,9 +927,11 @@ def copy_by_key_interval(
                     # while rows:
                     while key_begin <= max_id and max_id > 0:
                         if (datetime.now() - last_sleep).seconds > run_step:
-                            print(f"Roda por {run_step} segundos e dorme por"
+                            print(
+                                f"Roda por {run_step} segundos e dorme por"
                                    " 20 segundos para evitar o erro"
-                                   " Negsignal.SIGKILL do Airflow!")
+                                " Negsignal.SIGKILL do Airflow!"
+                            )
                             time.sleep(20)
                             last_sleep = datetime.now()
 
@@ -900,7 +941,14 @@ def copy_by_key_interval(
                                 destination_cur.executemany(insert, rows)
                                 destination_conn.commit()
                             except Exception as e:
-                                print("Erro destino: ", str(e), "Key interval: ", key_begin, "-", key_end)
+                                print(
+                                    "Erro destino: ",
+                                    str(e),
+                                    "Key interval: ",
+                                    key_begin,
+                                    "-",
+                                    key_end,
+                                )
                                 return False, key_begin
 
                         rows_inserted += len(rows)
@@ -910,9 +958,16 @@ def copy_by_key_interval(
                         try:
                             # pyodbc: rows = source_cur.execute(select_sql, key_begin, key_end).fetchall()
                             source_cur.execute(select_sql, (key_begin, key_end))
-                            rows = source_cur.fetchall()    # psycopg2
+                            rows = source_cur.fetchall()  # psycopg2
                         except Exception as e:
-                            print("Erro origem: ", str(e), "Key interval: ", key_begin, "-", key_end)
+                            print(
+                                "Erro origem: ",
+                                str(e),
+                                "Key interval: ",
+                                key_begin,
+                                "-",
+                                key_end,
+                            )
                             return False, key_begin
 
                     destination_conn.commit()
@@ -923,6 +978,7 @@ def copy_by_key_interval(
                     print('linhas/segundo: {}'.format(rows_inserted / delta_time))
 
                     return True, None
+
 
 def copy_by_key_with_retry(
                     source_provider: str,
@@ -936,7 +992,8 @@ def copy_by_key_with_retry(
                     key_interval: int = 10000,
                     destination_truncate: bool = True,
                     retries: int = 0,
-                    retry_delay: int = 600):
+    retry_delay: int = 600,
+):
     """
     Copia tabela entre dois bancos de dados chamando a function
     copy_by_key_interval(), mas permitindo retries quando ocorre falha.
@@ -988,7 +1045,8 @@ def copy_by_key_with_retry(
                         key_column=key_column,
                         key_start=key_start,
                         key_interval=key_interval,
-                        destination_truncate=destination_truncate)
+        destination_truncate=destination_truncate,
+    )
 
     while not succeeded and (retry <= retries):
         print("Falha na function copy_by_key_interval !!!")
@@ -1005,13 +1063,14 @@ def copy_by_key_with_retry(
                         key_column=key_column,
                         key_start=next_key,
                         key_interval=key_interval,
-                        destination_truncate=False)
-
+            destination_truncate=False,
+        )
 
     if succeeded:
         print("Término com sucesso!")
     else:
         print("Término com erro após", retries, "tentativas!")
+
 
 def copy_by_limit_offset(
                     source_provider: str,
@@ -1021,7 +1080,8 @@ def copy_by_limit_offset(
                     destination_conn_id: str,
                     destination_table: str,
                     limit: int = 1000,
-                    destination_truncate: bool = True):
+    destination_truncate: bool = True,
+):
     """
     Carrega dado do Postgres/MSSQL para Postgres/MSSQL com psycopg2 e pyodbc
     copiando todas as colunas já existentes na tabela de destino, usando
@@ -1057,8 +1117,9 @@ def copy_by_limit_offset(
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(destination_conn_id, destination_provider) \
-            as destination_conn:
+        with DbConnection(
+            destination_conn_id, destination_provider
+        ) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
 
@@ -1067,11 +1128,10 @@ def copy_by_limit_offset(
                     destination_cur.fast_executemany = True
 
                     # gera queries com limit e offset
-                    col_list = get_cols_name(destination_cur,
-                                             destination_provider,
-                                             destination_table)
-                    insert, truncate = build_dest_sqls(destination_table,
-                                                       col_list, '?')
+                    col_list = get_cols_name(
+                        destination_cur, destination_provider, destination_table
+                    )
+                    insert, truncate = build_dest_sqls(destination_table, col_list, "?")
                     select_sql = build_select_sql(source_table, col_list)
                     # pyodbc: select_sql = f"{select_sql} limit ?, ?"
                     select_sql = f"{select_sql} limit %s, %s"
@@ -1087,7 +1147,7 @@ def copy_by_limit_offset(
                     rows_inserted = 0
                     # pyodbc: rows = source_cur.execute(select_sql, next_offset, limit).fetchall()
                     source_cur.execute(select_sql, (next_offset, limit))
-                    rows = source_cur.fetchall()    # psycopg2
+                    rows = source_cur.fetchall()  # psycopg2
 
                     while rows:
                         destination_cur.executemany(insert, rows)
@@ -1096,7 +1156,7 @@ def copy_by_limit_offset(
                         next_offset = next_offset + limit
                         # pyodbc: rows = source_cur.execute(select_sql, next_offset, limit).fetchall()
                         source_cur.execute(select_sql, (next_offset, limit))
-                        rows = source_cur.fetchall()    # psycopg2
+                        rows = source_cur.fetchall()  # psycopg2
 
                     destination_conn.commit()
 
@@ -1114,7 +1174,8 @@ def search_key_gaps(
                     destination_table: str,
                     key_column: str,
                     key_start: int = 0,
-                    key_interval: int = 100):
+    key_interval: int = 100,
+):
     """
     Verifica se existem lacunas de linhas entre intervalos de chaves,
     comparando tabela origem x tabela destino. Para cada intervalo, deve
@@ -1148,8 +1209,9 @@ def search_key_gaps(
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(destination_conn_id, destination_provider) \
-            as destination_conn:
+        with DbConnection(
+            destination_conn_id, destination_provider
+        ) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
 
@@ -1184,7 +1246,9 @@ def search_key_gaps(
                     rows = source_cur.fetchone()
 
                     while rows:
-                        rowsdest = destination_cur.execute(compare_sql, key_begin, key_end).fetchone()
+                        rowsdest = destination_cur.execute(
+                            compare_sql, key_begin, key_end
+                        ).fetchone()
                         # psycopg2: destination_cur.execute(compare_sql, (key_begin, key_end))
                         # psycopg2: rowsdest = destination_cur.fetchone()
                         print("Key interval:", key_begin, " to ", key_end,
@@ -1210,9 +1274,8 @@ def search_key_gaps(
                     print('Tempo do compare: {:.4f} segundos'.format(delta_time))
                     print("Resumo: ", gaps, "gaps, ", totdif, "rows faltam no destino!")
 
-def load_env_var(
-    conn_name: str,
-    conn_id: str):
+
+def load_env_var(conn_name: str, conn_id: str):
     """
     Atribui a string de conexão para uma variável de ambiente em execução.
     Útil para executar o Great Expectations através de uma DAG, utilizando
@@ -1229,11 +1292,11 @@ def load_env_var(
 
     conn_values = BaseHook.get_connection(conn_id)
 
-    if conn_values.conn_type == 'mssql':
+    if conn_values.conn_type == "mssql":
         connection_string = get_mssql_odbc_conn_str(conn_id)
-    elif conn_values.conn_type == 'postgres':
+    elif conn_values.conn_type == "postgres":
         connection_string = PostgresHook(conn_id).get_uri()
-    elif conn_values.conn_type == 'mysql':
+    elif conn_values.conn_type == "mysql":
         connection_string = MySqlHook(conn_id).get_uri()
 
     # Grava o valor em variavel de ambiente na execução
