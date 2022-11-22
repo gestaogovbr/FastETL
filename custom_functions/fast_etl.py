@@ -42,9 +42,9 @@ class DbConnection:
 
     def __init__(self, conn_id: str, provider: str):
         # Valida providers suportados
-        providers = ['MSSQL', 'PG', 'MYSQL']
-        assert provider.upper() in providers, 'Provider não suportado '\
-                                              '(utilize MSSQL, PG ou MYSQL) :P'
+        assert provider in providers, (
+            "Provider não suportado " "(utilize MSSQL, PG ou MYSQL) :P"
+        )
 
         if provider == "MSSQL":
             conn_values = BaseHook.get_connection(conn_id)
@@ -293,24 +293,24 @@ def _convert_column(old_col: Column, db_provider: str) -> Column:
     )
 
 
-def create_table_if_not_exist(source_table: str,
+def create_table_if_not_exist(
+    source_table: str,
                               source_conn_id: str,
                               source_provider: str,
                               destination_table: str,
                               destination_conn_id: str,
-                              destination_provider: str
+    destination_provider: str,
                               ) -> None:
     ERROR_TABLE_DOES_NOT_EXIST = {
-        'MSSQL': 'Invalid object name',
-        'PG': 'does not exist',
+        "MSSQL": "Invalid object name",
+        "PG": "does not exist",
     }
-    _, source_eng = get_hook_and_engine_by_provider(
-        source_provider, source_conn_id)
+    _, source_eng = get_hook_and_engine_by_provider(source_provider, source_conn_id)
     destination_hook, destination_eng = get_hook_and_engine_by_provider(
-        destination_provider, destination_conn_id)
+        destination_provider, destination_conn_id
+    )
     try:
-        destination_hook.get_pandas_df(
-            f'select * from {destination_table} where 1=2')
+        destination_hook.get_pandas_df(f"select * from {destination_table} where 1=2")
     except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
         if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
             raise db_error
@@ -319,16 +319,19 @@ def create_table_if_not_exist(source_table: str,
         try:
             insp = reflection.Inspector.from_engine(source_eng)
         except AssertionError as e:
-            logging.ERROR("Não é possível criar tabela automaticamente "
+            logging.ERROR(
+                "Não é possível criar tabela automaticamente "
                         "a partir deste banco de dados. Crie a tabela "
-                        "manualmente para executar a cópia dos dados. ")
+                "manualmente para executar a cópia dos dados. "
+            )
             raise e
 
-        s_schema, s_table = source_table.split('.')
+        s_schema, s_table = source_table.split(".")
 
         generic_columns = insp.get_columns(s_table, s_schema)
-        dest_columns = [_convert_column(c, destination_provider)
-                        for c in generic_columns]
+        dest_columns = [
+            _convert_column(c, destination_provider) for c in generic_columns
+        ]
 
         destination_meta = MetaData(bind=destination_eng)
         d_schema, d_table = destination_table.split('.')
@@ -337,7 +340,8 @@ def create_table_if_not_exist(source_table: str,
         destination_meta.create_all(destination_eng)
 
 
-def copy_db_to_db(destination_table: str,
+def copy_db_to_db(
+    destination_table: str,
                   source_conn_id: str,
                   source_provider: str,
                   destination_conn_id: str,
@@ -346,7 +350,8 @@ def copy_db_to_db(destination_table: str,
                   select_sql: str = None,
                   columns_to_ignore: list = [],
                   destination_truncate: bool = True,
-                  chunksize: int = 1000) -> None:
+    chunksize: int = 1000,
+) -> None:
     """
     Carrega dado do Postgres/MSSQL/MySQL para Postgres/MSSQL com psycopg2 e pyodbc
     copiando todas as colunas e linhas já existentes na tabela de destino.
@@ -405,7 +410,7 @@ def copy_db_to_db(destination_table: str,
         source_provider,
         destination_table,
         destination_conn_id,
-        destination_provider)
+        destination_provider,
 
     # create connections
     with DbConnection(source_conn_id, source_provider) as source_conn:
