@@ -42,6 +42,8 @@ class DbConnection:
 
     def __init__(self, conn_id: str, provider: str):
         # Valida providers suportados
+        providers = ["MSSQL", "PG", "POSTGRES", "MYSQL"]
+        provider = provider.upper()
         assert provider in providers, (
             "Provider não suportado " "(utilize MSSQL, PG ou MYSQL) :P"
         )
@@ -262,12 +264,12 @@ def compare_source_dest_rows(
 
 
 def get_hook_and_engine_by_provider(provider: str, conn_id: str) -> [DbApiHook, Engine]:
-        provider: str,
-        conn_id: str) -> [DbApiHook, Engine]:
+    provider = provider.upper()
+
     if provider == "MSSQL":
         hook = MsSqlHook(conn_id)
         engine = get_mssql_odbc_engine(conn_id)
-    elif provider == 'PG':
+    elif provider == "PG" or provider == "POSTGRES":
         hook = PostgresHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
     elif provider == "MYSQL":
