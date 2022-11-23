@@ -37,6 +37,7 @@ class CopyDbToDbOperator(BaseOperator):
             columns_to_ignore: list = [],
             destination_truncate: bool = True,
             chunksize: int = 1000,
+            copy_table_comments: bool = False,
             *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.destination_table = destination_table
@@ -49,6 +50,7 @@ class CopyDbToDbOperator(BaseOperator):
         self.columns_to_ignore = columns_to_ignore
         self.destination_truncate = destination_truncate
         self.chunksize = chunksize
+        self.copy_table_comments = copy_table_comments
 
 
     def execute(self, context):
@@ -64,5 +66,6 @@ class CopyDbToDbOperator(BaseOperator):
             select_sql=self.select_sql,
             columns_to_ignore=self.columns_to_ignore,
             destination_truncate=self.destination_truncate,
-            chunksize=self.chunksize
+            chunksize=self.chunksize,
+            copy_table_comments=self.copy_table_comments
             )

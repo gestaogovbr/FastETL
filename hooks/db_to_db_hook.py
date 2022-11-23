@@ -33,7 +33,8 @@ class DbToDbHook(BaseHook):
              columns_to_ignore: list = [],
              destination_truncate: str = True,
              source_table: str = None,
-             chunksize: int = 1000):
+             chunksize: int = 1000,
+             copy_table_comments: bool = False):
         copy_db_to_db(
             source_table=source_table,
             destination_table=destination_table,
@@ -44,5 +45,6 @@ class DbToDbHook(BaseHook):
             select_sql=select_sql,
             columns_to_ignore=columns_to_ignore,
             destination_truncate=destination_truncate,
-            chunksize=chunksize
+            chunksize=chunksize,
+            copy_table_comments=copy_table_comments
             )
