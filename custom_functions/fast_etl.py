@@ -398,19 +398,20 @@ def transfer_table_comments(
             pd.DataFrame: concat of table and its columns comments/descriptions
         """
 
+        def __get_new_comments_df() -> pd.DataFrame:
+            return pd.DataFrame(columns=["database_level", "name", "comment"])
+
         def __get_mssql_table_comments(
-            conn_id: str, schema: str, table: str, table_comments: pd.DataFrame
+            conn_id: str, schema: str, table: str
         ) -> pd.DataFrame:
             """Get from mssql database comments/descriptions of provided
-            table and its columns. Uses MSSql storage procedure
+            table and its columns. Uses MSSql stored procedure
             fn_listextendedproperty.
 
             Args:
                 conn_id (str): Airflow database connection id
                 schema (str): Table schema
                 table (str): Table name
-                table_comments (pd.DataFrame): Empty dataframe with
-                    columns=["database_level", "name", "comment"]
 
             Returns:
                 pd.Dataframe: concat of table and its columns comments/descriptions
@@ -420,6 +421,7 @@ def transfer_table_comments(
             """
 
             mssql_hook = MsSqlHook(conn_id)
+            table_comments = __get_new_comments_df()
 
             for database_level, query_param in {
                 "table": "default",
@@ -449,7 +451,6 @@ def transfer_table_comments(
             conn_id: str,
             schema: str,
             table: str,
-            table_comments: pd.DataFrame,
             provider: str = "postgres",
         ) -> pd.DataFrame:
             """Get from postgres database comments/descriptions of provided
@@ -459,8 +460,6 @@ def transfer_table_comments(
                 conn_id (str): Airflow database connection id
                 schema (str): Table schema
                 table (str): Table name
-                table_comments (pd.DataFrame): Empty dataframe with
-                    columns=["database_level", "name", "comment"]
                 provider (str): Database type. Used for get_hook_and_engine_by_provider
                     function call. Defaults to postgres.
 
@@ -472,10 +471,13 @@ def transfer_table_comments(
                 https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_columns
             """
 
-            _, engine = get_hook_and_engine_by_provider(provider, conn_id)
+            _, engine = get_hook_and_engine_by_provider(
+                provider=provider, conn_id=conn_id
+            )
             inspector = inspect(engine)
 
-            table_info = inspector.get_table_comment(table, schema=schema)
+            table_info = inspector.get_table_comment(table_name=table, schema=schema)
+            table_comments = __get_new_comments_df()
             table_comments = table_comments.append(
                 {
                     "database_level": "table",
@@ -485,7 +487,7 @@ def transfer_table_comments(
                 ignore_index=True,
             )
 
-            columns_info = inspector.get_columns(table, schema=schema)
+            columns_info = inspector.get_columns(table_name=table, schema=schema)
             for row in columns_info:
                 table_comments = table_comments.append(
                     {
@@ -500,10 +502,9 @@ def transfer_table_comments(
 
         def __get_teiid_table_comments(
             conn_id: str,
-            vdbname: str,
+            vdb_name: str,
             schema: str,
             table: str,
-            table_comments: pd.DataFrame,
         ) -> pd.DataFrame:
             """Get from teiid database connection comments/descriptions
             of provided table and its columns. Uses database SYS.Tables
@@ -511,11 +512,9 @@ def transfer_table_comments(
 
             Args:
                 conn_id (str): Airflow database connection id
-                vdbname (str): Database name
+                vdb_name (str): Database name
                 schema (str): Table schema
                 table (str): Table name
-                table_comments (pd.DataFrame): Empty dataframe with
-                    columns=["database_level", "name", "comment"]
 
             Returns:
                 pd.DataFrame: concat of table and its columns comments/descriptions
@@ -528,7 +527,7 @@ def transfer_table_comments(
                     SELECT Name,
                         Description
                     FROM SYS.Tables
-                    WHERE VDBName = '{vdbname}'
+                    WHERE VDBName = '{vdb_name}'
                         and SchemaName = '{schema}'
                         and Name = '{table}'
                     """,
@@ -536,12 +535,13 @@ def transfer_table_comments(
                         SELECT Name,
                             Description
                         FROM SYS.Columns
-                        WHERE VDBName = '{vdbname}'
+                        WHERE VDBName = '{vdb_name}'
                             and SchemaName = '{schema}'
                             and TableName = '{table}'
                     """,
             }
 
+            table_comments = __get_new_comments_df()
             for database_level, query in queries.items():
                 rows_df = pg_hook.get_pandas_df(query)
                 rows_df.rename(
@@ -558,26 +558,29 @@ def transfer_table_comments(
         conn_type = conn_values.conn_type
         conn_database = conn_values.schema
 
-        table_comments_init = pd.DataFrame(
-            columns=["database_level", "name", "comment"]
-        )
-
         if conn_type == "mssql":
             table_comments = __get_mssql_table_comments(
-                conn_id, schema, table, table_comments_init
+                conn_id=conn_id,
+                schema=schema,
+                table=table,
             )
 
         elif conn_type == "postgres":
             # Postgres Connection
             try:
                 table_comments = __get_pg_table_comments(
-                    conn_id, schema, table, table_comments_init
+                    conn_id=conn_id,
+                    schema=schema,
+                    table=table,
                 )
 
             # teiid driver
             except AssertionError:
                 table_comments = __get_teiid_table_comments(
-                    conn_id, conn_database, schema, table, table_comments_init
+                    conn_id=conn_id,
+                    vdb_name=conn_database,
+                    schema=schema,
+                    table=table,
                 )
         else:
             raise Exception(
@@ -598,7 +601,7 @@ def transfer_table_comments(
             - MS Sql
 
         Contains functions:
-            - __get_mssql_storage_procedure_str
+            - __get_mssql_stored_procedure_str
             - __get_comment_value
             - __put_mssql_table_comments
             - __put_pg_table_comments
@@ -617,7 +620,7 @@ def transfer_table_comments(
             None
         """
 
-        def __get_mssql_storage_procedure_str(
+        def __get_mssql_stored_procedure_str(
             mssql_hook: MsSqlHook,
             schema: str,
             table: str,
@@ -625,7 +628,7 @@ def transfer_table_comments(
             column: str = None,
         ) -> str:
             """Check database table and columns descriptions and returns
-            mssql storage procedure command name depending if the column/table
+            mssql stored procedure command name depending if the column/table
             has already a description.
 
             Args:
@@ -683,13 +686,13 @@ def transfer_table_comments(
                     name not provided. PR for the best."""
                 )
 
-            storage_procedure = (
+            stored_procedure = (
                 "updateextendedproperty"
                 if mssql_hook.get_first(query)
                 else "addextendedproperty"
             )
 
-            return storage_procedure
+            return stored_procedure
 
         def __get_comment_value(
             df: pd.DataFrame, database_level: str, col_name: str = None
@@ -760,7 +763,7 @@ def transfer_table_comments(
 
             # Part 1 - check if table description exists
 
-            storage_procedure_str = __get_mssql_storage_procedure_str(
+            stored_procedure_str = __get_mssql_stored_procedure_str(
                 mssql_hook=mssql_hook,
                 schema=schema,
                 table=table,
@@ -774,7 +777,7 @@ def transfer_table_comments(
             if not comment.empty:
                 mssql_hook.run(
                     f"""
-                    EXEC sys.sp_{storage_procedure_str}
+                    EXEC sys.sp_{stored_procedure_str}
                     @name='MS_Description',
                     @value='{comment.values[0]}',
                     @level0type='schema',
@@ -788,7 +791,7 @@ def transfer_table_comments(
 
                 # Part 3 - check if columns description exists
 
-                storage_procedure_str = __get_mssql_storage_procedure_str(
+                stored_procedure_str = __get_mssql_stored_procedure_str(
                     mssql_hook=mssql_hook,
                     schema=schema,
                     table=table,
@@ -805,7 +808,7 @@ def transfer_table_comments(
                 if not comment.empty:
                     mssql_hook.run(
                         f"""
-                        EXEC sys.sp_{storage_procedure_str}
+                        EXEC sys.sp_{stored_procedure_str}
                         @name='MS_Description',
                         @value='{comment.values[0]}',
                         @level0type='schema',
@@ -846,7 +849,9 @@ def transfer_table_comments(
                 https://alembic.sqlalchemy.org/en/latest/ops.html
             """
 
-            _, engine = get_hook_and_engine_by_provider(provider, conn_id)
+            _, engine = get_hook_and_engine_by_provider(
+                provider=provider, conn_id=conn_id
+            )
             conn = engine.connect()
             ctx = MigrationContext.configure(conn)
             op = Operations(ctx)
@@ -881,15 +886,25 @@ def transfer_table_comments(
         conn_values = BaseHook.get_connection(conn_id)
         conn_type = conn_values.conn_type
 
-        cols_names = get_table_cols_name(conn_id, schema, table)
+        cols_names = get_table_cols_name(conn_id=conn_id, schema=schema, table=table)
 
         if conn_type == "mssql":
             __put_mssql_table_comments(
-                conn_id, schema, table, cols_names, table_comments
+                conn_id=conn_id,
+                schema=schema,
+                table=table,
+                cols_names=cols_names,
+                table_comments=table_comments,
             )
 
         elif conn_type == "postgres":
-            __put_pg_table_comments(conn_id, schema, table, cols_names, table_comments)
+            __put_pg_table_comments(
+                conn_id=conn_id,
+                schema=schema,
+                table=table,
+                cols_names=cols_names,
+                table_comments=table_comments,
+            )
 
         else:
             raise Exception(
@@ -901,12 +916,19 @@ def transfer_table_comments(
     # Part 1 - Get source table and columns descriptions
 
     s_schema, s_table = source_table.split(".")
-    table_comments = _get_table_comments(source_conn_id, s_schema, s_table)
+    table_comments = _get_table_comments(
+        conn_id=source_conn_id, schema=s_schema, table=s_table
+    )
 
     # Part 2 - Write destination table and columns descriptions
 
     d_schema, d_table = destination_table.split(".")
-    _put_table_comments(destination_conn_id, d_schema, d_table, table_comments)
+    _put_table_comments(
+        conn_id=destination_conn_id,
+        schema=d_schema,
+        table=d_table,
+        table_comments=table_comments,
+    )
 
 
 def copy_db_to_db(
