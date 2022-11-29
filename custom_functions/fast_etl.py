@@ -263,7 +263,9 @@ def compare_source_dest_rows(
         )
 
 
-def get_hook_and_engine_by_provider(provider: str, conn_id: str) -> [DbApiHook, Engine]:
+def get_hook_and_engine_by_provider(
+    provider: str, conn_id: str
+) -> Tuple[DbApiHook, Engine]:
     provider = provider.upper()
 
     if provider == "MSSQL":
@@ -322,7 +324,7 @@ def create_table_if_not_exist(
         try:
             insp = reflection.Inspector.from_engine(source_eng)
         except AssertionError as e:
-            logging.ERROR(
+            logging.error(
                 "Não é possível criar tabela automaticamente "
                 "a partir deste banco de dados. Crie a tabela "
                 "manualmente para executar a cópia dos dados. "
@@ -343,52 +345,392 @@ def create_table_if_not_exist(
         destination_meta.create_all(destination_eng)
 
     if copy_table_comments:
-        transfer_table_comments(
-            source_table, source_conn_id, destination_table, destination_conn_id
+        source_table_comments = TableComments(
+            conn_id=source_conn_id, schema_table=source_table
+        )
+        source_table_comments_df = source_table_comments.get_table_comments_df()
+
+        destination_table_comments = TableComments(
+            conn_id=destination_conn_id, schema_table=destination_table
+        )
+        destination_table_comments.put_table_comments(
+            table_comments=source_table_comments_df
         )
 
 
-def transfer_table_comments(
-    source_table: str,
-    source_conn_id: str,
-    destination_table: str,
-    destination_conn_id: str,
-) -> None:
+class TableComments:
     """
-    Transfer table comments/descriptions (including columns) from one
+    Retrieve and save table comments/descriptions (including columns) from one
     database to another. Accepts on the origin teiid, mssql and postgres.
-    And accepts on the destination mssql and postgres.
-
-    Contains functions:
-        - _get_table_comments
-        - _put_table_comments
-
-    Args:
-        source_table (str): Source table str at format schema.table
-        source_conn_id (str): Airflow connection id
-        destination_table (str): Destination table str at format schema.table
-        destination_conn_id (str): Airflow connection id
-
-    Returns:
-        None.
+    And accepts to the destination mssql and postgres.
     """
 
-    def _get_table_comments(conn_id: str, schema: str, table: str) -> pd.DataFrame:
+    def __init__(self, conn_id: str, schema_table: str):
+        """Initialize TableComments class variables/
+
+        Args:
+            conn_id (str): Airflow connection id
+            schema_table (str): Table str at format schema.table
+        """
+
+        self.conn_id = conn_id
+        self.schema, self.table = schema_table.split(".")
+        conn_values = BaseHook.get_connection(conn_id)
+        self.conn_type = conn_values.conn_type
+        self.conn_database = conn_values.schema
+        self.table_comments_init = pd.DataFrame(
+            columns=["database_level", "name", "comment"]
+        )
+        self.cols_names = None
+        self.mssql_hook = None
+        self.table_comments = None
+
+    def _get_mssql_table_comments(self) -> pd.DataFrame:
+        """Get from mssql database comments/descriptions of provided
+        table and its columns. Uses MSSql stored procedure
+        fn_listextendedproperty.
+
+        Returns:
+            pd.Dataframe: Concat of table and its columns comments/descriptions
+
+        Reference:
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-functions/sys-fn-listextendedproperty-transact-sql?view=sql-server-ver16
+        """
+
+        mssql_hook = MsSqlHook(self.conn_id)
+        table_comments = self.table_comments_init.copy()
+
+        for database_level, query_param in {
+            "table": "default",
+            "column": "'COLUMN'",
+        }.items():
+            rows_df = mssql_hook.get_pandas_df(
+                f"""
+                    SELECT objname,
+                        value
+                    FROM fn_listextendedproperty
+                        ('MS_DESCRIPTION',
+                        'schema', '{self.schema}',
+                        'table', '{self.table}',
+                        {query_param}, default);
+                """
+            )
+            rows_df.rename(
+                columns={"objname": "name", "value": "comment"}, inplace=True
+            )
+            rows_df["comment"] = rows_df["comment"].str.decode("utf-8")
+            rows_df["database_level"] = database_level
+            table_comments = table_comments.append(rows_df, ignore_index=True)
+
+        return table_comments
+
+    def _get_pg_table_comments(self) -> pd.DataFrame:
+        """Get from postgres database comments/descriptions of provided
+        table and its columns. Uses SQLAlchemy library.
+
+        Returns:
+            pd.DataFrame: Concat of table and its columns comments/descriptions
+
+        Reference:
+            https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_table_comment
+            https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_columns
+        """
+
+        _, engine = get_hook_and_engine_by_provider(
+            provider="postgres", conn_id=self.conn_id
+        )
+        inspector = inspect(engine)
+
+        table_info = inspector.get_table_comment(
+            table_name=self.table, schema=self.schema
+        )
+        table_comments = self.table_comments_init.copy()
+        table_comments = table_comments.append(
+            {
+                "database_level": "table",
+                "name": self.table,
+                "comment": table_info["text"],
+            },
+            ignore_index=True,
+        )
+
+        columns_info = inspector.get_columns(table_name=self.table, schema=self.schema)
+        for row in columns_info:
+            table_comments = table_comments.append(
+                {
+                    "database_level": "column",
+                    "name": row["name"],
+                    "comment": row["comment"],
+                },
+                ignore_index=True,
+            )
+
+        return table_comments
+
+    def _get_teiid_table_comments(self) -> pd.DataFrame:
+        """Get from teiid database connection comments/descriptions
+        of provided table and its columns. Uses database SYS.Tables
+        and SYS.Columns information tables.
+
+        Returns:
+            pd.DataFrame: concat of table and its columns comments/descriptions
+        """
+
+        pg_hook = PostgresHook(postgres_conn_id=self.conn_id)
+
+        queries = {
+            "table": f"""
+                SELECT Name,
+                    Description
+                FROM SYS.Tables
+                WHERE VDBName = '{self.conn_database}'
+                    and SchemaName = '{self.schema}'
+                    and Name = '{self.table}'
+                """,
+            "column": f"""
+                    SELECT Name,
+                        Description
+                    FROM SYS.Columns
+                    WHERE VDBName = '{self.conn_database}'
+                        and SchemaName = '{self.schema}'
+                        and TableName = '{self.table}'
+                """,
+        }
+
+        table_comments = self.table_comments_init.copy()
+        for database_level, query in queries.items():
+            rows_df = pg_hook.get_pandas_df(query)
+            rows_df.rename(
+                columns={"Name": "name", "Description": "comment"}, inplace=True
+            )
+            rows_df["database_level"] = database_level
+            table_comments = table_comments.append(rows_df, ignore_index=True)
+
+        return table_comments
+
+    def _get_mssql_stored_procedure_str(
+        self, database_level: str, col_name: str = None
+    ) -> str:
+        """Check database table and columns descriptions and returns
+        mssql stored procedure command name depending if the column/table
+        has already a description.
+
+        Args:
+            database_level (str): If `table` or `colunm`
+            col_name (str, optional): When `column` database_level, the
+                name of the column. Defaults to None.
+
+        Raises:
+            Exception: when the database level is neither
+                'table' or 'column'.
+
+        Returns:
+            str: `updateextendedproperty` or `addextendedproperty`
+                depending if the description already exists on the
+                table/column.
+
+        Reference:
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-addextendedproperty-transact-sql?view=sql-server-ver16
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-updateextendedproperty-transact-sql?view=sql-server-ver16
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-functions/sys-fn-listextendedproperty-transact-sql?view=sql-server-ver16
+        """
+
+        if database_level == "table":
+            query = f"""
+                SELECT value
+                FROM fn_listextendedproperty (
+                'MS_Description',
+                'schema',
+                '{self.schema}',
+                'table',
+                '{self.table}',
+                default,
+                default);
+            """
+
+        elif database_level == "column" and col_name:
+            query = f"""
+                SELECT value
+                FROM fn_listextendedproperty (
+                'MS_Description',
+                'schema',
+                '{self.schema}',
+                'table',
+                '{self.table}',
+                'column',
+                '{col_name}');
+            """
+
+        else:
+            raise Exception(
+                """MSSQL database level type not implemented or column
+                name not provided. PR for the best."""
+            )
+
+        stored_procedure = (
+            "updateextendedproperty"
+            if self.mssql_hook.get_first(query)
+            else "addextendedproperty"
+        )
+
+        return stored_procedure
+
+    def _get_comment_value(
+        self, database_level: str, col_name: str = None
+    ) -> pd.Series:
+        """Filter pandas dataframe to get the value of the comment
+        column based on table or column values.
+
+        Args:
+            database_level (str): If `table` or `column`
+            col_name (str, optional): Name of the column. Defaults to None.
+
+        Raises:
+            Exception: When database_level arg not in ['table', 'column']
+
+        Returns:
+            pd.Series: Filtered pandas series with matched row
+        """
+
+        if database_level == "table":
+            comment = self.table_comments.loc[
+                self.table_comments.database_level == database_level, "comment"
+            ]
+
+        elif database_level == "column" and col_name:
+            comment = self.table_comments.loc[
+                (self.table_comments.database_level == database_level)
+                & (self.table_comments.name.str.match(col_name, case=False)),
+                "comment",
+            ]
+
+        else:
+            raise Exception(
+                """
+                Database_level only accepts `table` or `column`.
+                If column, must provide column name.
+                """
+            )
+
+        # Convert None values to empty pd.Series
+        if not comment.empty and comment.values[0] is None:
+            comment = pd.Series()
+
+        return comment
+
+    def _put_mssql_table_comments(self) -> None:
+        """Write comments/descriptions on database table and its columns
+        for mssql.
+
+        Returns:
+            None.
+
+        Reference:
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-addextendedproperty-transact-sql?view=sql-server-ver16
+            https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-updateextendedproperty-transact-sql?view=sql-server-ver16
+        """
+
+        # Part 1 - check if table description exists
+
+        stored_procedure_str = self._get_mssql_stored_procedure_str(
+            database_level="table"
+        )
+
+        # Part 2 - add or update table description
+
+        comment = self._get_comment_value(database_level="table")
+
+        if not comment.empty:
+            self.mssql_hook.run(
+                f"""
+                EXEC sys.sp_{stored_procedure_str}
+                @name='MS_Description',
+                @value='{comment.values[0]}',
+                @level0type='schema',
+                @level0name='{self.schema}',
+                @level1type='table',
+                @level1name='{self.table}'
+                """
+            )
+
+        for col_name in self.cols_names:
+
+            # Part 3 - check if columns description exists
+
+            stored_procedure_str = self._get_mssql_stored_procedure_str(
+                database_level="column", col_name=col_name
+            )
+
+            # Part 4 - add or update columns description
+
+            comment = self._get_comment_value(
+                database_level="column", col_name=col_name
+            )
+
+            if not comment.empty:
+                self.mssql_hook.run(
+                    f"""
+                    EXEC sys.sp_{stored_procedure_str}
+                    @name='MS_Description',
+                    @value='{comment.values[0]}',
+                    @level0type='schema',
+                    @level0name='{self.schema}',
+                    @level1type='table',
+                    @level1name='{self.table}',
+                    @level2type='column',
+                    @level2name='{col_name}'
+                    """
+                )
+
+    def _put_pg_table_comments(self) -> None:
+        """Write comments/descriptions on database table and its columns
+        for postgres using SQLAlchemy and Alembic.
+
+        Returns:
+            None.
+
+        References:
+            https://alembic.sqlalchemy.org/en/latest/ops.html
+        """
+
+        _, engine = get_hook_and_engine_by_provider(
+            provider="postgres", conn_id=self.conn_id
+        )
+        conn = engine.connect()
+        ctx = MigrationContext.configure(conn)
+        op = Operations(ctx)
+
+        # Part 1 - write table comment
+
+        comment = self._get_comment_value(database_level="table")
+
+        if not comment.empty:
+            op.create_table_comment(
+                table_name=self.table, schema=self.schema, comment=comment.values[0]
+            )
+
+        # Part 2 - write columns comments
+
+        for col_name in self.cols_names:
+
+            comment = self._get_comment_value(
+                database_level="column", col_name=col_name
+            )
+
+            if not comment.empty:
+                op.alter_column(
+                    table_name=self.table,
+                    column_name=col_name,
+                    schema=self.schema,
+                    comment=comment.values[0],
+                )
+
+    def get_table_comments_df(self):
         """Get comments/descriptions of provided table and its columns
         by the type/provider of the database. Implemented for:
             - Postgres
             - teiid
             - MS Sql
-
-        Contains functions:
-            - __get_mssql_table_comments
-            - __get_pg_table_comments
-            - __get_teiid_table_comments
-
-        Args:
-            conn_id (str): Airflow database connection id
-            schema (str): Table schema name
-            table (str): Table name
 
         Raises:
             Exception: when the provided database is not in postgres,
@@ -398,190 +740,17 @@ def transfer_table_comments(
             pd.DataFrame: concat of table and its columns comments/descriptions
         """
 
-        def __get_new_comments_df() -> pd.DataFrame:
-            return pd.DataFrame(columns=["database_level", "name", "comment"])
+        if self.conn_type == "mssql":
+            table_comments = self._get_mssql_table_comments()
 
-        def __get_mssql_table_comments(
-            conn_id: str, schema: str, table: str
-        ) -> pd.DataFrame:
-            """Get from mssql database comments/descriptions of provided
-            table and its columns. Uses MSSql stored procedure
-            fn_listextendedproperty.
-
-            Args:
-                conn_id (str): Airflow database connection id
-                schema (str): Table schema
-                table (str): Table name
-
-            Returns:
-                pd.Dataframe: concat of table and its columns comments/descriptions
-
-            Reference:
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-functions/sys-fn-listextendedproperty-transact-sql?view=sql-server-ver16
-            """
-
-            mssql_hook = MsSqlHook(conn_id)
-            table_comments = __get_new_comments_df()
-
-            for database_level, query_param in {
-                "table": "default",
-                "column": "'COLUMN'",
-            }.items():
-                rows_df = mssql_hook.get_pandas_df(
-                    f"""
-                        SELECT objname,
-                            value
-                        FROM fn_listextendedproperty
-                            ('MS_DESCRIPTION',
-                            'schema', '{schema}',
-                            'table', '{table}',
-                            {query_param}, default);
-                    """
-                )
-                rows_df.rename(
-                    columns={"objname": "name", "value": "comment"}, inplace=True
-                )
-                rows_df["comment"] = rows_df["comment"].str.decode("utf-8")
-                rows_df["database_level"] = database_level
-                table_comments = table_comments.append(rows_df, ignore_index=True)
-
-            return table_comments
-
-        def __get_pg_table_comments(
-            conn_id: str,
-            schema: str,
-            table: str,
-            provider: str = "postgres",
-        ) -> pd.DataFrame:
-            """Get from postgres database comments/descriptions of provided
-            table and its columns. Uses SQLAlchemy library.
-
-            Args:
-                conn_id (str): Airflow database connection id
-                schema (str): Table schema
-                table (str): Table name
-                provider (str): Database type. Used for get_hook_and_engine_by_provider
-                    function call. Defaults to postgres.
-
-            Returns:
-                pd.DataFrame: concat of table and its columns comments/descriptions
-
-            Reference:
-                https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_table_comment
-                https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_columns
-            """
-
-            _, engine = get_hook_and_engine_by_provider(
-                provider=provider, conn_id=conn_id
-            )
-            inspector = inspect(engine)
-
-            table_info = inspector.get_table_comment(table_name=table, schema=schema)
-            table_comments = __get_new_comments_df()
-            table_comments = table_comments.append(
-                {
-                    "database_level": "table",
-                    "name": table,
-                    "comment": table_info["text"],
-                },
-                ignore_index=True,
-            )
-
-            columns_info = inspector.get_columns(table_name=table, schema=schema)
-            for row in columns_info:
-                table_comments = table_comments.append(
-                    {
-                        "database_level": "column",
-                        "name": row["name"],
-                        "comment": row["comment"],
-                    },
-                    ignore_index=True,
-                )
-
-            return table_comments
-
-        def __get_teiid_table_comments(
-            conn_id: str,
-            vdb_name: str,
-            schema: str,
-            table: str,
-        ) -> pd.DataFrame:
-            """Get from teiid database connection comments/descriptions
-            of provided table and its columns. Uses database SYS.Tables
-            and SYS.Columns information tables.
-
-            Args:
-                conn_id (str): Airflow database connection id
-                vdb_name (str): Database name
-                schema (str): Table schema
-                table (str): Table name
-
-            Returns:
-                pd.DataFrame: concat of table and its columns comments/descriptions
-            """
-
-            pg_hook = PostgresHook(postgres_conn_id=conn_id)
-
-            queries = {
-                "table": f"""
-                    SELECT Name,
-                        Description
-                    FROM SYS.Tables
-                    WHERE VDBName = '{vdb_name}'
-                        and SchemaName = '{schema}'
-                        and Name = '{table}'
-                    """,
-                "column": f"""
-                        SELECT Name,
-                            Description
-                        FROM SYS.Columns
-                        WHERE VDBName = '{vdb_name}'
-                            and SchemaName = '{schema}'
-                            and TableName = '{table}'
-                    """,
-            }
-
-            table_comments = __get_new_comments_df()
-            for database_level, query in queries.items():
-                rows_df = pg_hook.get_pandas_df(query)
-                rows_df.rename(
-                    columns={"Name": "name", "Description": "comment"}, inplace=True
-                )
-                rows_df["database_level"] = database_level
-                table_comments = table_comments.append(rows_df, ignore_index=True)
-
-            return table_comments
-
-        ### --- Begin of `_get_table_comments` functions orchestration ---
-
-        conn_values = BaseHook.get_connection(conn_id)
-        conn_type = conn_values.conn_type
-        conn_database = conn_values.schema
-
-        if conn_type == "mssql":
-            table_comments = __get_mssql_table_comments(
-                conn_id=conn_id,
-                schema=schema,
-                table=table,
-            )
-
-        elif conn_type == "postgres":
+        elif self.conn_type == "postgres":
             # Postgres Connection
             try:
-                table_comments = __get_pg_table_comments(
-                    conn_id=conn_id,
-                    schema=schema,
-                    table=table,
-                )
+                table_comments = self._get_pg_table_comments()
 
             # teiid driver
             except AssertionError:
-                table_comments = __get_teiid_table_comments(
-                    conn_id=conn_id,
-                    vdb_name=conn_database,
-                    schema=schema,
-                    table=table,
-                )
+                table_comments = self._get_teiid_table_comments()
         else:
             raise Exception(
                 "Database connection type not implemented. PR for the best."
@@ -589,27 +758,13 @@ def transfer_table_comments(
 
         return table_comments
 
-    def _put_table_comments(
-        conn_id: str,
-        schema: str,
-        table: str,
-        table_comments: pd.DataFrame,
-    ) -> None:
+    def put_table_comments(self, table_comments):
         """Write comments/descriptions on table and its columns
         by the type/provider of the database. Implemented for:
             - Postgres
             - MS Sql
 
-        Contains functions:
-            - __get_mssql_stored_procedure_str
-            - __get_comment_value
-            - __put_mssql_table_comments
-            - __put_pg_table_comments
-
         Args:
-            conn_id (str): Airflow database connection id
-            schema (str): Table schema
-            table (str): Table name
             table_comments (pd.DataFrame): Pandas dataframe with
                 table and columns comments/descriptions
 
@@ -620,315 +775,22 @@ def transfer_table_comments(
             None
         """
 
-        def __get_mssql_stored_procedure_str(
-            mssql_hook: MsSqlHook,
-            schema: str,
-            table: str,
-            database_level: str,
-            column: str = None,
-        ) -> str:
-            """Check database table and columns descriptions and returns
-            mssql stored procedure command name depending if the column/table
-            has already a description.
+        self.table_comments = table_comments
+        self.cols_names = get_table_cols_name(
+            conn_id=self.conn_id, schema=self.schema, table=self.table
+        )
 
-            Args:
-                mssql_hook (MsSqlHook): Airflow MSSql hook
-                schema (str): Table schema
-                table (str): Table name
-                database_level (str): If `table` or `colunm`
-                column (str, optional): When `column` database_level, the
-                    name of the column. Defaults to None.
+        if self.conn_type == "mssql":
+            self.mssql_hook = MsSqlHook(self.conn_id)
+            self._put_mssql_table_comments()
 
-            Raises:
-                Exception: when the database level is neither
-                    'table' or 'column'.
-
-            Returns:
-                str: `updateextendedproperty` or `addextendedproperty`
-                    depending if the description already exists on the
-                    table/column.
-
-            Reference:
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-addextendedproperty-transact-sql?view=sql-server-ver16
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-updateextendedproperty-transact-sql?view=sql-server-ver16
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-functions/sys-fn-listextendedproperty-transact-sql?view=sql-server-ver16
-            """
-
-            if database_level == "table":
-                query = f"""
-                    SELECT value
-                    FROM fn_listextendedproperty (
-                    'MS_Description',
-                    'schema',
-                    '{schema}',
-                    'table',
-                    '{table}',
-                    default,
-                    default);
-                """
-
-            elif database_level == "column" and column:
-                query = f"""
-                    SELECT value
-                    FROM fn_listextendedproperty (
-                    'MS_Description',
-                    'schema',
-                    '{schema}',
-                    'table',
-                    '{table}',
-                    'column',
-                    '{column}');
-                """
-
-            else:
-                raise Exception(
-                    """MSSQL database level type not implemented or column
-                    name not provided. PR for the best."""
-                )
-
-            stored_procedure = (
-                "updateextendedproperty"
-                if mssql_hook.get_first(query)
-                else "addextendedproperty"
-            )
-
-            return stored_procedure
-
-        def __get_comment_value(
-            df: pd.DataFrame, database_level: str, col_name: str = None
-        ) -> pd.Series:
-            """Filter pandas dataframe to get the value of the comment
-            column based on table or column values.
-
-            Args:
-                df (pd.DataFrame): Pandas dataframe with table and columns
-                    comments/descriptions.
-                database_level (str): If table or colunm
-                col_name (str, optional): Name of the column. Defaults to None.
-
-            Raises:
-                Exception: When database_level arg not in ['table', 'column']
-
-            Returns:
-                pd.Series: Filtered pandas series with matched row
-            """
-
-            if database_level == "table":
-                comment = df.loc[df.database_level == database_level, "comment"]
-
-            elif database_level == "column" and col_name:
-                comment = df.loc[
-                    (df.database_level == database_level)
-                    & (df.name.str.match(col_name, case=False)),
-                    "comment",
-                ]
-
-            else:
-                raise Exception(
-                    """
-                    Database_level only accepts `table` or `column`.
-                    If column, must provide column name.
-                    """
-                )
-
-            return comment
-
-        def __put_mssql_table_comments(
-            conn_id: str,
-            schema: str,
-            table: str,
-            cols_names: list,
-            table_comments: pd.DataFrame,
-        ) -> None:
-            """Write comments/descriptions on database table and its columns
-            for mssql.
-
-            Args:
-                conn_id (str): Airflow database connection id
-                schema (str): Table schema
-                table (str): Table name
-                cols_names: list,
-                table_comments: (pd.DataFrame): Pandas dataframe with
-                    table and columns comments/descriptions
-
-            Returns:
-                None.
-
-            Reference:
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-addextendedproperty-transact-sql?view=sql-server-ver16
-                https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-updateextendedproperty-transact-sql?view=sql-server-ver16
-            """
-
-            mssql_hook = MsSqlHook(conn_id)
-
-            # Part 1 - check if table description exists
-
-            stored_procedure_str = __get_mssql_stored_procedure_str(
-                mssql_hook=mssql_hook,
-                schema=schema,
-                table=table,
-                database_level="table",
-            )
-
-            # Part 2 - add or update table description
-
-            comment = __get_comment_value(df=table_comments, database_level="table")
-
-            if not comment.empty:
-                mssql_hook.run(
-                    f"""
-                    EXEC sys.sp_{stored_procedure_str}
-                    @name='MS_Description',
-                    @value='{comment.values[0]}',
-                    @level0type='schema',
-                    @level0name='{schema}',
-                    @level1type='table',
-                    @level1name='{table}'
-                    """
-                )
-
-            for col_name in cols_names:
-
-                # Part 3 - check if columns description exists
-
-                stored_procedure_str = __get_mssql_stored_procedure_str(
-                    mssql_hook=mssql_hook,
-                    schema=schema,
-                    table=table,
-                    database_level="column",
-                    column=col_name,
-                )
-
-                # Part 4 - add or update columns description
-
-                comment = __get_comment_value(
-                    df=table_comments, database_level="column", col_name=col_name
-                )
-
-                if not comment.empty:
-                    mssql_hook.run(
-                        f"""
-                        EXEC sys.sp_{stored_procedure_str}
-                        @name='MS_Description',
-                        @value='{comment.values[0]}',
-                        @level0type='schema',
-                        @level0name='{schema}',
-                        @level1type='table',
-                        @level1name='{table}',
-                        @level2type='column',
-                        @level2name='{col_name}'
-                        """
-                    )
-
-        def __put_pg_table_comments(
-            conn_id: str,
-            schema: str,
-            table: str,
-            cols_names: list,
-            table_comments: pd.DataFrame,
-            provider: str = "postgres",
-        ) -> None:
-            """Write comments/descriptions on database table and its columns
-            for postgres using SQLAlchemy and Alembic.
-
-            Args:
-                conn_id (str): Airflow database connection id
-                    function call. Defaults to postgres.
-                schema (str): Table schema
-                table (str): Table name
-                cols_names (list): Columns names in list
-                table_comments (pd.DataFrame): Pandas dataframe with
-                    table and columns comments/descriptions
-                provider (str): Database type. Used for get_hook_and_engine_by_provider.
-                    Defaults to postgres.
-
-            Returns:
-                None.
-
-            References:
-                https://alembic.sqlalchemy.org/en/latest/ops.html
-            """
-
-            _, engine = get_hook_and_engine_by_provider(
-                provider=provider, conn_id=conn_id
-            )
-            conn = engine.connect()
-            ctx = MigrationContext.configure(conn)
-            op = Operations(ctx)
-
-            # Part 1 - write table comment
-
-            comment = __get_comment_value(df=table_comments, database_level="table")
-
-            if not comment.empty:
-                op.create_table_comment(
-                    table_name=table, schema=schema, comment=comment.values[0]
-                )
-
-            # Part 2 - write colunms comments
-
-            for col_name in cols_names:
-
-                comment = __get_comment_value(
-                    df=table_comments, database_level="column", col_name=col_name
-                )
-
-                if not comment.empty:
-                    op.alter_column(
-                        table_name=table,
-                        column_name=col_name,
-                        schema=schema,
-                        comment=comment.values[0],
-                    )
-
-        ### --- Begin of `_put_table_comments` functions orchestration ---
-
-        conn_values = BaseHook.get_connection(conn_id)
-        conn_type = conn_values.conn_type
-
-        cols_names = get_table_cols_name(conn_id=conn_id, schema=schema, table=table)
-
-        if conn_type == "mssql":
-            __put_mssql_table_comments(
-                conn_id=conn_id,
-                schema=schema,
-                table=table,
-                cols_names=cols_names,
-                table_comments=table_comments,
-            )
-
-        elif conn_type == "postgres":
-            __put_pg_table_comments(
-                conn_id=conn_id,
-                schema=schema,
-                table=table,
-                cols_names=cols_names,
-                table_comments=table_comments,
-            )
+        elif self.conn_type == "postgres":
+            self._put_pg_table_comments()
 
         else:
             raise Exception(
                 "Database connection type not implemented. PR for the best."
             )
-
-    ### --- Begin of `transfer_table_comments` functions orchestration ---
-
-    # Part 1 - Get source table and columns descriptions
-
-    s_schema, s_table = source_table.split(".")
-    table_comments = _get_table_comments(
-        conn_id=source_conn_id, schema=s_schema, table=s_table
-    )
-
-    # Part 2 - Write destination table and columns descriptions
-
-    d_schema, d_table = destination_table.split(".")
-    _put_table_comments(
-        conn_id=destination_conn_id,
-        schema=d_schema,
-        table=d_table,
-        table_comments=table_comments,
-    )
 
 
 def copy_db_to_db(
