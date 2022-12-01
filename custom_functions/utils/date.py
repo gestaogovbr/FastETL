@@ -1,8 +1,10 @@
 """ Funções de uso comum para manipular datas e horas.
 """
-
+import os
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
+
+AIRFLOW_TIMEZONE = os.getenv("AIRFLOW__CORE__DEFAULT_TIMEZONE")
 
 def remove_template_indentation(text: str) -> str:
     """Remove a indentação em strings de templates.
@@ -46,7 +48,7 @@ def get_reference_date(context: dict) -> datetime:
 
     return reference_date
 
-def get_trigger_date(context: dict) -> datetime:
+def get_trigger_date(context: dict, local_time: bool = False) -> datetime:
     """ Calcula a data de disparo da execução da DAG.
 
         Caso seja uma execução agendada, será data_interval_end,
@@ -65,6 +67,12 @@ def get_trigger_date(context: dict) -> datetime:
         Caso seja feita a ativação manual (trigger DAG) sem passar
         esse parâmetro, será considerada a logical_date, que
         no caso é a data em que foi realizado o trigger (data atual).
+
+        Caso o parâmetro local_time seja True, nos casos de execução
+        agendada ou manual sem configuração será considerado o
+        datetime convertido para o fuso horário setado para o
+        ambiente do Airflow. Por padrão o parâmetro é False,
+        considerando o horário UTC.
     """
 
     trigger_date_conf: str = (
@@ -80,8 +88,13 @@ def get_trigger_date(context: dict) -> datetime:
             trigger_date: datetime = datetime.fromisoformat(trigger_date_conf)
         else: # execução manual sem configuração
             trigger_date: datetime = context["logical_date"]
+            if local_time is True:
+                trigger_date = trigger_date.in_timezone(AIRFLOW_TIMEZONE)
+
     else: # execução agendada
         trigger_date: datetime = context["data_interval_end"]
+        if local_time is True:
+            trigger_date = trigger_date.in_timezone(AIRFLOW_TIMEZONE)
 
     return trigger_date
 
@@ -174,6 +187,21 @@ base_template_trigger_date = '''
 {% endif %}
 '''
 
+base_template_trigger_date_local_time = '''
+{% if dag_run.external_trigger is defined and dag_run.external_trigger %}
+    {% if dag_run.conf is defined %}
+        {% if dag_run.conf["trigger_date"] is defined %}
+            {% set the_date = macros.datetime.fromisoformat(dag_run.conf["trigger_date"]) %}
+        {% else %}
+            {% set the_date = logical_date.in_timezone(\'''' + AIRFLOW_TIMEZONE + '''\')%}
+        {% endif %}
+    {% endif %}
+{% else %}
+    {% set the_date = data_interval_end.in_timezone(\'''' + AIRFLOW_TIMEZONE + '''\')%}
+{% endif %}
+'''
+
+
 template_last_day_of_last_month = remove_template_indentation(
     base_template_trigger_date + '''
 {% set last_day_of_last_month =
@@ -184,6 +212,11 @@ template_last_day_of_last_month = remove_template_indentation(
 # para ser usado em dags
 template_trigger_date = remove_template_indentation(
     base_template_trigger_date +
+    '{{ the_date.isoformat() }}'
+)
+
+template_trigger_date_local_time = remove_template_indentation(
+    base_template_trigger_date_local_time +
     '{{ the_date.isoformat() }}'
 )
 
