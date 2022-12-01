@@ -374,13 +374,13 @@ def _copy_table_comments(
     source_table_comments = TableComments(
         conn_id=source_conn_id, schema_table=source_table
     )
-    source_table_comments_df = source_table_comments.get_table_comments_df()
 
     destination_table_comments = TableComments(
         conn_id=destination_conn_id, schema_table=destination_table
     )
+
     destination_table_comments.put_table_comments(
-        table_comments=source_table_comments_df
+        table_comments=source_table_comments.table_comments
     )
 
 
@@ -409,7 +409,18 @@ class TableComments:
         )
         self.cols_names = None
         self.mssql_hook = None
-        self.table_comments = None
+        self._table_comments = None
+
+    @property
+    def table_comments(self):
+        if getattr(self, "_table_comments", None) is None:
+            self._table_comments = self.get_table_comments_df()
+
+        return self._table_comments
+
+    @table_comments.setter
+    def table_comments(self, df):
+        self._table_comments = df
 
     def _get_mssql_table_comments(self) -> pd.DataFrame:
         """Get from mssql database comments/descriptions of provided
@@ -588,7 +599,7 @@ class TableComments:
             """
 
         else:
-            raise Exception(
+            raise ValueError(
                 """MSSQL database level type not implemented or column
                 name not provided. PR for the best."""
             )
@@ -631,7 +642,7 @@ class TableComments:
             ]
 
         else:
-            raise Exception(
+            raise ValueError(
                 """
                 Database_level only accepts `table` or `column`.
                 If column, must provide column name.
@@ -778,7 +789,7 @@ class TableComments:
             except AssertionError:
                 table_comments = self._get_teiid_table_comments()
         else:
-            raise Exception(
+            raise NotImplementedError(
                 "Database connection type not implemented. PR for the best."
             )
 
@@ -801,7 +812,7 @@ class TableComments:
             None
         """
 
-        self.table_comments = table_comments
+        self._table_comments = table_comments
         self.cols_names = get_table_cols_name(
             conn_id=self.conn_id, schema=self.schema, table=self.table
         )
@@ -814,9 +825,15 @@ class TableComments:
             self._put_pg_table_comments()
 
         else:
-            raise Exception(
+            raise NotImplementedError(
                 "Database connection type not implemented. PR for the best."
             )
+
+    def save(self):
+        """Save Dataframe of table comments on the database.
+        """
+
+        self.put_table_comments(self.table_comments)
 
 
 def copy_db_to_db(
