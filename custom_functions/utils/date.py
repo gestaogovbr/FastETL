@@ -93,8 +93,8 @@ def get_trigger_date(context: dict, local_time: bool = False) -> datetime:
 
     else: # execução agendada
         trigger_date: datetime = context["data_interval_end"]
-        trigger_date = trigger_date.in_timezone(AIRFLOW_TIMEZONE) \
-        if local_time is True else None
+        if local_time is True:
+            trigger_date = trigger_date.in_timezone(AIRFLOW_TIMEZONE)
 
     return trigger_date
 
