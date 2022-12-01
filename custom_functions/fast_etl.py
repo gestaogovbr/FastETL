@@ -345,17 +345,43 @@ def create_table_if_not_exist(
         destination_meta.create_all(destination_eng)
 
     if copy_table_comments:
-        source_table_comments = TableComments(
-            conn_id=source_conn_id, schema_table=source_table
+        _copy_table_comments(
+            source_conn_id=source_conn_id,
+            source_table=source_table,
+            destination_conn_id=destination_conn_id,
+            destination_table=destination_table,
         )
-        source_table_comments_df = source_table_comments.get_table_comments_df()
 
-        destination_table_comments = TableComments(
-            conn_id=destination_conn_id, schema_table=destination_table
-        )
-        destination_table_comments.put_table_comments(
-            table_comments=source_table_comments_df
-        )
+
+def _copy_table_comments(
+    source_conn_id: str,
+    source_table: str,
+    destination_conn_id: str,
+    destination_table: str,
+) -> None:
+    """Copy table and colunms comments/descriptions between databases.
+
+    Args:
+        source_conn_id (str): Airflow connection id
+        source_table (str): Table str at format schema.table
+        destination_conn_id (str): Airflow connection id
+        destination_table (str): Table str at format schema.table
+
+    Returns:
+        None
+    """
+
+    source_table_comments = TableComments(
+        conn_id=source_conn_id, schema_table=source_table
+    )
+    source_table_comments_df = source_table_comments.get_table_comments_df()
+
+    destination_table_comments = TableComments(
+        conn_id=destination_conn_id, schema_table=destination_table
+    )
+    destination_table_comments.put_table_comments(
+        table_comments=source_table_comments_df
+    )
 
 
 class TableComments:
@@ -366,7 +392,7 @@ class TableComments:
     """
 
     def __init__(self, conn_id: str, schema_table: str):
-        """Initialize TableComments class variables/
+        """Initialize TableComments class variables.
 
         Args:
             conn_id (str): Airflow connection id
@@ -843,7 +869,7 @@ def copy_db_to_db(
         chunksize (int): tamanho do bloco de leitura na origem.
             Default = 1000 linhas
         copy_table_comments (bool): flag if includes on the execution the
-            copy of table comments/descriptions
+            copy of table comments/descriptions. Default to False.
 
     Return:
         None
@@ -1085,6 +1111,7 @@ def sync_db_2_db(
     source_exc_table: str = None,
     source_exc_column: str = None,
     chunksize: int = 1000,
+    copy_table_comments: bool = False,
 ) -> None:
     """Realiza a atualização incremental de uma tabela. A sincronização
     é realizada em 3 etapas. 1-Envia as alterações necessárias para uma
@@ -1133,6 +1160,8 @@ def sync_db_2_db(
             registradas exclusões
         chunksize (int): tamanho do bloco de leitura na origem.
         Default = 1000 linhas
+        copy_table_comments (bool): flag if includes on the execution the
+            copy of table comments/descriptions. Default to False.
 
     Return:
         None
@@ -1191,6 +1220,7 @@ def sync_db_2_db(
         select_sql=select_diff,
         destination_truncate=True,
         chunksize=chunksize,
+        copy_table_comments=copy_table_comments,
     )
 
     # Reconstrói índices
