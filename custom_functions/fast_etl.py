@@ -1233,7 +1233,7 @@ def sync_db_2_db(
         source_provider="PG",
         destination_conn_id=destination_conn_id,
         destination_provider=destination_provider,
-        source_table=None,
+        source_table=source_table_name,
         select_sql=select_diff,
         destination_truncate=True,
         chunksize=chunksize,
