@@ -1236,8 +1236,7 @@ def sync_db_2_db(
         source_table=source_table_name,
         select_sql=select_diff,
         destination_truncate=True,
-        chunksize=chunksize,
-        copy_table_comments=copy_table_comments,
+        chunksize=chunksize
     )
 
     # Reconstrói índices
@@ -1277,6 +1276,15 @@ def sync_db_2_db(
             dest_hook.run(sql)
         logging.info(
             "Quantidade de linhas possivelmente excluídas: %d", len(ids_to_del)
+        )
+
+    # atualiza comentários da tabela
+    if copy_table_comments:
+        _copy_table_comments(
+            source_conn_id,
+            source_table_name,
+            destination_conn_id,
+            dest_table_name,
         )
 
 
