@@ -244,3 +244,8 @@ template_ano_mes_dia_trigger = remove_template_indentation(
     base_template_trigger_date +
     '{{ the_date.strftime("%Y%m%d") }}'
 )
+
+template_ano_mes_dia_trigger_local_time = remove_template_indentation(
+    base_template_trigger_date_local_time +
+    '{{ the_date.strftime("%d/%m/%Y") }}'
+)
