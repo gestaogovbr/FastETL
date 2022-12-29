@@ -33,6 +33,7 @@ from airflow.providers.odbc.hooks.odbc import OdbcHook
 from airflow.hooks.base import BaseHook
 from airflow.hooks.dbapi import DbApiHook
 
+from FastETL.custom_functions.utils.load_info import LoadInfo
 
 class DbConnection:
     """
@@ -835,6 +836,20 @@ class TableComments:
 
         self.put_table_comments(self.table_comments)
 
+def write_load_info(source_conn_id: str,
+            source_schema_table: str,
+            load_type: str,
+            dest_conn_id: str,
+            log_schema_name: str,
+            rows_loaded: int):
+    load_info = LoadInfo(
+            source_conn_id,
+            source_schema_table,
+            load_type,
+            dest_conn_id,
+            log_schema_name)
+
+    load_info.write(rows_loaded)
 
 def copy_db_to_db(
     destination_table: str,
@@ -975,6 +990,12 @@ def copy_db_to_db(
                     #                           source_table,
                     #                           destination_table)
 
+                    write_load_info(source_conn_id=source_conn_id,
+                                    source_schema_table=source_table,
+                                    load_type="full",
+                                    dest_conn_id=destination_conn_id,
+                                    log_schema_name=destination_table.split(".")[0],
+                                    rows_loaded=rows_inserted)
                     logging.info("Tempo load: %f segundos", delta_time)
                     logging.info("Linhas inseridas: %d", rows_inserted)
                     logging.info("linhas/segundo: %f", rows_inserted / delta_time)
@@ -1286,6 +1307,13 @@ def sync_db_2_db(
             destination_conn_id,
             dest_table_name,
         )
+
+    write_load_info(source_conn_id=source_conn_id,
+                    source_schema_table=source_table_name,
+                    load_type="incremental",
+                    dest_conn_id=destination_conn_id,
+                    log_schema_name=dest_table_name.split(".")[0],
+                    rows_loaded=new_rows_count)
 
 
 def write_ctds(table, rows, conn_id):
