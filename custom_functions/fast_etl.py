@@ -6,6 +6,7 @@ Módulo cópia de dados entre Postgres e MsSql e outras coisas
 import os
 import time
 from datetime import datetime, date
+import re
 import warnings
 import urllib
 from typing import List, Union, Tuple
@@ -862,7 +863,8 @@ def get_schema_table_from_query(query: str) -> str:
         schema_table (str): string in format `schema.table`
     """
 
-    db_schema_table = query.split("from")[1].split(" ")[1]
+    sintax_from = re.search(r"from\s+[\w|\.]*", query, re.IGNORECASE).group()
+    db_schema_table = sintax_from.split()[-1]
     schema_table = ".".join(db_schema_table.split(".")[-2:])
 
     return schema_table
