@@ -852,6 +852,22 @@ def save_load_info(
     load_info.save(rows_loaded)
 
 
+def get_schema_table_from_query(query: str) -> str:
+    """Returns schema.table from a query statement.
+
+    Args:
+        query (str): sql query statement.
+
+    Returns:
+        schema_table (str): string in format `schema.table`
+    """
+
+    db_schema_table = query.split("from")[1].split(" ")[1]
+    schema_table = ".".join(db_schema_table.split(".")[-2:])
+
+    return schema_table
+
+
 def copy_db_to_db(
     destination_table: str,
     source_conn_id: str,
@@ -864,6 +880,7 @@ def copy_db_to_db(
     destination_truncate: bool = True,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
+    load_type: str = "full",
 ) -> None:
     """
     Carrega dado do Postgres/MSSQL/MySQL para Postgres/MSSQL com psycopg2 e pyodbc
@@ -903,6 +920,7 @@ def copy_db_to_db(
             Default = 1000 linhas
         copy_table_comments (bool): flag if includes on the execution the
             copy of table comments/descriptions. Default to False.
+        load_type (str): if "full" or "incremental". Default to "full"
 
     Return:
         None
@@ -991,10 +1009,13 @@ def copy_db_to_db(
                     #                           source_table,
                     #                           destination_table)
 
+                    if select_sql:
+                        source_table = get_schema_table_from_query(select_sql)
+
                     save_load_info(
                         source_conn_id=source_conn_id,
                         source_schema_table=source_table,
-                        load_type="full",
+                        load_type=load_type,
                         dest_conn_id=destination_conn_id,
                         log_schema_name=destination_table.split(".")[0],
                         rows_loaded=rows_inserted,
@@ -1262,6 +1283,7 @@ def sync_db_2_db(
         select_sql=select_diff,
         destination_truncate=True,
         chunksize=chunksize,
+        load_type="incremental",
     )
 
     # Reconstrói índices
@@ -1311,15 +1333,6 @@ def sync_db_2_db(
             destination_conn_id,
             dest_table_name,
         )
-
-    save_load_info(
-        source_conn_id=source_conn_id,
-        source_schema_table=source_table_name,
-        load_type="incremental",
-        dest_conn_id=destination_conn_id,
-        log_schema_name=dest_table_name.split(".")[0],
-        rows_loaded=new_rows_count,
-    )
 
 
 def write_ctds(table, rows, conn_id):
