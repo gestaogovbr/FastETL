@@ -8,6 +8,8 @@ import time
 from enum import Enum
 import json
 import requests
+from requests.models import PreparedRequest
+from typing import List
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
@@ -51,6 +53,7 @@ class Field(Enum):
 class DOUHook(BaseHook):
     IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
     IN_API_BASE_URL = 'https://www.in.gov.br/consulta/-/buscar/dou'
+    GET_PAGE_SOURCE_URL = 'http://selenium:5000/get_page_source'
     SEC_DESCRIPTION = {
         Section.SECAO_1.value: 'Seção 1',
         Section.SECAO_2.value: 'Seção 2',
@@ -110,16 +113,16 @@ class DOUHook(BaseHook):
         elif search_date == SearchDate.ANO:
             return (publish_to_date - timedelta(days=364))
 
-    def _request_with_retry(self, payload: list):
+    def _request_with_retry(self, param:str):
         try:
-            return requests.get(self.IN_API_BASE_URL, params=payload)
+            return requests.post(self.GET_PAGE_SOURCE_URL, json=param)
         except requests.exceptions.ConnectionError:
-            logging.info('Sleep for 30 seconds before retry requests.get().')
+            logging.info('Sleep for 30 seconds before retry requests.post().')
             time.sleep(30)
-            return requests.get(self.IN_API_BASE_URL, params=payload)
+            return requests.post(self.GET_PAGE_SOURCE_URL, json=param)
 
     def search_text(self, search_term: str,
-                          sections: [Section],
+                          sections: List[Section],
                           reference_date:datetime=datetime.now(),
                           search_date=SearchDate.DIA,
                           field=Field.TUDO,
@@ -148,11 +151,16 @@ class DOUHook(BaseHook):
         for section in sections:
             payload.append(('s', section.value))
 
+        req = PreparedRequest()
+        req.prepare_url(self.IN_API_BASE_URL, params=payload)
+        dou_url = {"dou_url": req.url}
+
         if with_retry:
-            page = self._request_with_retry(payload=payload)
+            page_source = self._request_with_retry(param=dou_url)
         else:
-            page = requests.get(self.IN_API_BASE_URL, params=payload)
-        soup = BeautifulSoup(page.content, 'html.parser')
+            page_source = requests.post(self.GET_PAGE_SOURCE_URL, json=dou_url)
+
+        soup = BeautifulSoup(page_source.text, 'html.parser')
 
         script_tag = soup.find(
             'script',
