@@ -9,8 +9,10 @@ def get_page_source():
     url = data["dou_url"]
     driver = webdriver.Chrome()
     driver.get(url)
+    result = driver.page_source
+    driver.quit()
 
-    return driver.page_source
+    return result
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0')
