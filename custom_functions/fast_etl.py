@@ -1238,6 +1238,14 @@ def sync_db_2_db(
         * Possibilitar inserir data da carga na tabela de destino
         * Criar testes
     """
+
+    def _divide_chunks(l, n):
+        """Split list into a new list with n lists
+        """
+        # looping till length l
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
     source_table_name = f"{source_schema}.{table}"
     dest_table_name = f"{destination_schema}.{table}"
     if increment_schema:
@@ -1316,13 +1324,17 @@ def sync_db_2_db(
                           """
         rows = source_hook.get_records(source_exc_sql)
         ids_to_del = [row[0] for row in rows]
+
         if ids_to_del:
-            ids = ", ".join(str(id) for id in ids_to_del)
-            sql = f"""
-                DELETE FROM {dest_table_name}
-                WHERE {key_column} IN ({ids})
-            """
-            dest_hook.run(sql)
+            ids_to_del_split = _divide_chunks(ids_to_del, 500)
+            for chunk in ids_to_del_split:
+                ids = ", ".join(str(id) for id in chunk)
+                sql = f"""
+                    DELETE FROM {dest_table_name}
+                    WHERE {key_column} IN ({ids})
+                """
+                dest_hook.run(sql)
+
         logging.info(
             "Quantidade de linhas possivelmente excluídas: %d", len(ids_to_del)
         )
