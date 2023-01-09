@@ -64,10 +64,10 @@ class LoadInfo:
 
         sql = f"""{create_prefix}
                 {self.log_schema_name}.{self.log_table_name} (
-                no_vdb      varchar(30) NOT NULL,
-                no_schema   varchar(30) NOT NULL,
-                no_tabela   varchar(60) NOT NULL,
-                no_usuario  varchar(20) NOT NULL,
+                no_vdb      varchar(60) NOT NULL,
+                no_schema   varchar(120) NOT NULL,
+                no_tabela   varchar(120) NOT NULL,
+                no_usuario  varchar(40) NOT NULL,
                 tp_carga    varchar(15) NOT NULL,
                 dt_consumo  {date_type} NOT NULL,
                 qt_linhas   bigint NULL)
