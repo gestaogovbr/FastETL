@@ -863,8 +863,15 @@ def get_schema_table_from_query(query: str) -> str:
         schema_table (str): string in format `schema.table`
     """
 
-    sintax_from = re.search(r"from\s+[\w|\.]*", query, re.IGNORECASE).group()
+    # search pattern "from schema.table" on query
+    sintax_from = re.search(
+        r"from\s+\"?\'?\[?[\w|\.|\"|\'|\]|\]]*\"?\'?\]?", query, re.IGNORECASE
+    ).group()
+    # split "from " from "schema.table" and get schema.table [-1]
     db_schema_table = sintax_from.split()[-1]
+    # clean [, ], ", '
+    db_schema_table = re.sub(r"\[|\]|\"|\'", "", db_schema_table)
+    # clean "dbo." if exists on dbo.schema.table
     schema_table = ".".join(db_schema_table.split(".")[-2:])
 
     return schema_table
@@ -1240,11 +1247,10 @@ def sync_db_2_db(
     """
 
     def _divide_chunks(l, n):
-        """Split list into a new list with n lists
-        """
+        """Split list into a new list with n lists"""
         # looping till length l
         for i in range(0, len(l), n):
-            yield l[i:i + n]
+            yield l[i : i + n]
 
     source_table_name = f"{source_schema}.{table}"
     dest_table_name = f"{destination_schema}.{table}"
