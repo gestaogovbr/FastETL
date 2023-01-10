@@ -2,6 +2,8 @@
 Recieve information about table loading execution and store in log table.
 """
 
+import logging
+
 from airflow.hooks.base import BaseHook
 
 class LoadInfo:
@@ -31,7 +33,13 @@ class LoadInfo:
         """
 
         self.s_conn_id = source_conn_id
-        self.s_schema, self.s_table = source_schema_table.split(".")
+
+        try:
+            self.s_schema, self.s_table = source_schema_table.split(".")
+        except ValueError:
+            logging.warning("Tabela de origem sem especificação na query.")
+            self.s_schema, self.s_table = "não informado", source_schema_table
+
         self.load_type = load_type
         s_conn_values = BaseHook.get_connection(source_conn_id)
         self.s_conn_database = s_conn_values.schema
