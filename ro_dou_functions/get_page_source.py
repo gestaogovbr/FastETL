@@ -1,10 +1,11 @@
 from flask import Flask, request, json
-from selenium import webdriver
 
 app = Flask(__name__)
 
 @app.route('/get_page_source', methods=["POST"])
 def get_page_source():
+    from selenium import webdriver
+
     data = json.loads(request.data)
     url = data["dou_url"]
     driver = webdriver.Chrome()
