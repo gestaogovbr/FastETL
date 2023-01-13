@@ -138,3 +138,4 @@ test_notrack/
 **/.DS_Store
 .pre-commit-config.yaml
 pyproject.toml
+ro_dou_functions/.*
