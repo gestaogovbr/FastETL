@@ -139,3 +139,4 @@ test_notrack/
 .pre-commit-config.yaml
 pyproject.toml
 ro_dou_functions/.*
+!.airflowignore
