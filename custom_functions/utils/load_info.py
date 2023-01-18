@@ -68,7 +68,7 @@ class LoadInfo:
             date_type = "timestamp"
 
         else:
-            raise Exception("Conn_type not implemented.")
+            raise Exception(f"Conn_type not implemented: {conn_values.conn_type}")
 
         sql = f"""{create_prefix}
                 {self.log_schema_name}.{self.log_table_name} (
