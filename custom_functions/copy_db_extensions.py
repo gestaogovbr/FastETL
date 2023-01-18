@@ -1,16 +1,12 @@
 """
-_summary_
+Include database copy extensions.
 """
 
 import time
 import logging
 from datetime import datetime
-import ctds
-import ctds.pool
 
 from airflow.hooks.postgres_hook import PostgresHook
-from airflow.hooks.base import BaseHook
-from airflow.hooks.mssql_hook import MsSqlHook
 
 from FastETL.custom_functions.fast_etl import (
     DbConnection,
@@ -19,8 +15,6 @@ from FastETL.custom_functions.fast_etl import (
     build_dest_sqls,
     build_select_sql,
 )
-
-# XXX utilizado em carga_inicial_grandes_tabelas
 
 
 def copy_by_key_interval(
@@ -289,10 +283,6 @@ def copy_by_key_with_retry(
         logging.info("Término com erro após %d tentativas!", retries)
 
 
-######################################################
-# XXX não utilizados em nenhum lugar
-
-
 def copy_by_limit_offset(
     source_provider: str,
     source_conn_id: str,
@@ -385,194 +375,3 @@ def copy_by_limit_offset(
                     logging.info("Tempo load: %f segundos", delta_time)
                     logging.info("Linhas inseridas: %d", rows_inserted)
                     logging.info("linhas/segundo: %f", rows_inserted / delta_time)
-
-
-def search_key_gaps(
-    source_provider: str,
-    source_conn_id: str,
-    source_table: str,
-    destination_provider: str,
-    destination_conn_id: str,
-    destination_table: str,
-    key_column: str,
-    key_start: int = 0,
-    key_interval: int = 100,
-):
-    """
-    Verifica se existem lacunas de linhas entre intervalos de chaves,
-    comparando tabela origem x tabela destino. Para cada intervalo, deve
-    existir a mesma quantidade distinta de id's.
-
-    Exemplo:
-        search_key_gaps(
-                        source_provider='PG',
-                        source_conn_id='quartzo_comprasnet',
-                        source_table='Comprasnet_VBL.tbl_pregao',
-                        destination_provider='MSSQL',
-                        destination_conn_id='mssql_srv_32_stg_comprasnet',
-                        destination_table='dbo.tbl_pregao',
-                        key_column='prgCod',
-                        key_start=0,
-                        key_interval=100000)
-
-    Args:
-        source_provider (str): provider do banco origem (MSSQL ou PG)
-        source_conn_id (str): connection origem do Airflow
-        source_table (str): tabela de origem no formato schema.table
-        destination_provider (str): provider do banco destino (MSSQL ou PG)
-        destination_conn_id (str): connection destino do Airflow
-        destination_table (str): tabela de destino no formato schema.table
-        key_column (str): nome da coluna chave da tabela origem
-        key_start (int): id da chave a partir do qual a comparação é feita
-        key_interval (int): intervalo de id's para ler da origem a cada vez
-    """
-    # validate db string
-    validate_db_string(source_table, destination_table, None)
-
-    # create connections
-    with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(
-            destination_conn_id, destination_provider
-        ) as destination_conn:
-            with source_conn.cursor() as source_cur:
-                with destination_conn.cursor() as destination_cur:
-
-                    # gera queries
-                    select_sql = f"""
-                        SELECT COUNT(DISTINCT {key_column}) AS count_source
-                        FROM {source_table}"""
-                    # pyodbc: select_sql = f"{select_sql} WHERE {key_column} BETWEEN ? AND ?"
-                    select_sql = f"{select_sql} WHERE {key_column} BETWEEN %s AND %s"
-                    compare_sql = f"""
-                        SELECT COUNT(DISTINCT {key_column}) AS count_dest
-                        FROM {destination_table}"""
-                    compare_sql = f"{compare_sql} WHERE {key_column} BETWEEN ? AND ?"
-                    # psycopg2: compare_sql = f"{compare_sql} WHERE {key_column} BETWEEN %s AND %s"
-                    lastkey_sql = f"""
-                        SELECT MAX({key_column}) AS last_key
-                        FROM {destination_table}"""
-
-                    # compare by key interval
-                    start_time = time.perf_counter()
-
-                    rowlast = destination_cur.execute(lastkey_sql).fetchone()
-                    # psycopg2: destination_cur.execute(lastkey_sql)
-                    # psycopg2: rowlast = destination_cur.fetchone()
-                    last_key = rowlast.last_key
-
-                    gaps = totdif = 0
-                    key_begin = key_start
-                    key_end = key_begin + key_interval - 1
-                    # pyodbc: rows = source_cur.execute(select_sql, key_begin, key_end).fetchone()
-                    source_cur.execute(select_sql, (key_begin, key_end))
-                    rows = source_cur.fetchone()
-
-                    while rows:
-                        rowsdest = destination_cur.execute(
-                            compare_sql, key_begin, key_end
-                        ).fetchone()
-                        # psycopg2: destination_cur.execute(compare_sql, (key_begin, key_end))
-                        # psycopg2: rowsdest = destination_cur.fetchone()
-                        logging.info(
-                            "Key interval: %d to %d. %s",
-                            key_begin,
-                            key_end,
-                            time.strftime("%H:%M:%S", time.localtime()),
-                        )
-                        # pyodbc: count_source = rows.count_source
-                        count_source = rows[0]  # psycopg2
-                        if count_source != rowsdest.count_dest:
-                            dif = count_source - rowsdest.count_dest
-                            logging.info(
-                                "Gap!!! Source keys: %d. Dest keys: %d. Difference: %d.",
-                                count_source,
-                                rowsdest.count_dest,
-                                dif,
-                            )
-                            gaps += 1
-                            totdif += dif
-                        key_begin = key_end + 1
-                        key_end = key_begin + key_interval - 1
-                        if key_begin > last_key:
-                            break
-                        # pyodbc: rows = source_cur.execute(select_sql, key_begin, key_end).fetchone()
-                        source_cur.execute(select_sql, (key_begin, key_end))
-                        rows = source_cur.fetchone()
-
-                    delta_time = time.perf_counter() - start_time
-                    logging.info("Tempo do compare: %f segundos", delta_time)
-                    logging.info(
-                        "Resumo: %d gaps, %d rows faltam no destino!", gaps, totdif
-                    )
-
-
-def _build_increm_filter(
-    col_list: list, dest_hook: MsSqlHook, table: str, key_column: str
-) -> str:
-    """Constrói a condição where (where_condition) a ser utilizada para
-    calcular e identificar as linhas da tabela no BD origem (Quartzo/Serpro)
-    que devem ser sincronizadas com aquela tabela no BD destino. Se a
-    tabela não possuir a coluna 'dataalteracao' será utilizada a coluna
-    (key_column).
-    """
-    col_list = [col.lower() for col in col_list]
-    if "dataalteracao" in col_list:
-        key = "dataalteracao"
-    else:
-        key = key_column
-    max_value = _table_column_max_string(dest_hook, table, key)
-    where_condition = f"{key} > '{max_value}'"
-
-    return where_condition
-
-
-# TODO: Propor ao Wash de passarmos a definir explicitamente a coluna
-# 'dataalteracao' na variável airflow de configurações sempre que for o
-# caso, e assim pararmos de checar se a coluna 'dataalteracao' está na
-# lista de colunas. Consultá-lo sobre drawbacks.
-
-
-def _table_column_max_string(db_hook: MsSqlHook, table: str, column: str):
-    """Calcula o valor máximo da coluna (column) na tabela (table). Se
-    a coluna for 'dataalteracao' a string retornada é formatada.
-    """
-    sql = f"SELECT MAX({column}) FROM {table};"
-    max_value = db_hook.get_first(sql)[0]
-    # TODO: Descobrir se é data pelo tipo do BD
-    if column == "dataalteracao":
-        return max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    else:
-        return str(max_value)
-
-
-def write_ctds(table, rows, conn_id):
-    """
-    Escreve em banco MsSql Server utilizando biblioteca ctds com driver
-    FreeTds.
-    """
-
-    conn_values = BaseHook.get_connection(conn_id)
-
-    dbconfig = {
-        "server": conn_values.host,
-        "port": int(conn_values.port),
-        "database": conn_values.schema,
-        "autocommit": True,
-        "enable_bcp": True,
-        "ntlmv2": True,
-        "user": conn_values.login,
-        "password": conn_values.password,
-        "timeout": 300,
-    }
-
-    pool = ctds.pool.ConnectionPool(ctds, dbconfig)
-
-    with pool.connection() as conn:
-        itime = time.perf_counter()
-        linhas = conn.bulk_insert(
-            table=table,
-            rows=rows,
-            # batch_size=300000,
-        )
-        ftime = time.perf_counter()
-        logging.info("%d linhas inseridas em %f segundos.", linhas, ftime - itime)
