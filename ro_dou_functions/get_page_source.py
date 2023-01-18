@@ -1,4 +1,3 @@
-import shutil
 from flask import Flask, request, json
 from selenium import webdriver
 
@@ -11,11 +10,7 @@ def get_page_source():
     driver = webdriver.Chrome()
     driver.get(url)
     result = driver.page_source
-    driver.close()
     driver.quit()
-
-    tmp_folder = driver.capabilities['chrome']['userDataDir']
-    shutil.rmtree(tmp_folder, ignore_errors=True)
 
     return result
 
