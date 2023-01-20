@@ -24,7 +24,5 @@ with DAG(
                 source_table=f'{source_conf[1]}.source_table',
                 destination_table=f'{dest_conf[1]}.destination_table',
                 source_conn_id=f'{source_conf[0]}-source-conn',
-                source_provider=source_conf[0].upper(),
                 destination_conn_id=f'{dest_conf[0]}-destination-conn',
-                destination_provider=dest_conf[0].upper(),
                 )

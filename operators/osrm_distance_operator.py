@@ -14,7 +14,7 @@ from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
 from FastETL.hooks.osrm_hook import OSRMHook, get_shortest_distance
-from FastETL.custom_functions.fast_etl import DbConnection
+from FastETL.custom_functions.utils.db_connection import DbConnection
 
 class OSRMDistanceDbOperator(BaseOperator):
     """Enriches a database with distances calculated using the Open Street
@@ -225,11 +225,9 @@ class OSRMDistanceDbOperator(BaseOperator):
         """Execute the operator."""
         self.osrm_hook = OSRMHook(self.osrm_conn_id)
         with DbConnection(
-                conn_id=self.db_conn_id,
-                provider=self.db_conn_type.upper()) as read_db_conn:
+                conn_id=self.db_conn_id) as read_db_conn:
             with DbConnection(
-                    conn_id=self.db_conn_id,
-                    provider=self.db_conn_type.upper()) as write_db_conn:
+                    conn_id=self.db_conn_id) as write_db_conn:
                 for rows in pd.read_sql(
                         self.select_sql,
                         con=read_db_conn,

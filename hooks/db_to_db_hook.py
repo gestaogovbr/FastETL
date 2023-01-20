@@ -18,14 +18,10 @@ class DbToDbHook(BaseHook):
     def __init__(self,
                  source_conn_id: str,
                  destination_conn_id: str,
-                 source_provider: str,
-                 destination_provider: str,
                  *args,
                  **kwargs):
         self.source_conn_id = source_conn_id
         self.destination_conn_id = destination_conn_id
-        self.source_provider = source_provider
-        self.destination_provider = destination_provider
 
     def full_copy(self,
              destination_table: str,
@@ -39,9 +35,7 @@ class DbToDbHook(BaseHook):
             source_table=source_table,
             destination_table=destination_table,
             source_conn_id=self.source_conn_id,
-            source_provider=self.source_provider,
             destination_conn_id=self.destination_conn_id,
-            destination_provider=self.destination_provider,
             select_sql=select_sql,
             columns_to_ignore=columns_to_ignore,
             destination_truncate=destination_truncate,
