@@ -15,7 +15,7 @@ with DAG(
     ) as dag:
     db_confs = [
         ('mssql', 'dbo'),
-        ('pg', 'public')
+        ('postgres', 'public')
     ]
     for source_conf in db_confs:
         for dest_conf in db_confs:

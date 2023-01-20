@@ -84,14 +84,14 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
 @pytest.mark.parametrize(
     'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider, has_dest_table',
     [
-        ('pg-source-conn', PostgresHook, 'postgres', 'pg-destination-conn', PostgresHook, 'postgres', True),
+        ('postgres-source-conn', PostgresHook, 'postgres', 'postgres-destination-conn', PostgresHook, 'postgres', True),
         ('mssql-source-conn', OdbcHook, 'mssql', 'mssql-destination-conn', OdbcHook, 'mssql', True),
-        ('pg-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', True),
-        ('mssql-source-conn', OdbcHook, 'mssql', 'pg-destination-conn', PostgresHook, 'postgres', True),
-        ('pg-source-conn', PostgresHook, 'postgres', 'pg-destination-conn', PostgresHook, 'postgres', False),
+        ('postgres-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', True),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'postgres-destination-conn', PostgresHook, 'postgres', True),
+        ('postgres-source-conn', PostgresHook, 'postgres', 'postgres-destination-conn', PostgresHook, 'postgres', False),
         ('mssql-source-conn', OdbcHook, 'mssql', 'mssql-destination-conn', OdbcHook, 'mssql', False),
-        ('pg-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', False),
-        ('mssql-source-conn', OdbcHook, 'mssql', 'pg-destination-conn', PostgresHook, 'postgres', False),
+        ('postgres-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', False),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'postgres-destination-conn', PostgresHook, 'postgres', False),
     ])
 def test_full_table_replication_various_db_types(
         source_conn_id: str,
