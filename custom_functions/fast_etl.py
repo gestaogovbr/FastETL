@@ -7,146 +7,31 @@ import time
 from datetime import datetime, date
 import re
 import warnings
-import urllib
-from typing import List, Union, Tuple
+from typing import Union, Tuple
 import logging
-import pyodbc
 import pandas as pd
 from pandas.io.sql import DatabaseError
 from psycopg2 import OperationalError
 from sqlalchemy.exc import NoSuchModuleError
-from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, MetaData
-from sqlalchemy.engine import reflection, Engine
+from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes as sa_types
 import sqlalchemy.dialects as sa_dialects
 
-from airflow.hooks.base import BaseHook
-from airflow.hooks.dbapi import DbApiHook
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.hooks.mysql_hook import MySqlHook
 
+from FastETL.custom_functions.utils.db_connection import (
+    DbConnection,
+    get_conn_type,
+    get_mssql_odbc_engine,
+    get_hook_and_engine_by_provider,
+)
 from FastETL.custom_functions.utils.load_info import LoadInfo
 from FastETL.custom_functions.utils.table_comments import TableComments
-
-class DbConnection:
-    """
-    Gera as conexões origem e destino dependendo do tipo de provider.
-    Providers disponíveis: 'MSSQL', 'PG' e 'MYSQL'
-    """
-
-    def __init__(self, conn_id: str, provider: str):
-        # Valida providers suportados
-        providers = ["MSSQL", "PG", "POSTGRES", "MYSQL"]
-        provider = provider.upper()
-        assert provider in providers, (
-            "Provider não suportado " "(utilize MSSQL, PG ou MYSQL) :P"
-        )
-
-        if provider == "MSSQL":
-            # XXX trocar trecho por chamada a função get_hook_and_engine_by_provider
-            # XXX dá pra usar a função engine pra refatorar a clase DbConn???
-            # o pg e mysql já estão prontos na get_hook.. só precisa testar
-            # se a get_mssql_odbc_conn_str retorna o mesmo código que abaixo
-            conn_values = BaseHook.get_connection(conn_id)
-            driver = "{ODBC Driver 17 for SQL Server}"
-            server = conn_values.host
-            port = conn_values.port
-            database = conn_values.schema
-            user = conn_values.login
-            password = conn_values.password
-            self.mssql_conn_string = f"""Driver={driver};\
-                Server={server}, {port};\
-                Database={database};\
-                Uid={user};\
-                Pwd={password};"""
-        elif provider == "PG" or provider == "POSTGRES":
-            self.pg_hook = PostgresHook(postgres_conn_id=conn_id)
-        elif provider == "MYSQL":
-            self.msql_hook = MySqlHook(mysql_conn_id=conn_id)
-        self.provider = provider
-
-    def __enter__(self):
-        if self.provider == "MSSQL":
-            try:
-                self.conn = pyodbc.connect(self.mssql_conn_string)
-            except:
-                raise Exception("MsSql connection failed.")
-        elif self.provider == "PG" or self.provider == "POSTGRES":
-            try:
-                self.conn = self.pg_hook.get_conn()
-            except:
-                raise Exception("PG connection failed.")
-        elif self.provider == "MYSQL":
-            try:
-                self.conn = self.msql_hook.get_conn()
-            except:
-                raise Exception("MYSQL connection failed.")
-        return self.conn
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.conn.close()
-
-
-def get_mssql_odbc_conn_str(conn_id: str):
-    """
-    Cria uma string de conexão com banco SQL Server usando driver pyodbc.
-    """
-    conn_values = BaseHook.get_connection(conn_id)
-    driver = "{ODBC Driver 17 for SQL Server}"
-    server = conn_values.host
-    port = conn_values.port
-    database = conn_values.schema
-    user = conn_values.login
-    password = conn_values.password
-
-    mssql_conn = f"""Driver={driver};Server={server}, {port}; \
-                    Database={database};Uid={user};Pwd={password};"""
-
-    quoted_conn_str = urllib.parse.quote_plus(mssql_conn)
-
-    return f"mssql+pyodbc:///?odbc_connect={quoted_conn_str}"
-
-
-def get_mssql_odbc_engine(conn_id: str):
-    """
-    Cria uma engine de conexão com banco SQL Server usando driver pyodbc.
-    """
-    return create_engine(get_mssql_odbc_conn_str(conn_id))
-
-
-def get_hook_and_engine_by_provider(
-    provider: str, conn_id: str
-) -> Tuple[DbApiHook, Engine]:
-    provider = provider.upper()
-
-    if provider == "MSSQL":
-        hook = MsSqlHook(conn_id)
-        engine = get_mssql_odbc_engine(conn_id)
-    elif provider == "PG" or provider == "POSTGRES":
-        hook = PostgresHook(conn_id)
-        engine = hook.get_sqlalchemy_engine()
-    elif provider == "MYSQL":
-        hook = MySqlHook(conn_id)
-        engine = hook.get_sqlalchemy_engine()
-
-    return hook, engine
-
-
-def get_conn_type(conn_id: str) -> str:
-    """Get connection type from Airflow connections
-
-    Args:
-        conn_id (str): Airflow connection id
-
-    Returns:
-        str: type of connection. Ex: mssql, postgres, ...
-    """
-
-    conn_values = BaseHook.get_connection(conn_id)
-
-    return conn_values.conn_type
+from FastETL.custom_functions.utils.get_table_cols_name import (
+    get_table_cols_name,
+)
 
 
 def build_select_sql(source_table: str, column_list: str) -> str:
@@ -167,7 +52,7 @@ def build_dest_sqls(
     Monta a string de truncate do destino
     """
 
-    columns = ", ".join(col for col in column_list)
+    columns = ", ".join(f'"{col}"' for col in column_list)
 
     values = ", ".join([wildcard_symbol for i in range(len(column_list))])
     insert = f"INSERT INTO {destination_table} ({columns}) " f"VALUES ({values})"
@@ -175,52 +60,6 @@ def build_dest_sqls(
     truncate = f"TRUNCATE TABLE {destination_table}"
 
     return insert, truncate
-
-
-def get_cols_name(
-    cur, destination_provider: str, destination_table: str, columns_to_ignore: list = []
-) -> List[str]:
-    """
-    Obtem as colunas da tabela de destino
-    """
-
-    if destination_provider.upper() == "MSSQL":
-        colnames = []
-        cur.execute(f"SELECT * FROM {destination_table} WHERE 1 = 2")
-        for col in cur.columns(
-            schema=destination_table.split(".")[0],
-            table=destination_table.split(".")[1],
-        ):
-            colnames.append(col.column_name)
-    elif destination_provider.upper() == "PG":
-        cur.execute(f"SELECT * FROM {destination_table} WHERE 1 = 2")
-        colnames = [desc[0] for desc in cur.description]
-
-    colnames = [n for n in colnames if n not in columns_to_ignore]
-
-    return [f'"{n}"' for n in colnames]
-
-
-def get_table_cols_name(conn_id: str, schema: str, table: str):
-    """
-    Obtem a lista de colunas de uma tabela.
-    """
-    conn_values = BaseHook.get_connection(conn_id)
-
-    if conn_values.conn_type == "mssql":
-        db_hook = MsSqlHook(mssql_conn_id=conn_id)
-    elif conn_values.conn_type == "postgres":
-        db_hook = PostgresHook(postgres_conn_id=conn_id)
-    else:
-        raise Exception("Conn_type not implemented.")
-
-    with db_hook.get_conn() as db_conn:
-        with db_conn.cursor() as db_cur:
-            db_cur.execute(f"SELECT * FROM {schema}.{table} WHERE 1=2")
-            column_names = [tup[0] for tup in db_cur.description]
-
-    return column_names
-
 
 
 def insert_df_to_db(
@@ -274,61 +113,63 @@ def validate_db_string(
             warnings.warn("Tabelas de origem e destino com nomes diferentes")
 
 
-def compare_source_dest_rows(
-    source_cur, destination_cur, source_table: str, destination_table: str
-) -> None:
-    """
-    Compara quantidade de linhas na tabela origem e destino após o ETL.
-    Caso diferente, imprime warning. Quando a tabela de origem está
-    diretamente ligada ao sistema transacional justifica-se a diferença.
-    """
-
-    source_cur.execute(f"SELECT COUNT(*) FROM {source_table}")
-    destination_cur.execute(f"SELECT COUNT(*) FROM {destination_table}")
-
-    source_row_count = source_cur.fetchone()[0]
-    destination_row_count = destination_cur.fetchone()[0]
-
-    if source_row_count != destination_row_count:
-        warnings.warn(
-            "Quantidade de linhas diferentes na origem e destino. "
-            f"Origem: {source_row_count} linhas. "
-            f"Destino: {destination_row_count} linhas"
-        )
-
-
-def _convert_column(old_col: Column, db_provider: str) -> Column:
-    type_mapping = {
-        "NUMERIC": sa_types.Numeric(38, 13),
-        "BIT": sa_types.Boolean(),
-    }
-    if db_provider.upper() == "MSSQL":
-        type_mapping["DATETIME"] = sa_dialects.mssql.DATETIME2()
-
-    return Column(
-        old_col["name"],
-        type_mapping.get(
-            str(old_col["type"]._type_affinity()), old_col["type"]._type_affinity()
-        ),
-    )
-
-
 def create_table_if_not_exist(
     source_table: str,
     source_conn_id: str,
-    source_provider: str,
     destination_table: str,
     destination_conn_id: str,
-    destination_provider: str,
     copy_table_comments: bool,
 ) -> None:
+    """Create table on destination if not exists.
+
+    Args:
+        source_table (str): Source table name on format schema.table.
+        source_conn_id (str): Airflow connection id.
+        destination_table (str): Destination table name on format
+            schema.table.
+        destination_conn_id (str): Airflow connection id.
+        copy_table_comments (bool): Flag to copy table and columns
+            comments/descriptions.
+
+    Returns:
+        None.
+    """
+
+    def _convert_column(old_col: Column, db_provider: str) -> Column:
+        """Convert column type.
+
+        Args:
+            old_col (Column): Column to convert type.
+            db_provider (str): Connection type. If `mssql` or `postgres`.
+
+        Returns:
+            Column: Column with converted type.
+        """
+
+        type_mapping = {
+            "NUMERIC": sa_types.Numeric(38, 13),
+            "BIT": sa_types.Boolean(),
+        }
+
+        if db_provider == "mssql":
+            type_mapping["DATETIME"] = sa_dialects.mssql.DATETIME2()
+
+        return Column(
+            old_col["name"],
+            type_mapping.get(
+                str(old_col["type"]._type_affinity()), old_col["type"]._type_affinity()
+            ),
+        )
+
+    destination_provider = get_conn_type(destination_conn_id)
+
     ERROR_TABLE_DOES_NOT_EXIST = {
-        "MSSQL": "Invalid object name",
-        "PG": "does not exist",
+        "mssql": "Invalid object name",
+        "postgres": "does not exist",
     }
-    _, source_eng = get_hook_and_engine_by_provider(source_provider, source_conn_id)
+    _, source_eng = get_hook_and_engine_by_provider(source_conn_id)
     destination_hook, destination_eng = get_hook_and_engine_by_provider(
-        destination_provider, destination_conn_id
+        destination_conn_id
     )
     try:
         destination_hook.get_pandas_df(f"select * from {destination_table} where 1=2")
@@ -378,13 +219,13 @@ def _copy_table_comments(
     """Copy table and colunms comments/descriptions between databases.
 
     Args:
-        source_conn_id (str): Airflow connection id
-        source_table (str): Table str at format schema.table
-        destination_conn_id (str): Airflow connection id
-        destination_table (str): Table str at format schema.table
+        source_conn_id (str): Airflow connection id.
+        source_table (str): Table str at format schema.table.
+        destination_conn_id (str): Airflow connection id.
+        destination_table (str): Table str at format schema.table.
 
     Returns:
-        None
+        None.
     """
 
     source_table_comments = TableComments(
@@ -454,9 +295,7 @@ def get_schema_table_from_query(query: str) -> str:
 def copy_db_to_db(
     destination_table: str,
     source_conn_id: str,
-    source_provider: str,
     destination_conn_id: str,
-    destination_provider: str,
     source_table: str = None,
     select_sql: str = None,
     columns_to_ignore: list = [],
@@ -490,9 +329,7 @@ def copy_db_to_db(
     Args:
         destination_table (str): tabela de destino no formato schema.table
         source_conn_id (str): connection origem do Airflow
-        source_provider (str): provider do banco origem (MSSQL ou PG)
         destination_conn_id (str): connection destino do Airflow
-        destination_provider (str): provider do banco destino (MSSQL ou PG)
         source_table (str): tabela de origem no formato schema.table
         select_sql (str): query sql para consulta na origem. Se utilizado o
             source_table será ignorado
@@ -523,27 +360,21 @@ def copy_db_to_db(
     create_table_if_not_exist(
         source_table,
         source_conn_id,
-        source_provider,
         destination_table,
         destination_conn_id,
-        destination_provider,
         copy_table_comments,
     )
 
-    # TODO
-    # mudar todos os check para caixa baixa?
-    # source_provider = BaseHook.XXX(source_conn_id).conn_type
-    # destination_provider = BaseHook.XXX(destination_conn_id).conn_type
+    source_provider = get_conn_type(source_conn_id)
+    destination_provider = get_conn_type(destination_conn_id)
 
     # create connections
-    with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(
-            destination_conn_id, destination_provider
-        ) as destination_conn:
+    with DbConnection(source_conn_id) as source_conn:
+        with DbConnection(destination_conn_id) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
                     # Fast etl
-                    if destination_provider == "MSSQL":
+                    if destination_provider == "mssql":
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
                         wildcard_symbol = "?"
@@ -551,11 +382,11 @@ def copy_db_to_db(
                         wildcard_symbol = "%s"
 
                     # gera queries
-                    col_list = get_cols_name(
-                        destination_cur,
-                        destination_provider,
-                        destination_table,
-                        columns_to_ignore,
+                    col_list = get_table_cols_name(
+                        conn_id=destination_conn_id,
+                        schema=destination_table.split(".")[0],
+                        table=destination_table.split(".")[1],
+                        columns_to_ignore=columns_to_ignore,
                     )
 
                     insert, truncate = build_dest_sqls(
@@ -565,13 +396,13 @@ def copy_db_to_db(
                         select_sql = build_select_sql(source_table, col_list)
 
                     # Remove as aspas na query para compatibilidade com o MYSQL
-                    if source_provider == "MYSQL":
+                    if source_provider == "mysql":
                         select_sql = select_sql.replace('"', "")
 
                     # truncate stg
                     if destination_truncate:
                         destination_cur.execute(truncate)
-                        if destination_provider == "MSSQL":
+                        if destination_provider == "mssql":
                             destination_cur.commit()
 
                     # download data
@@ -590,13 +421,6 @@ def copy_db_to_db(
                     destination_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
-
-                    # XXX: Delete?
-                    # validate total lines downloaded
-                    # compare_source_dest_rows(source_cur,
-                    #                           destination_cur,
-                    #                           source_table,
-                    #                           destination_table)
 
                     if select_sql:
                         source_table = get_schema_table_from_query(select_sql)
@@ -802,15 +626,7 @@ def sync_db_2_db(
         inc_table_name = f"{destination_schema}.{table}_alteracoes"
 
     source_hook = PostgresHook(postgres_conn_id=source_conn_id, autocommit=True)
-
-    conn_values = BaseHook.get_connection(destination_conn_id)
-    if conn_values.conn_type == "mssql":
-        dest_hook = MsSqlHook(mssql_conn_id=destination_conn_id)
-        # XXX pq colocar em caixa alta?
-        destination_provider = "MSSQL"
-    elif conn_values.conn_type == "postgres":
-        dest_hook = PostgresHook(postgres_conn_id=destination_conn_id)
-        destination_provider = "PG"
+    dest_hook, _ = get_hook_and_engine_by_provider(destination_conn_id)
 
     col_list = get_table_cols_name(destination_conn_id, destination_schema, table)
 
@@ -835,9 +651,7 @@ def sync_db_2_db(
     copy_db_to_db(
         destination_table=f"{inc_table_name}",
         source_conn_id=source_conn_id,
-        source_provider="PG",
         destination_conn_id=destination_conn_id,
-        destination_provider=destination_provider,
         source_table=source_table_name,
         select_sql=select_diff,
         destination_truncate=True,
@@ -846,9 +660,10 @@ def sync_db_2_db(
     )
 
     # Reconstrói índices
-    if conn_values.conn_type == "mssql":
+    destination_conn_type = get_conn_type(destination_conn_id)
+    if destination_conn_type == "mssql":
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
-    elif conn_values.conn_type == "postgres":
+    elif destination_conn_type == "postgres":
         sql = f"REINDEX TABLE {inc_table_name}"
 
     dest_hook.run(sql)

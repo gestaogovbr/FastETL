@@ -6,6 +6,8 @@ import logging
 
 from airflow.hooks.base import BaseHook
 
+from FastETL.custom_functions.utils.db_connection import get_conn_type
+
 class LoadInfo:
     """
     Load quantity of rows downloaded into a control table.
@@ -54,21 +56,21 @@ class LoadInfo:
         Create log table if not exists. Works for MSSql and Postgres.
         """
 
-        conn_values = BaseHook.get_connection(self.d_conn_id)
+        d_conn_type = get_conn_type(self.d_conn_id)
 
-        if conn_values.conn_type == "mssql":
+        if d_conn_type == "mssql":
             create_prefix = f"""
                     IF OBJECT_ID('{self.log_schema_name}.{self.log_table_name}',
                         'U') IS NULL CREATE TABLE
                     """
             date_type = "datetime2"
 
-        elif conn_values.conn_type == "postgres":
+        elif d_conn_type == "postgres":
             create_prefix = "CREATE TABLE IF NOT EXISTS "
             date_type = "timestamp"
 
         else:
-            raise Exception(f"Conn_type not implemented: {conn_values.conn_type}")
+            raise Exception(f"Conn_type not implemented: {d_conn_type}")
 
         sql = f"""{create_prefix}
                 {self.log_schema_name}.{self.log_table_name} (
@@ -80,7 +82,8 @@ class LoadInfo:
                 dt_consumo  {date_type} NOT NULL,
                 qt_linhas   bigint NULL)
                 """
-        db_hook = conn_values.get_hook()
+
+        db_hook = BaseHook.get_connection(self.d_conn_id).get_hook()
         db_hook.run(sql)
 
     def save(self, rows_loaded: int):
@@ -100,6 +103,5 @@ class LoadInfo:
                 '{self.s_conn_login}', '{self.load_type}', CURRENT_TIMESTAMP, {rows_loaded})
         """
 
-        conn_values = BaseHook.get_connection(self.d_conn_id)
-        db_hook = conn_values.get_hook()
+        db_hook = BaseHook.get_connection(self.d_conn_id).get_hook()
         db_hook.run(sql)

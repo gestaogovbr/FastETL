@@ -25,12 +25,10 @@ Args:
 import os
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.hooks.postgres_hook import PostgresHook
-from airflow.hooks.base import BaseHook
 from airflow.utils.decorators import apply_defaults
 
-from FastETL.custom_functions.fast_etl import get_table_cols_name
+from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
+from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
 
 class DownloadCSVFromDbOperator(BaseOperator):
     ui_color = '#95aad5'
@@ -76,14 +74,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
             """
 
     def execute(self, context):
-        base_hook = BaseHook.get_connection(self.conn_id)
-
-        if base_hook.conn_type == 'mssql':
-            db_hook = MsSqlHook(mssql_conn_id=self.conn_id)
-        elif base_hook.conn_type == 'postgres':
-            db_hook = PostgresHook(postgres_conn_id=self.conn_id)
-        else:
-            raise Exception('Conn_type not implemented.')
+        db_hook, _ = get_hook_and_engine_by_provider(self.conn_id)
 
         if self.select_sql:
             df_select = self.select_sql

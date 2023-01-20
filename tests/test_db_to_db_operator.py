@@ -1,23 +1,18 @@
-from datetime import datetime, date
+from datetime import datetime
 import logging
 import subprocess
 import pytest
 
-from random import sample, randint, uniform
+from random import randint, uniform
 
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
-from airflow import settings
-from airflow.models import Connection
 
 import pandas as pd
 from pandas._testing import assert_frame_equal
-from sqlalchemy import Table, Column, Integer, String, Date, Float, Boolean, MetaData
 from pyodbc import ProgrammingError
 from psycopg2.errors import UndefinedTable
-
-from plugins.FastETL.hooks.db_to_db_hook import DbToDbHook
 
 
 def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
@@ -33,19 +28,6 @@ def _create_initial_table(table_name: str, hook: DbApiHook,
     filename = f'create_{table_name}_{db_provider.lower()}.sql'
     sql_stmt = open(f'/opt/airflow/tests/sql/init/{filename}').read()
     hook.run(sql_stmt.format(table_name=table_name))
-
-def _get_conn_password(conn_id: str) -> str:
-    "Gets the password from an Airflow connection."
-    session = settings.Session()
-    conn = session.query(Connection).filter_by(conn_id=conn_id).one()
-    return conn.password
-
-def _set_conn_password(conn_id: str, password: str) -> None:
-    "Sets the password of an Airflow connection."
-    session = settings.Session()
-    conn = session.query(Connection).filter_by(conn_id=conn_id).one()
-    conn.password = password
-    session.commit()
 
 NAMES = ['hendrix', 'nitai', 'krishna', 'jesus', 'Danielle', 'Augusto']
 DESCRIPTIONS = [
@@ -102,14 +84,14 @@ def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
 @pytest.mark.parametrize(
     'source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider, has_dest_table',
     [
-        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG', True),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL', True),
-        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL', True),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG', True),
-        ('pg-source-conn', PostgresHook, 'PG', 'pg-destination-conn', PostgresHook, 'PG', False),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'mssql-destination-conn', OdbcHook, 'MSSQL', False),
-        ('pg-source-conn', PostgresHook, 'PG', 'mssql-destination-conn', OdbcHook, 'MSSQL', False),
-        ('mssql-source-conn', OdbcHook, 'MSSQL', 'pg-destination-conn', PostgresHook, 'PG', False),
+        ('pg-source-conn', PostgresHook, 'postgres', 'pg-destination-conn', PostgresHook, 'postgres', True),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'mssql-destination-conn', OdbcHook, 'mssql', True),
+        ('pg-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', True),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'pg-destination-conn', PostgresHook, 'postgres', True),
+        ('pg-source-conn', PostgresHook, 'postgres', 'pg-destination-conn', PostgresHook, 'postgres', False),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'mssql-destination-conn', OdbcHook, 'mssql', False),
+        ('pg-source-conn', PostgresHook, 'postgres', 'mssql-destination-conn', OdbcHook, 'mssql', False),
+        ('mssql-source-conn', OdbcHook, 'mssql', 'pg-destination-conn', PostgresHook, 'postgres', False),
     ])
 def test_full_table_replication_various_db_types(
         source_conn_id: str,

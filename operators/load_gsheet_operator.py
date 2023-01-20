@@ -25,7 +25,7 @@ from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
 from FastETL.hooks.gsheet_hook import GSheetHook
-from FastETL.custom_functions.fast_etl import get_mssql_odbc_engine
+from FastETL.custom_functions.utils.db_connection import get_mssql_odbc_engine
 
 class LoadGSheetOperator(BaseOperator):
     ui_color = '#72efdd'

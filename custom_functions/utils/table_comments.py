@@ -12,10 +12,8 @@ from airflow.hooks.base import BaseHook
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.postgres_hook import PostgresHook
 
-from FastETL.custom_functions.fast_etl import (
-    get_hook_and_engine_by_provider,
-    get_table_cols_name,
-)
+from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
+from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
 
 
 class TableComments:
@@ -107,9 +105,7 @@ class TableComments:
             https://docs.sqlalchemy.org/en/14/core/reflection.html#sqlalchemy.engine.reflection.Inspector.get_columns
         """
 
-        _, engine = get_hook_and_engine_by_provider(
-            provider="postgres", conn_id=self.conn_id
-        )
+        _, engine = get_hook_and_engine_by_provider(conn_id=self.conn_id)
         inspector = inspect(engine)
 
         table_info = inspector.get_table_comment(
@@ -364,9 +360,7 @@ class TableComments:
             https://alembic.sqlalchemy.org/en/latest/ops.html
         """
 
-        _, engine = get_hook_and_engine_by_provider(
-            provider="postgres", conn_id=self.conn_id
-        )
+        _, engine = get_hook_and_engine_by_provider(conn_id=self.conn_id)
         conn = engine.connect()
         ctx = MigrationContext.configure(conn)
         op = Operations(ctx)

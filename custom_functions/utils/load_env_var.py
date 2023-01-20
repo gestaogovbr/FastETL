@@ -1,10 +1,13 @@
 import os
 
-from airflow.hooks.base import BaseHook
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.mysql_hook import MySqlHook
 
-from FastETL.custom_functions.fast_etl import get_mssql_odbc_conn_str
+from FastETL.custom_functions.utils.db_connection import (
+    get_mssql_odbc_conn_str,
+    get_conn_type,
+)
+
 
 def load_env_var(conn_name: str, conn_id: str):
     """
@@ -21,13 +24,13 @@ def load_env_var(conn_name: str, conn_id: str):
         conn_id (str): connection origem do Airflow
     """
 
-    conn_values = BaseHook.get_connection(conn_id)
+    conn_type = get_conn_type(conn_id)
 
-    if conn_values.conn_type == "mssql":
+    if conn_type == "mssql":
         connection_string = get_mssql_odbc_conn_str(conn_id)
-    elif conn_values.conn_type == "postgres":
+    elif conn_type == "postgres":
         connection_string = PostgresHook(conn_id).get_uri()
-    elif conn_values.conn_type == "mysql":
+    elif conn_type == "mysql":
         connection_string = MySqlHook(conn_id).get_uri()
 
     # Grava o valor em variavel de ambiente na execução

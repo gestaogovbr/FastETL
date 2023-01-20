@@ -8,20 +8,18 @@ from datetime import datetime
 
 from airflow.hooks.postgres_hook import PostgresHook
 
+from FastETL.custom_functions.utils.db_connection import DbConnection, get_conn_type
+from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from FastETL.custom_functions.fast_etl import (
-    DbConnection,
     validate_db_string,
-    get_cols_name,
     build_dest_sqls,
     build_select_sql,
 )
 
 
 def copy_by_key_interval(
-    source_provider: str,
     source_conn_id: str,
     source_table: str,
-    destination_provider: str,
     destination_conn_id: str,
     destination_table: str,
     key_column: str,
@@ -38,10 +36,8 @@ def copy_by_key_interval(
 
     Exemplo:
         copy_by_key_interval(
-                            source_provider='PG',
                             source_conn_id='quartzo_scdp',
                             source_table='novoScdp_VBL.trecho',
-                            destination_provider='MSSQL',
                             destination_conn_id='mssql_srv_30_stg_scdp',
                             destination_table='dbo.trecho',
                             key_column='id',
@@ -50,10 +46,8 @@ def copy_by_key_interval(
                             destination_truncate=False)
 
     Args:
-        source_provider (str): provider do banco origem (MSSQL ou PG)
         source_conn_id (str): connection origem do Airflow
         source_table (str): tabela de origem no formato schema.table
-        destination_provider (str): provider do banco destino (MSSQL ou PG)
         destination_conn_id (str): connection destino do Airflow
         destination_table (str): tabela de destino no formato schema.table
         key_column (str): nome da coluna chave da tabela origem
@@ -77,15 +71,13 @@ def copy_by_key_interval(
     validate_db_string(source_table, destination_table, None)
 
     # create connections
-    with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(
-            destination_conn_id, destination_provider
-        ) as destination_conn:
+    with DbConnection(source_conn_id) as source_conn:
+        with DbConnection(destination_conn_id) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
-
+                    dest_conn_type = get_conn_type(destination_conn_id)
                     # Fast etl
-                    if destination_provider == "MSSQL":
+                    if dest_conn_type == "mssql":
                         destination_conn.autocommit = False
                         destination_cur.fast_executemany = True
                         wildcard_symbol = "?"
@@ -93,8 +85,10 @@ def copy_by_key_interval(
                         wildcard_symbol = "%s"
 
                     # gera queries
-                    col_list = get_cols_name(
-                        destination_cur, destination_provider, destination_table
+                    col_list = get_table_cols_name(
+                        conn_id=destination_conn_id,
+                        schema=destination_table.split(".")[0],
+                        table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
                         destination_table, col_list, wildcard_symbol
@@ -192,10 +186,8 @@ def copy_by_key_interval(
 
 
 def copy_by_key_with_retry(
-    source_provider: str,
     source_conn_id: str,
     source_table: str,
-    destination_provider: str,
     destination_conn_id: str,
     destination_table: str,
     key_column: str,
@@ -216,10 +208,8 @@ def copy_by_key_with_retry(
 
     Exemplo:
         copy_by_key_with_retry(
-                            source_provider='PG',
                             source_conn_id='quartzo_scdp',
                             source_table='novoScdp_VBL.trecho',
-                            destination_provider='MSSQL',
                             destination_conn_id='mssql_srv_30_stg_scdp',
                             destination_table='dbo.trecho',
                             key_column='id',
@@ -230,10 +220,8 @@ def copy_by_key_with_retry(
                             retry_delay=300)
 
     Args:
-        source_provider (str): provider do banco origem (MSSQL ou PG)
         source_conn_id (str): connection origem do Airflow
         source_table (str): tabela de origem no formato schema.table
-        destination_provider (str): provider do banco destino (MSSQL ou PG)
         destination_conn_id (str): connection destino do Airflow
         destination_table (str): tabela de destino no formato schema.table
         key_column (str): nome da coluna chave da tabela origem
@@ -247,10 +235,8 @@ def copy_by_key_with_retry(
 
     retry = 0
     succeeded, next_key = copy_by_key_interval(
-        source_provider=source_provider,
         source_conn_id=source_conn_id,
         source_table=source_table,
-        destination_provider=destination_provider,
         destination_conn_id=destination_conn_id,
         destination_table=destination_table,
         key_column=key_column,
@@ -265,10 +251,8 @@ def copy_by_key_with_retry(
         logging.info("Tentando retry %d em %d segundos...", retry, retry_delay)
         time.sleep(retry_delay)
         succeeded, next_key = copy_by_key_interval(
-            source_provider=source_provider,
             source_conn_id=source_conn_id,
             source_table=source_table,
-            destination_provider=destination_provider,
             destination_conn_id=destination_conn_id,
             destination_table=destination_table,
             key_column=key_column,
@@ -284,10 +268,8 @@ def copy_by_key_with_retry(
 
 
 def copy_by_limit_offset(
-    source_provider: str,
     source_conn_id: str,
     source_table: str,
-    destination_provider: str,
     destination_conn_id: str,
     destination_table: str,
     limit: int = 1000,
@@ -302,20 +284,16 @@ def copy_by_limit_offset(
 
     Exemplo:
         copy_by_limit_offset(
-                            source_provider='PG',
                             source_conn_id='quartzo_scdp',
                             source_table='novoScdp_VBL.trecho',
-                            destination_provider='MSSQL',
                             destination_conn_id='mssql_srv_30_stg_scdp',
                             destination_table='dbo.trecho',
                             limit=1000,
                             destination_truncate=True)
 
     Args:
-        source_provider (str): provider do banco origem (MSSQL ou PG)
         source_conn_id (str): connection origem do Airflow
         source_table (str): tabela de origem no formato schema.table
-        destination_provider (str): provider do banco destino (MSSQL ou PG)
         destination_conn_id (str): connection destino do Airflow
         destination_table (str): tabela de destino no formato schema.table
         limit (int): quantidade de linhas para ler da origem a cada vez
@@ -327,20 +305,19 @@ def copy_by_limit_offset(
     validate_db_string(source_table, destination_table, None)
 
     # create connections
-    with DbConnection(source_conn_id, source_provider) as source_conn:
-        with DbConnection(
-            destination_conn_id, destination_provider
-        ) as destination_conn:
+    with DbConnection(source_conn_id) as source_conn:
+        with DbConnection(destination_conn_id) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
-
                     # Fast etl
                     destination_conn.autocommit = False
                     destination_cur.fast_executemany = True
 
                     # gera queries com limit e offset
-                    col_list = get_cols_name(
-                        destination_cur, destination_provider, destination_table
+                    col_list = get_table_cols_name(
+                        conn_id=destination_conn_id,
+                        schema=destination_table.split(".")[0],
+                        table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(destination_table, col_list, "?")
                     select_sql = build_select_sql(source_table, col_list)
