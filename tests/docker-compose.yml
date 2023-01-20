@@ -44,6 +44,7 @@
           AIRFLOW__CORE__EXECUTOR: SequentialExecutor
           AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
           AIRFLOW__CORE__FERNET_KEY: 'Uqv6pwYWJn7xifR3QAkifMTkupos8mkxaQL2Q7Ydsqw='
+          AIRFLOW__CORE__DEFAULT_TIMEZONE: 'America/Sao_Paulo'
           AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
           AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
         volumes:
@@ -53,7 +54,7 @@
           - ../tests:/opt/airflow/tests
           - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
         container_name: airflow
-        command: webserver
+        command: bash -c "airflow db init && airflow webserver"
         ports:
           - 8080:8080
         healthcheck:
@@ -63,10 +64,10 @@
           retries: 5
         restart: always
 
-      pg-source:
+      postgres-source:
         image: postgres:11.4-alpine
         restart: always
-        container_name: pg-source
+        container_name: postgres-source
         ports:
           - 54321:5432
         environment:
@@ -74,10 +75,10 @@
           - POSTGRES_PASSWORD=root
           - POSTGRES_DB=db
 
-      pg-destination:
+      postgres-destination:
         image: postgres:11.4-alpine
         restart: always
-        container_name: pg-destination
+        container_name: postgres-destination
         ports:
           - 54322:5432
         environment:

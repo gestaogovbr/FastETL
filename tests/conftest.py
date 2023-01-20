@@ -19,20 +19,20 @@ def pytest_configure(config):
     # define some models to get the tests to pass.
     db.merge_conn(
         models.Connection(
-            conn_id='pg-source-conn', conn_type='postgres',
-            host='pg-source', schema='db',
+            conn_id='postgres-source-conn', conn_type='postgres',
+            host='postgres-source', schema='db',
             login='root', password='root')
     )
     db.merge_conn(
         models.Connection(
-            conn_id='pg-destination-conn', conn_type='postgres',
-            host='pg-destination', schema='db',
+            conn_id='postgres-destination-conn', conn_type='postgres',
+            host='postgres-destination', schema='db',
             login='root', password='root')
     )
     db.merge_conn(
         models.Connection(
-            conn_id='pg-destination-fake-conn', conn_type='postgres',
-            host='pg-destination', schema='db',
+            conn_id='postgres-destination-fake-conn', conn_type='postgres',
+            host='postgres-destination', schema='db',
             login='fake', password='fake')
     )
 
