@@ -8,7 +8,7 @@ from FastETL.custom_functions.utils.db_connection import DbConnection
 
 
 def get_table_cols_name(
-    conn_id: str, schema: str, table: str, columns_to_ignore: List
+    conn_id: str, schema: str, table: str, columns_to_ignore: List = []
 ) -> List[str]:
     """
     Obtem a lista de colunas de uma tabela.
