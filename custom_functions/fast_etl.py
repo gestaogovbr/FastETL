@@ -39,7 +39,7 @@ def build_select_sql(source_table: str, column_list: str) -> str:
     Monta a string do select da origem
     """
 
-    columns = ", ".join(col for col in column_list)
+    columns = ", ".join(f'"{col}"' for col in column_list)
 
     return f"SELECT {columns} FROM {source_table}"
 
