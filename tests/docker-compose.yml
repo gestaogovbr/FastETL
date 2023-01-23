@@ -39,7 +39,7 @@
     version: '3'
     services:
       airflow:
-        build: .
+        image: ghcr.io/economiagovbr/airflow2-docker:latest
         environment:
           AIRFLOW__CORE__EXECUTOR: SequentialExecutor
           AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
@@ -54,6 +54,7 @@
           - ../tests:/opt/airflow/tests
           - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
         container_name: airflow
+        command: scheduler
         ports:
           - 8080:8080
         healthcheck:
