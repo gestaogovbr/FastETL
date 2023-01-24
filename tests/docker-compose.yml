@@ -55,7 +55,6 @@
           - ../tests:/opt/airflow/tests
           - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
         container_name: airflow
-        # command: db init
         ports:
           - 8080:8080
         healthcheck:
