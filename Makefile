@@ -12,5 +12,4 @@ down:
 
 .PHONY: tests
 tests:
-	docker exec airflow sh -c "airflow db reset -y"
 	docker exec airflow pytest -vvv --color=yes
