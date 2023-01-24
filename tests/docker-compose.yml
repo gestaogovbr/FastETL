@@ -39,6 +39,7 @@
     version: '3'
     services:
       airflow:
+        # image: ghcr.io/economiagovbr/airflow2-docker:latest
         build: .
         environment:
           AIRFLOW__CORE__EXECUTOR: SequentialExecutor
