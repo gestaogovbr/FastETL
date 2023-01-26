@@ -13,7 +13,7 @@ from airflow.hooks.base import BaseHook
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
-from airflow.hooks.mysql_hook import MySqlHook
+from airflow.providers.mysql.hooks.mysql import MySqlHook
 
 
 class DbConnection:
