@@ -12,7 +12,7 @@ import pyodbc
 from airflow.hooks.base import BaseHook
 from airflow.hooks.dbapi import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.hooks.mysql_hook import MySqlHook
 
 

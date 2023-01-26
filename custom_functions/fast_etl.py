@@ -19,7 +19,7 @@ from sqlalchemy.sql import sqltypes as sa_types
 import sqlalchemy.dialects as sa_dialects
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
 from FastETL.custom_functions.utils.db_connection import (
     DbConnection,

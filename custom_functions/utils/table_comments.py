@@ -9,7 +9,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 
 from airflow.hooks.base import BaseHook
-from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
