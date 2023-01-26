@@ -27,7 +27,7 @@ args = {
 }
 @dag(
     default_args=args,
-    schedule_interval=None,
+    schedule=None,
     catchup=False,
     description=__doc__,
     tags=["osrm"]
