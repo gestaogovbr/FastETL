@@ -18,7 +18,7 @@ from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes as sa_types
 import sqlalchemy.dialects as sa_dialects
 
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.mssql_hook import MsSqlHook
 
 from FastETL.custom_functions.utils.db_connection import (
