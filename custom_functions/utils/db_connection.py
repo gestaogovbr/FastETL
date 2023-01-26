@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 import pyodbc
 
 from airflow.hooks.base import BaseHook
-from airflow.hooks.dbapi import DbApiHook
+from airflow.providers.common.sql.hooks.sql import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
