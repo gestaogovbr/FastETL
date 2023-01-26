@@ -1038,6 +1038,12 @@ class OrgaosMappingCleaner(GSheetMappingCleaner):
 
     def clean(self):
         df = self.df
+
+        # check if dataframe is empty
+        if df.empty:
+            logging.info("Dataframe is empty, nothing to map.")
+            return
+
         column_orgao_nome = self.column_orgao_nome
         column_unidade_administrativa_nome = \
             self.column_unidade_administrativa_nome
