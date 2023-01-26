@@ -189,6 +189,11 @@ class DataPatch:
                 be written.
             file_format (str, optional): File format. Defaults to "csv".
         """
+        # verify whether is data to be written
+        if self.qa.empty:
+            raise ValueError("Quality control dataframe is empty, "
+               " no data to write.")
+
         # prepara um dataframe com só o que mudou
         control = self.qa.copy() # a partir da tabela de QA
         control[self.primary_keys] = (
