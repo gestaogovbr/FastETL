@@ -53,7 +53,7 @@ def get_trigger_date(context: dict, local_time: bool = False) -> datetime:
 
         Caso seja uma execução agendada, será data_interval_end,
         que no Airflow é a data esperada em que a DAG seja executada
-        (é igual a logical_date + o schedule_interval).
+        (é igual a logical_date + o schedule).
 
         Caso seja feita ativação manual (trigger DAG), poderá ser
         passado o parâmetro trigger_date no JSON de configuração.
