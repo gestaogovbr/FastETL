@@ -6,7 +6,7 @@ import time
 import logging
 from datetime import datetime
 
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 from FastETL.custom_functions.utils.db_connection import DbConnection, get_conn_type
 from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name

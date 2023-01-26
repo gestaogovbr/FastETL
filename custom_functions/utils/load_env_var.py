@@ -1,6 +1,6 @@
 import os
 
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.mysql_hook import MySqlHook
 
 from FastETL.custom_functions.utils.db_connection import (
