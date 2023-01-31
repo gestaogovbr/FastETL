@@ -4,7 +4,6 @@ airflow hooks, sqlalchemy and pyodbc.
 """
 
 from typing import Tuple
-import urllib
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine, URL
 import pyodbc
@@ -79,10 +78,8 @@ def get_mssql_odbc_conn_str(conn_id: str, raw_str: bool = False) -> str:
     if raw_str:
         return mssql_conn_str
 
-    # quoted_conn_str = urllib.parse.quote_plus(mssql_conn_str)
     connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": mssql_conn_str})
 
-    # return f"mssql+pyodbc:///?odbc_connect={quoted_conn_str}"
     return connection_url
 
 
