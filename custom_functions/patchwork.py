@@ -472,9 +472,10 @@ class GeoPointDataCleaner(BaseDataCleaner):
 
     def clean(self):
         "Limpa as colunas de latitude e longitude."
-        df = self.df
-        if df.empty:
+        if self.df.empty or self.qa.empty:
+            logging.info("Data or QA dataframe is empty, nothing to clean.")
             return
+        df = self.df
 
         # Verificações de separador de casas decimais e tipagem da coluna
         for column in (self.latitude_column, self.longitude_column):
