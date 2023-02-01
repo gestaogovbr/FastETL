@@ -382,6 +382,9 @@ class DuplicatedRowCleaner(OverwritingDataCleaner):
     def clean(self):
         "Remove as linhas duplicadas."
         df = self.df
+        if df.empty:
+            logging.info("Dataframe is empty, nothing to clean.")
+            return
 
         duplicated = df.duplicated(subset=self.primary_keys, keep='first')
         if duplicated.empty:
