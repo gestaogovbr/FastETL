@@ -387,9 +387,10 @@ class DuplicatedRowCleaner(OverwritingDataCleaner):
             return
 
         duplicated = df.duplicated(subset=self.primary_keys, keep='first')
-        if duplicated.empty:
+        if df[duplicated].empty:
             logging.info("No rows with duplicated primary keys were found in data.")
             return
+        logging.info("Found %d duplicated rows.", len(df[duplicated]))
 
         df.loc[duplicated].apply(
             lambda row:
