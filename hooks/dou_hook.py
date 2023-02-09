@@ -7,75 +7,75 @@ from datetime import datetime, timedelta
 import time
 from enum import Enum
 import json
-import requests
-from requests.models import PreparedRequest
 from typing import List
+import requests
 
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
 from bs4 import BeautifulSoup
 
+
 class Section(Enum):
-    """Define the section options to be used as parameter in the search
-    """
-    SECAO_1 = 'do1'
-    SECAO_2 = 'do2'
-    SECAO_3 = 'do3'
-    EDICAO_EXTRA = 'doe'
-    EDICAO_EXTRA_1A = 'do1_extra_a'
-    EDICAO_EXTRA_1B = 'do1_extra_b'
-    EDICAO_EXTRA_1D = 'do1_extra_d'
-    EDICAO_EXTRA_2A = 'do2_extra_a'
-    EDICAO_EXTRA_2B = 'do2_extra_b'
-    EDICAO_EXTRA_2D = 'do2_extra_d'
-    EDICAO_EXTRA_3A = 'do3_extra_a'
-    EDICAO_EXTRA_3B = 'do3_extra_b'
-    EDICAO_EXTRA_3D = 'do3_extra_d'
-    EDICAO_SUPLEMENTAR = 'do1a'
-    TODOS = 'todos'
+    """Define the section options to be used as parameter in the search"""
+
+    SECAO_1 = "do1"
+    SECAO_2 = "do2"
+    SECAO_3 = "do3"
+    EDICAO_EXTRA = "doe"
+    EDICAO_EXTRA_1A = "do1_extra_a"
+    EDICAO_EXTRA_1B = "do1_extra_b"
+    EDICAO_EXTRA_1D = "do1_extra_d"
+    EDICAO_EXTRA_2A = "do2_extra_a"
+    EDICAO_EXTRA_2B = "do2_extra_b"
+    EDICAO_EXTRA_2D = "do2_extra_d"
+    EDICAO_EXTRA_3A = "do3_extra_a"
+    EDICAO_EXTRA_3B = "do3_extra_b"
+    EDICAO_EXTRA_3D = "do3_extra_d"
+    EDICAO_SUPLEMENTAR = "do1a"
+    TODOS = "todos"
+
 
 class SearchDate(Enum):
-    """Define the search date options to be used as parameter in the search
-    """
-    DIA = 'dia'
-    SEMANA = 'semana'
-    MES = 'mes'
-    ANO = 'ano'
+    """Define the search date options to be used as parameter in the search"""
+
+    DIA = "dia"
+    SEMANA = "semana"
+    MES = "mes"
+    ANO = "ano"
+
 
 class Field(Enum):
-    """Define the search field options to be used as parameter in the search
-    """
-    TUDO = 'tudo'
-    TITULO = 'title_pt_BR'
-    CONTEUDO = 'ddm__text__21040__texto_pt_BR'
+    """Define the search field options to be used as parameter in the search"""
+
+    TUDO = "tudo"
+    TITULO = "title_pt_BR"
+    CONTEUDO = "ddm__text__21040__texto_pt_BR"
+
 
 class DOUHook(BaseHook):
-    IN_WEB_BASE_URL = 'https://www.in.gov.br/web/dou/-/'
-    IN_API_BASE_URL = 'https://www.in.gov.br/consulta/-/buscar/dou'
-    GET_PAGE_SOURCE_URL = 'http://selenium:5000/get_page_source'
+    IN_WEB_BASE_URL = "https://www.in.gov.br/web/dou/-/"
+    IN_API_BASE_URL = "https://www.in.gov.br/consulta/-/buscar/dou"
     SEC_DESCRIPTION = {
-        Section.SECAO_1.value: 'Seção 1',
-        Section.SECAO_2.value: 'Seção 2',
-        Section.SECAO_3.value: 'Seção 3',
-        Section.EDICAO_EXTRA.value: 'Edição Extra',
-        Section.EDICAO_EXTRA_1A.value: 'Seção: 1 - Extra A',
-        Section.EDICAO_EXTRA_1B.value: 'Seção: 1 - Extra B',
-        Section.EDICAO_EXTRA_1D.value: 'Seção: 1 - Extra D',
-        Section.EDICAO_EXTRA_2A.value: 'Seção: 2 - Extra A',
-        Section.EDICAO_EXTRA_2B.value: 'Seção: 2 - Extra B',
-        Section.EDICAO_EXTRA_2D.value: 'Seção: 2 - Extra D',
-        Section.EDICAO_EXTRA_3A.value: 'Seção: 3 - Extra A',
-        Section.EDICAO_EXTRA_3B.value: 'Seção: 3 - Extra B',
-        Section.EDICAO_EXTRA_3D.value: 'Seção: 3 - Extra D',
-        Section.EDICAO_SUPLEMENTAR.value: 'Edição Suplementar',
-        Section.TODOS.value: 'Todas'
+        Section.SECAO_1.value: "Seção 1",
+        Section.SECAO_2.value: "Seção 2",
+        Section.SECAO_3.value: "Seção 3",
+        Section.EDICAO_EXTRA.value: "Edição Extra",
+        Section.EDICAO_EXTRA_1A.value: "Seção: 1 - Extra A",
+        Section.EDICAO_EXTRA_1B.value: "Seção: 1 - Extra B",
+        Section.EDICAO_EXTRA_1D.value: "Seção: 1 - Extra D",
+        Section.EDICAO_EXTRA_2A.value: "Seção: 2 - Extra A",
+        Section.EDICAO_EXTRA_2B.value: "Seção: 2 - Extra B",
+        Section.EDICAO_EXTRA_2D.value: "Seção: 2 - Extra D",
+        Section.EDICAO_EXTRA_3A.value: "Seção: 3 - Extra A",
+        Section.EDICAO_EXTRA_3B.value: "Seção: 3 - Extra B",
+        Section.EDICAO_EXTRA_3D.value: "Seção: 3 - Extra D",
+        Section.EDICAO_SUPLEMENTAR.value: "Edição Suplementar",
+        Section.TODOS.value: "Todas",
     }
 
     @apply_defaults
-    def __init__(self,
-                 *args,
-                 **kwargs):
+    def __init__(self, *args, **kwargs):
         pass
 
     def _get_query_str(self, term, field, is_exact_search):
@@ -89,11 +89,11 @@ class DOUHook(BaseHook):
         if field == Field.TUDO:
             return term
         else:
-            return f'{field.value}-{term}'
+            return f"{field.value}-{term}"
 
-    def calculate_from_datetime(self,
-                                publish_to_date: datetime,
-                                search_date: SearchDate):
+    def calculate_from_datetime(
+        self, publish_to_date: datetime, search_date: SearchDate
+    ):
         """
         Calculate parameter `publishFrom` to be passed to the API based
         on publishTo parameter and `search_date`. Perform especial
@@ -103,15 +103,15 @@ class DOUHook(BaseHook):
             return publish_to_date
 
         elif search_date == SearchDate.SEMANA:
-            return (publish_to_date - timedelta(days=6))
+            return publish_to_date - timedelta(days=6)
 
         elif search_date == SearchDate.MES:
             end_prev_month = publish_to_date.replace(day=1) - timedelta(days=1)
             publish_from_date = end_prev_month.replace(day=publish_to_date.day)
-            return (publish_from_date - timedelta(days=1))
+            return publish_from_date - timedelta(days=1)
 
         elif search_date == SearchDate.ANO:
-            return (publish_to_date - timedelta(days=364))
+            return publish_to_date - timedelta(days=364)
 
     def _request_with_retry(self, payload: List):
         try:
@@ -121,13 +121,16 @@ class DOUHook(BaseHook):
             time.sleep(30)
             return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
 
-    def search_text(self, search_term: str,
-                          sections: List[Section],
-                          reference_date:datetime=datetime.now(),
-                          search_date=SearchDate.DIA,
-                          field=Field.TUDO,
-                          is_exact_search=True,
-                          with_retry=True):
+    def search_text(
+        self,
+        search_term: str,
+        sections: List[Section],
+        reference_date: datetime = datetime.now(),
+        search_date=SearchDate.DIA,
+        field=Field.TUDO,
+        is_exact_search=True,
+        with_retry=True,
+    ):
         """
         Search for a term in the API and return all ocurrences.
 
@@ -142,18 +145,14 @@ class DOUHook(BaseHook):
         publish_from = self.calculate_from_datetime(reference_date, search_date)
 
         payload = [
-            ('q', self._get_query_str(search_term, field, is_exact_search)),
-            ('exactDate', 'personalizado'),
-            ('publishFrom', publish_from.strftime('%d-%m-%Y')),
-            ('publishTo', reference_date.strftime('%d-%m-%Y')),
-            ('sortType', '0')
+            ("q", self._get_query_str(search_term, field, is_exact_search)),
+            ("exactDate", "personalizado"),
+            ("publishFrom", publish_from.strftime("%d-%m-%Y")),
+            ("publishTo", reference_date.strftime("%d-%m-%Y")),
+            ("sortType", "0"),
         ]
         for section in sections:
-            payload.append(('s', section.value))
-
-        req = PreparedRequest()
-        req.prepare_url(self.IN_API_BASE_URL, params=payload)
-        dou_url = {"dou_url": req.url}
+            payload.append(("s", section.value))
 
         if with_retry:
             page = self._request_with_retry(payload=payload)
@@ -163,19 +162,18 @@ class DOUHook(BaseHook):
         soup = BeautifulSoup(page.content, "html.parser")
 
         script_tag = soup.find(
-            'script',
-            id='_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params'
+            "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
         )
-        search_results = json.loads(script_tag.contents[0])['jsonArray']
+        search_results = json.loads(script_tag.contents[0])["jsonArray"]
         all_results = []
         if search_results:
             for content in search_results:
                 item = {}
-                item['section'] = content['pubName'].lower()
-                item['title'] = content['title']
-                item['href'] = self.IN_WEB_BASE_URL + content['urlTitle']
-                item['abstract'] = content['content']
-                item['date'] = content['pubDate']
+                item["section"] = content["pubName"].lower()
+                item["title"] = content["title"]
+                item["href"] = self.IN_WEB_BASE_URL + content["urlTitle"]
+                item["abstract"] = content["content"]
+                item["date"] = content["pubDate"]
 
                 all_results.append(item)
 
