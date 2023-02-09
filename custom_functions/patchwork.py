@@ -472,8 +472,8 @@ class GeoPointDataCleaner(BaseDataCleaner):
 
     def clean(self):
         "Limpa as colunas de latitude e longitude."
-        if self.df.empty or self.qa.empty:
-            logging.info("Data or QA dataframe is empty, nothing to clean.")
+        if self.df.empty:
+            logging.info("Dataframe is empty, nothing to clean.")
             return
         df = self.df
 
@@ -550,18 +550,20 @@ class GeoPointDataCleaner(BaseDataCleaner):
         )
         logging.info('Encontradas %d linhas com latitude inválida.',
             len(df.loc[latitude_inexistente]))
-        df.loc[latitude_inexistente].apply(
-            lambda row:
-            self._qa_log(
-                row_id=[row.qru_corrida],
-                column=self.latitude_column,
-                original_value=str(getattr(row,self.latitude_column)),
-                considered_value=None,
-                level=QALogLevel.CAST_NULL,
-                reason=('Valor de latitude fora dos limites: '
-                    f'{getattr(row, self.latitude_column)}.')),
-            axis=1)
-        df.loc[latitude_inexistente, self.latitude_column] = None
+
+        if not df.loc[latitude_inexistente].empty:
+            df.loc[latitude_inexistente].apply(
+                lambda row:
+                self._qa_log(
+                    row_id=[row.qru_corrida],
+                    column=self.latitude_column,
+                    original_value=str(getattr(row,self.latitude_column)),
+                    considered_value=None,
+                    level=QALogLevel.CAST_NULL,
+                    reason=('Valor de latitude fora dos limites: '
+                        f'{getattr(row, self.latitude_column)}.')),
+                axis=1)
+            df.loc[latitude_inexistente, self.latitude_column] = None
 
         longitude_inexistente = (
             (df[self.longitude_column] < -180.0) |
@@ -569,18 +571,20 @@ class GeoPointDataCleaner(BaseDataCleaner):
         )
         logging.info('Encontradas %d linhas com longitude inválida.',
             len(df.loc[longitude_inexistente]))
-        df.loc[longitude_inexistente].apply(
-            lambda row:
-            self._qa_log(
-                row_id=[row.qru_corrida],
-                column=self.longitude_column,
-                original_value=str(getattr(row,self.longitude_column)),
-                considered_value=None,
-                level=QALogLevel.CAST_NULL,
-                reason=('Valor de longitude fora dos limites: '
-                    f'{getattr(row, self.longitude_column)}.')),
-            axis=1)
-        df.loc[longitude_inexistente, self.longitude_column] = None
+
+        if not df.loc[longitude_inexistente].empty:
+            df.loc[longitude_inexistente].apply(
+                lambda row:
+                self._qa_log(
+                    row_id=[row.qru_corrida],
+                    column=self.longitude_column,
+                    original_value=str(getattr(row,self.longitude_column)),
+                    considered_value=None,
+                    level=QALogLevel.CAST_NULL,
+                    reason=('Valor de longitude fora dos limites: '
+                        f'{getattr(row, self.longitude_column)}.')),
+                axis=1)
+            df.loc[longitude_inexistente, self.longitude_column] = None
 
         self.df = df
 
