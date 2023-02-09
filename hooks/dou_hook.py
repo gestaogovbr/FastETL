@@ -113,13 +113,13 @@ class DOUHook(BaseHook):
         elif search_date == SearchDate.ANO:
             return (publish_to_date - timedelta(days=364))
 
-    def _request_with_retry(self, param:str):
+    def _request_with_retry(self, payload: List):
         try:
-            return requests.post(self.GET_PAGE_SOURCE_URL, json=param)
+            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
         except requests.exceptions.ConnectionError:
-            logging.info('Sleep for 30 seconds before retry requests.post().')
+            logging.info("Sleep for 30 seconds before retry requests.get().")
             time.sleep(30)
-            return requests.post(self.GET_PAGE_SOURCE_URL, json=param)
+            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
 
     def search_text(self, search_term: str,
                           sections: List[Section],
@@ -156,11 +156,11 @@ class DOUHook(BaseHook):
         dou_url = {"dou_url": req.url}
 
         if with_retry:
-            page_source = self._request_with_retry(param=dou_url)
+            page = self._request_with_retry(payload=payload)
         else:
-            page_source = requests.post(self.GET_PAGE_SOURCE_URL, json=dou_url)
+            page = requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
 
-        soup = BeautifulSoup(page_source.text, 'html.parser')
+        soup = BeautifulSoup(page.content, "html.parser")
 
         script_tag = soup.find(
             'script',
