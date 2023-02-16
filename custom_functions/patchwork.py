@@ -1184,7 +1184,7 @@ def merge_patches(tmp_dir: str, source: str, source_config: dict,
         df_qa = DataPatch.read_zipped_csv(qa_file_name)
         # linhas a remover neste arquivo de QA
         exclude_by_qa = (
-            df_qa[df_qa.nivel_erro == str(QALogLevel.DROP_LINE.value)]
+            df_qa[df_qa.nivel_erro == QALogLevel.DROP_LINE.value]
             ['primary_keys_values']
             .str.split(',', expand=True)
         )
