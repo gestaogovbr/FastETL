@@ -1111,7 +1111,7 @@ def longest_common_substring(a: str, b: str) -> str:
     return a[match.a : match.a + match.size]
 
 def merge_patches(tmp_dir: str, source: str, source_config: dict,
-        adjust_dataframe: Callable[[pd.DataFrame], pd.DataFrame] = None):
+        adjust_dataframe: Callable[[pd.DataFrame], pd.DataFrame] = None) -> bool:
     """Pega todos os arquivos patchwork:
 
     1. arquivos com sufixo -patch, que são as diferenças registradas
@@ -1133,10 +1133,14 @@ def merge_patches(tmp_dir: str, source: str, source_config: dict,
         adjust_dataframe (Callable[[pd.DataFrame], pd.DataFrame]): função
             opcional para realizar ajustes finais no dataframe antes da
             consolidação final.
+    
 
      Raises:
         ValueError: Se a quantidade de chaves informada em source_config
             diferir da quantidade de chaves encontrada nos arquivos de QA.
+
+    Returns:
+        bool: True se há dados a carregar, False caso contrário.
     """
     primary_keys = source_config['primary_keys']
     file_name = os.path.join(tmp_dir, f'{source}.zip')
@@ -1249,3 +1253,5 @@ def merge_patches(tmp_dir: str, source: str, source_config: dict,
     for file in patch_files:
         os.remove(file)
     os.remove(file_name)
+
+    return not df.empty
