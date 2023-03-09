@@ -414,7 +414,7 @@ class TableComments:
                 table_comments = self._get_pg_table_comments()
 
             # teiid driver
-            except AssertionError:
+            except:
                 table_comments = self._get_teiid_table_comments()
         else:
             raise NotImplementedError(
