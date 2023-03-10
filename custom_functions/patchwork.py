@@ -169,7 +169,7 @@ class DataPatch:
         os.chdir(output_path)
 
         # grava o esquema para o data package
-        package = Package(name=filename)
+        package = Package(name=filename.lower())
         resource = Resource(f'{filename}.csv', schema=Schema.describe(df))
         package.add_resource(resource)
 
