@@ -27,7 +27,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from difflib import SequenceMatcher
 
 import pandas as pd
-from frictionless import Package, Resource, Schema
+from frictionless import Package, Resource, Schema, formats
 
 from FastETL.hooks.gsheet_hook import GSheetHook
 
@@ -127,9 +127,11 @@ class DataPatch:
             _, descriptor_name = os.path.split(file_name)
             descriptor_name = descriptor_name.rsplit('.', 1)[0] # sem o .zip
             descriptor_name += '.datapackage.json'
+            logging.info("file_name: %s", file_name)
+            logging.info("descriptor_name: %s", descriptor_name)
             package = Package(
                 file_name,
-                innerpath=descriptor_name)
+                control=formats.zip.ZipControl(innerpath=descriptor_name))
             resource = package.get_resource(package.resource_names[0])
             df = resource.to_pandas()
             # guarda as colunas de índice (chaves primárias), se houver
