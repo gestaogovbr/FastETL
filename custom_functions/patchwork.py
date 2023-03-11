@@ -127,8 +127,6 @@ class DataPatch:
             _, descriptor_name = os.path.split(file_name)
             descriptor_name = descriptor_name.rsplit('.', 1)[0] # sem o .zip
             descriptor_name += '.datapackage.json'
-            logging.info("file_name: %s", file_name)
-            logging.info("descriptor_name: %s", descriptor_name)
             package = Package(
                 file_name,
                 control=formats.zip.ZipControl(innerpath=descriptor_name))
