@@ -93,7 +93,9 @@ def copy_by_key_interval(
                     insert, truncate = build_dest_sqls(
                         destination_table, col_list, wildcard_symbol
                     )
-                    select_sql = build_select_sql(source_table, col_list)
+                    select_sql = build_select_sql(schema=source_table.split(".")[0],
+                                                  table=source_table.split(".")[1],
+                                                  column_list=col_list)
                     # pyodbc: select_sql = f"{select_sql} WHERE {key_column} BETWEEN ? AND ?"
                     select_sql = f"{select_sql} WHERE {key_column} BETWEEN %s AND %s"
 
@@ -320,7 +322,9 @@ def copy_by_limit_offset(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(destination_table, col_list, "?")
-                    select_sql = build_select_sql(source_table, col_list)
+                    select_sql = build_select_sql(schema=source_table.split(".")[0],
+                                                  table=source_table.split(".")[1],
+                                                  column_list=col_list)
                     # pyodbc: select_sql = f"{select_sql} limit ?, ?"
                     select_sql = f"{select_sql} limit %s, %s"
 

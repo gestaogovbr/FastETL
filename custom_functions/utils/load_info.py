@@ -16,10 +16,11 @@ class LoadInfo:
     def __init__(
         self,
         source_conn_id: str,
-        source_schema_table: str,
+        source_table: str,
         load_type: str,
         dest_conn_id: str,
         log_schema_name: str,
+        source_schema: str = "não informado",
         log_table_name: str = "consumo_dados",
     ) -> None:
         """Initialize LoadInfo class variables.
@@ -35,13 +36,8 @@ class LoadInfo:
         """
 
         self.s_conn_id = source_conn_id
-
-        try:
-            self.s_schema, self.s_table = source_schema_table.split(".")
-        except ValueError:
-            logging.warning("Tabela de origem sem especificação na query.")
-            self.s_schema, self.s_table = "não informado", source_schema_table
-
+        self.s_schema = source_schema
+        self.s_table = source_table
         self.load_type = load_type
         s_conn_values = BaseHook.get_connection(source_conn_id)
         self.s_conn_database = s_conn_values.schema
