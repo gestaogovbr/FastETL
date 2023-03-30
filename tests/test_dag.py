@@ -21,8 +21,14 @@ with DAG(
         for dest_conf in db_confs:
             CopyDbToDbOperator(
                 task_id=f'test_from_{source_conf[0]}_to_{dest_conf[0]}',
-                source_table=f'{source_conf[1]}.source_table',
-                destination_table=f'{dest_conf[1]}.destination_table',
-                source_conn_id=f'{source_conf[0]}-source-conn',
-                destination_conn_id=f'{dest_conf[0]}-destination-conn',
-                )
+                source={
+                    "conn_id": f'{source_conf[0]}-source-conn',
+                    "schema": source_conf[1],
+                    "table": 'source_table',
+                },
+                destination={
+                    "conn_id": f'{dest_conf[0]}-destination-conn',
+                    "schema": dest_conf[1],
+                    "table": 'destination_table',
+                },
+            )
