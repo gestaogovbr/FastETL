@@ -295,8 +295,8 @@ def get_schema_table_from_query(query: str) -> str:
 
 
 def copy_db_to_db(
-    source_conn: Dict[str, str],
-    destination_conn: Dict[str, str],
+    source: Dict[str, str],
+    destination: Dict[str, str],
     columns_to_ignore: list = None,
     destination_truncate: bool = True,
     chunksize: int = 1000,
@@ -358,8 +358,8 @@ def copy_db_to_db(
     # dest_schema_table = f"{destination_conn['schema']}.{destination_conn['table']}"
 
     # validate connections
-    source = SourceConnection(**source_conn)
-    destination = DestinationConnection(**destination_conn)
+    source = SourceConnection(**source)
+    destination = DestinationConnection(**destination)
 
     # create table if not exists in destination db
     create_table_if_not_exists(
@@ -664,13 +664,13 @@ def sync_db_2_db(
     logging.info("SELECT para espelhamento: %s", select_diff)
 
     copy_db_to_db(
-        source_conn={
+        source={
             "conn_id": source_conn_id,
             "query": select_diff,
             "schema": source_table_name.split(".")[0],
             "table": source_table_name.split(".")[1],
         },
-        destination_conn={
+        destination={
             "conn_id": destination_conn_id,
             "schema": inc_table_name.split(".")[0],
             "table": inc_table_name.split(".")[1],

@@ -11,7 +11,6 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from FastETL.custom_functions.utils.db_connection import DbConnection, get_conn_type
 from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from FastETL.custom_functions.fast_etl import (
-    validate_db_string,
     build_dest_sqls,
     build_select_sql,
 )
@@ -66,9 +65,6 @@ def copy_by_key_interval(
         * try/except nas aberturas das conexões; se erro: return False, key_start
         * comparar performance do prepared statement no source: psycopg2 x pyodbc
     """
-
-    # validate db string
-    validate_db_string(source_table, destination_table, None)
 
     # create connections
     with DbConnection(source_conn_id) as source_conn:
@@ -302,9 +298,6 @@ def copy_by_limit_offset(
         destination_truncate (bool): booleano para truncar tabela de destino
             antes do load. Default = True
     """
-
-    # validate db string
-    validate_db_string(source_table, destination_table, None)
 
     # create connections
     with DbConnection(source_conn_id) as source_conn:
