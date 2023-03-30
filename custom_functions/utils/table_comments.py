@@ -23,16 +23,18 @@ class TableComments:
     And accepts to the destination mssql and postgres.
     """
 
-    def __init__(self, conn_id: str, schema_table: str):
+    def __init__(self, conn_id: str, schema: str, table: str):
         """Initialize TableComments class variables.
 
         Args:
             conn_id (str): Airflow connection id
-            schema_table (str): Table str at format schema.table
+            schema (str): Schema str
+            table (str): Table str
         """
 
         self.conn_id = conn_id
-        self.schema, self.table = schema_table.split(".")
+        self.schema = schema
+        self.table = table
         conn_values = BaseHook.get_connection(conn_id)
         self.conn_type = conn_values.conn_type
         self.conn_database = conn_values.schema

@@ -32,20 +32,41 @@ from FastETL.custom_functions.utils.table_comments import TableComments
 from FastETL.custom_functions.utils.get_table_cols_name import (
     get_table_cols_name,
 )
+class SourceConnection:
+    def __init__(self, conn_id: str, schema: str = None, table: str = None, query: str = None):
+
+        if not conn_id:
+            raise ValueError("conn_id argument cannot be empty")
+        if not query and not (schema or table):
+            raise ValueError("must provide either schema and table or query")
+
+        self.conn_id = conn_id
+        self.schema = schema
+        self.table = table
+        self.query = query
+
+class DestinationConnection:
+    def __init__(self, conn_id: str, schema: str, table: str):
+
+        self.conn_id = conn_id
+        self.schema = schema
+        self.table = table
 
 
-def build_select_sql(source_table: str, column_list: str) -> str:
+def build_select_sql(schema: str, table: str, column_list: str) -> str:
     """
     Monta a string do select da origem
     """
 
     columns = ", ".join(f'"{col}"' for col in column_list)
 
-    return f"SELECT {columns} FROM {source_table}"
+    return f"SELECT {columns} FROM {schema}.{table}"
 
 
 def build_dest_sqls(
-    destination_table: str, column_list: str, wildcard_symbol: str
+    destination: DestinationConnection,
+    column_list: str,
+    wildcard_symbol: str
 ) -> Union[str, str, str]:
     """
     Monta a string do insert do destino
@@ -55,9 +76,9 @@ def build_dest_sqls(
     columns = ", ".join(f'"{col}"' for col in column_list)
 
     values = ", ".join([wildcard_symbol for i in range(len(column_list))])
-    insert = f"INSERT INTO {destination_table} ({columns}) " f"VALUES ({values})"
+    insert = f"INSERT INTO {destination.schema}.{destination.table} ({columns}) " f"VALUES ({values})"
 
-    truncate = f"TRUNCATE TABLE {destination_table}"
+    truncate = f"TRUNCATE TABLE {destination.schema}.{destination.table}"
 
     return insert, truncate
 
@@ -91,33 +112,9 @@ def insert_df_to_db(
     )
 
 
-def validate_db_string(
-    source_table: str, destination_table: str, select_sql: str
-) -> None:
-    """
-    Valida se string do banco está no formato schema.table e se tabelas de
-    origem e destino possuem o mesmo nome. Se possui select_sql não valida a
-    source_table
-    """
-
-    assert (
-        destination_table.count(".") == 1
-    ), "Estrutura tabela destino deve ser str: schema.table"
-
-    if not select_sql:
-        assert (
-            source_table.count(".") == 1
-        ), "Estrutura tabela origem deve ser str: schema.table"
-
-        if source_table.split(".")[1] != destination_table.split(".")[1]:
-            warnings.warn("Tabelas de origem e destino com nomes diferentes")
-
-
-def create_table_if_not_exist(
-    source_table: str,
-    source_conn_id: str,
-    destination_table: str,
-    destination_conn_id: str,
+def create_table_if_not_exists(
+    source: SourceConnection,
+    destination: DestinationConnection,
     copy_table_comments: bool,
 ) -> None:
     """Create table on destination if not exists.
@@ -161,18 +158,18 @@ def create_table_if_not_exist(
             ),
         )
 
-    destination_provider = get_conn_type(destination_conn_id)
+    destination_provider = get_conn_type(destination.conn_id)
 
     ERROR_TABLE_DOES_NOT_EXIST = {
         "mssql": "Invalid object name",
         "postgres": "does not exist",
     }
-    _, source_eng = get_hook_and_engine_by_provider(source_conn_id)
+    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
     destination_hook, destination_eng = get_hook_and_engine_by_provider(
-        destination_conn_id
+        destination.conn_id
     )
     try:
-        destination_hook.get_pandas_df(f"select * from {destination_table} where 1=2")
+        destination_hook.get_pandas_df(f"select * from {destination.table} where 1=2")
     except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
         if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
             raise db_error
@@ -188,52 +185,45 @@ def create_table_if_not_exist(
             )
             raise e
 
-        s_schema, s_table = source_table.split(".")
-
-        generic_columns = insp.get_columns(s_table, s_schema)
+        generic_columns = insp.get_columns(source.table, source.schema)
         dest_columns = [
             _convert_column(c, destination_provider) for c in generic_columns
         ]
 
         destination_meta = MetaData(bind=destination_eng)
-        d_schema, d_table = destination_table.split(".")
-        Table(d_table, destination_meta, *dest_columns, schema=d_schema)
+        Table(destination.table, destination_meta, *dest_columns, schema=destination.schema)
 
         destination_meta.create_all(destination_eng)
 
     if copy_table_comments:
         _copy_table_comments(
-            source_conn_id=source_conn_id,
-            source_table=source_table,
-            destination_conn_id=destination_conn_id,
-            destination_table=destination_table,
+            source=source,
+            destination=destination,
         )
 
 
 def _copy_table_comments(
-    source_conn_id: str,
-    source_table: str,
-    destination_conn_id: str,
-    destination_table: str,
+    source: SourceConnection,
+    destination: DestinationConnection
 ) -> None:
-    """Copy table and colunms comments/descriptions between databases.
+    """Copy table and column comments/descriptions between databases.
 
     Args:
-        source_conn_id (str): Airflow connection id.
-        source_table (str): Table str at format schema.table.
-        destination_conn_id (str): Airflow connection id.
-        destination_table (str): Table str at format schema.table.
+        source (SourceConnection): Connection object containing the
+            source database information.
+        destination (DestinationConnection): Connection object
+            containing the destination database information.
 
     Returns:
         None.
     """
 
     source_table_comments = TableComments(
-        conn_id=source_conn_id, schema_table=source_table
+        conn_id=source.conn_id, schema=source.schema, table=source.table
     )
 
     destination_table_comments = TableComments(
-        conn_id=destination_conn_id, schema_table=destination_table
+        conn_id=destination.conn_id, schema=destination.schema, table=destination.table
     )
 
     destination_table_comments.put_table_comments(
@@ -242,11 +232,9 @@ def _copy_table_comments(
 
 
 def save_load_info(
-    source_conn_id: str,
-    source_schema_table: str,
+    source: SourceConnection,
+    destination: DestinationConnection,
     load_type: str,
-    dest_conn_id: str,
-    log_schema_name: str,
     rows_loaded: int,
 ):
     """Insert on db ingest metadata, as origin and number of lines loaded.
@@ -262,7 +250,12 @@ def save_load_info(
     """
 
     load_info = LoadInfo(
-        source_conn_id, source_schema_table, load_type, dest_conn_id, log_schema_name
+        source_conn_id=source.conn_id,
+        source_schema=source.schema,
+        source_table=source.table,
+        load_type=load_type,
+        dest_conn_id=destination.conn_id,
+        log_schema_name=destination.schema,
     )
 
     load_info.save(rows_loaded)
@@ -287,17 +280,15 @@ def get_schema_table_from_query(query: str) -> str:
     # clean [, ], ", '
     db_schema_table = re.sub(r"\[|\]|\"|\'", "", db_schema_table)
     # clean "dbo." if exists on dbo.schema.table
-    schema_table = ".".join(db_schema_table.split(".")[-2:])
+    schema, table = db_schema_table.split(".")[-2:]
 
-    return schema_table
+    return schema, table
+
 
 
 def copy_db_to_db(
-    destination_table: str,
-    source_conn_id: str,
-    destination_conn_id: str,
-    source_table: str = None,
-    select_sql: str = None,
+    source_conn: dict[str, str],
+    destination_conn: dict[str, str],
     columns_to_ignore: list = [],
     destination_truncate: bool = True,
     chunksize: int = 1000,
@@ -319,18 +310,21 @@ def copy_db_to_db(
     data com hora, e **datetime2** para timestamp
 
     Exemplo:
-        copy_db_to_db('Siorg_VBL.contato_email',
-                      'SIORG_ESTATISTICAS.contato_email',
-                      'POSTG_CONN_ID',
-                      'PG',
+        copy_db_to_db('POSTG_CONN_ID',
+                      'Siorg_VBL',
                       'MSSQL_CONN_ID',
-                      'MSSQL')
+                      'SIORG_ESTATISTICAS'
+                      'contato_email',
+                      'contato_email',
+                      )
 
     Args:
-        destination_table (str): tabela de destino no formato schema.table
         source_conn_id (str): connection origem do Airflow
+        source_schema (str): esquema de origem
+        source_table (str): tabela de origem
         destination_conn_id (str): connection destino do Airflow
-        source_table (str): tabela de origem no formato schema.table
+        destination_schema (str): esquema de destino
+        destination_table (str): tabela de destino
         select_sql (str): query sql para consulta na origem. Se utilizado o
             source_table será ignorado
         columns_to_ignore (list): list of columns to be ignored in the copy
@@ -352,25 +346,26 @@ def copy_db_to_db(
         * Possibilitar inserir data da carga na tabela de destino
         * Criar testes
     """
+    # source_schema_table = f"{source_conn['schema']}.{source_conn['table']}"
+    # dest_schema_table = f"{destination_conn['schema']}.{destination_conn['table']}"
 
-    # validate db string
-    validate_db_string(source_table, destination_table, select_sql)
+    # validate connections
+    source = SourceConnection(**source_conn)
+    destination = DestinationConnection(**destination_conn)
 
     # create table if not exists in destination db
-    create_table_if_not_exist(
-        source_table,
-        source_conn_id,
-        destination_table,
-        destination_conn_id,
+    create_table_if_not_exists(
+        source,
+        destination,
         copy_table_comments,
     )
 
-    source_provider = get_conn_type(source_conn_id)
-    destination_provider = get_conn_type(destination_conn_id)
+    source_provider = get_conn_type(source.conn_id)
+    destination_provider = get_conn_type(destination.conn_id)
 
     # create connections
-    with DbConnection(source_conn_id) as source_conn:
-        with DbConnection(destination_conn_id) as destination_conn:
+    with DbConnection(source.conn_id) as source_conn:
+        with DbConnection(destination.conn_id) as destination_conn:
             with source_conn.cursor() as source_cur:
                 with destination_conn.cursor() as destination_cur:
                     # Fast etl
@@ -383,17 +378,19 @@ def copy_db_to_db(
 
                     # gera queries
                     col_list = get_table_cols_name(
-                        conn_id=destination_conn_id,
-                        schema=destination_table.split(".")[0],
-                        table=destination_table.split(".")[1],
+                        conn_id=destination.conn_id,
+                        schema=destination.schema,
+                        table=destination.table,
                         columns_to_ignore=columns_to_ignore,
                     )
 
                     insert, truncate = build_dest_sqls(
-                        destination_table, col_list, wildcard_symbol
+                        destination, col_list, wildcard_symbol
                     )
-                    if not select_sql:
-                        select_sql = build_select_sql(source_table, col_list)
+                    if source.query:
+                        select_sql = source.query
+                    else:
+                        select_sql = build_select_sql(source.schema, source.table, col_list)
 
                     # Remove as aspas na query para compatibilidade com o MYSQL
                     if source_provider == "mysql":
@@ -411,7 +408,7 @@ def copy_db_to_db(
                     rows = source_cur.fetchmany(chunksize)
                     rows_inserted = 0
 
-                    logging.info("Inserindo linhas na tabela [%s].", destination_table)
+                    logging.info("Inserindo linhas na tabela [%s].[%s]", destination.schema, destination.table)
                     while rows:
                         destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
@@ -422,15 +419,13 @@ def copy_db_to_db(
 
                     delta_time = time.perf_counter() - start_time
 
-                    if select_sql:
-                        source_table = get_schema_table_from_query(select_sql)
+                    if source.query:
+                        source.schema, source.table = get_schema_table_from_query(source.query)
 
                     save_load_info(
-                        source_conn_id=source_conn_id,
-                        source_schema_table=source_table,
+                        source=source,
+                        destination=destination,
                         load_type=load_type,
-                        dest_conn_id=destination_conn_id,
-                        log_schema_name=destination_table.split(".")[0],
                         rows_loaded=rows_inserted,
                     )
 
@@ -644,16 +639,19 @@ def sync_db_2_db(
 
     # Guarda as alterações e inclusões necessárias
     if not select_sql:
-        select_sql = build_select_sql(f"{source_table_name}", col_list)
+        select_sql = build_select_sql(schema=source_schema, table=table, column_list=col_list)
     select_diff = f"{select_sql} WHERE {where_condition}"
     logging.info("SELECT para espelhamento: %s", select_diff)
 
     copy_db_to_db(
-        destination_table=f"{inc_table_name}",
-        source_conn_id=source_conn_id,
-        destination_conn_id=destination_conn_id,
-        source_table=source_table_name,
-        select_sql=select_diff,
+        source_conn={"conn_id": source_conn_id, "query": select_diff,
+                     "schema": source_table_name.split(".")[0],
+                     "table": source_table_name.split(".")[1],
+                     },
+        destination_conn={"conn_id": destination_conn_id,
+                          "schema": inc_table_name.split(".")[0],
+                          "table": inc_table_name.split(".")[1]
+                          },
         destination_truncate=True,
         chunksize=chunksize,
         load_type="incremental",
@@ -706,8 +704,14 @@ def sync_db_2_db(
     # atualiza comentários da tabela
     if copy_table_comments:
         _copy_table_comments(
-            source_conn_id,
-            source_table_name,
-            destination_conn_id,
-            dest_table_name,
-        )
+            source=SourceConnection(
+                conn_id=source_conn_id,
+                schema=source_table_name.split(".")[0],
+                table=source_table_name.split(".")[1]
+                ),
+            destination=DestinationConnection(
+                conn_id=destination_conn_id,
+                schema=dest_table_name.split(".")[0],
+                table=dest_table_name.split(".")[1]
+                ),
+            )
