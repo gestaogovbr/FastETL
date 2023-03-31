@@ -7,7 +7,6 @@ data following full and incremental strategies.
 from datetime import datetime
 from typing import Dict
 
-from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
 from FastETL.custom_functions.fast_etl import copy_db_to_db, sync_db_2_db

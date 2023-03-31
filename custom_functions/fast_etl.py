@@ -34,6 +34,27 @@ from FastETL.custom_functions.utils.get_table_cols_name import (
 
 
 class SourceConnection:
+    """
+    Represents a source connection to a database, encapsulating the connection details
+    (e.g., connection ID, schema, table, query) required to read data from a database.
+
+    Args:
+        conn_id (str): The unique identifier of the connection to use.
+        schema (str, optional): The name of the schema to use. Default is None.
+        table (str, optional): The name of the table to use. Default is None.
+        query (str, optional): The SQL query to use. Default is None.
+
+    Raises:
+        ValueError: If `conn_id` is empty or if neither `query` nor (`schema` and `table`)
+            is provided.
+
+    Attributes:
+        conn_id (str): The unique identifier of the connection.
+        schema (str): The name of the schema.
+        table (str): The name of the table.
+        query (str): The SQL query.
+    """
+
     def __init__(
         self, conn_id: str, schema: str = None, table: str = None, query: str = None
     ):
@@ -50,6 +71,21 @@ class SourceConnection:
 
 
 class DestinationConnection:
+    """
+    Represents a destination connection to a database, encapsulating the connection details
+    (e.g., connection ID, schema, table) required to write data to a database.
+
+    Args:
+        conn_id (str): The unique identifier of the connection to use.
+        schema (str): The name of the schema to use.
+        table (str): The name of the table to use.
+
+    Attributes:
+        conn_id (str): The unique identifier of the connection.
+        schema (str): The name of the schema.
+        table (str): The name of the table.
+    """
+
     def __init__(self, conn_id: str, schema: str, table: str):
 
         self.conn_id = conn_id
@@ -122,19 +158,27 @@ def create_table_if_not_exists(
     destination: DestinationConnection,
     copy_table_comments: bool,
 ) -> None:
-    """Create table on destination if not exists.
+    """
+    Creates a destination table if it does not already exist and copies
+    data from a source table to the destination.
 
     Args:
-        source_table (str): Source table name on format schema.table.
-        source_conn_id (str): Airflow connection id.
-        destination_table (str): Destination table name on format
-            schema.table.
-        destination_conn_id (str): Airflow connection id.
-        copy_table_comments (bool): Flag to copy table and columns
-            comments/descriptions.
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+        destination (DestinationConnection): A `DestinationConnection`
+            object containing the connection details for the destination
+            database.
+        copy_table_comments (bool): A flag indicating whether to copy table
+            and columns comments/descriptions.
 
     Returns:
         None.
+
+    Raises:
+        DatabaseError: If there is an error with the database connection or
+            query.
+        OperationalError: If there is an error with the database operation.
+        NoSuchModuleError: If a required module is missing.
     """
 
     def _convert_column(old_col: Column, db_provider: str) -> Column:
@@ -215,7 +259,8 @@ def create_table_if_not_exists(
 def _copy_table_comments(
     source: SourceConnection, destination: DestinationConnection
 ) -> None:
-    """Copy table and column comments/descriptions between databases.
+    """
+    Copy table and column comments/descriptions between databases.
 
     Args:
         source (SourceConnection): Connection object containing the
@@ -246,16 +291,22 @@ def save_load_info(
     load_type: str,
     rows_loaded: int,
 ):
-    """Insert on db ingest metadata, as origin and number of lines loaded.
+    """
+    Inserts metadata information into a database about a data ingestion
+    process, including the origin of the data, the type of ingestion
+    (full or incremental), the destination database, the schema where
+    the control data will be stored, and the number of rows loaded.
 
     Args:
-        source_conn_id (str): Source db airflow connection id
-        source_schema_table (str): Table string in format `schema.table`
-        load_type (str): if "full" or "incremental"
-        dest_conn_id (str): Destination db airflow connection id
-        log_schema_name (str): Schema where the control data will be stored.
-            Defaults to same as destination.
-        rows_loaded (int): Number of rows loaded on the transaction.
+        source (SourceConnection): Object with connection info to the
+            source database (conn_id, schema, table).
+        destination (DestinationConnection): Object with connection info
+            to the destination database (conn_id, schema).
+        load_type (str): Type of data ingestion, "full" or "incremental".
+        rows_loaded (int): Number of rows loaded in the transaction.
+
+    Returns:
+        None.
     """
 
     load_info = LoadInfo(
@@ -318,31 +369,45 @@ def copy_db_to_db(
     data com hora, e **datetime2** para timestamp
 
     Exemplo:
-        copy_db_to_db('POSTG_CONN_ID',
-                      'Siorg_VBL',
-                      'MSSQL_CONN_ID',
-                      'SIORG_ESTATISTICAS'
-                      'contato_email',
-                      'contato_email',
-                      )
+        copy_db_to_db(
+            {"conn_id": "conn_id", "schema": "schema", "table: "table"},
+            {"conn_id": "conn_id", "schema": "schema", "table: "table"}
+        )
 
     Args:
-        source_conn_id (str): connection origem do Airflow
-        source_schema (str): esquema de origem
-        source_table (str): tabela de origem
-        destination_conn_id (str): connection destino do Airflow
-        destination_schema (str): esquema de destino
-        destination_table (str): tabela de destino
-        select_sql (str): query sql para consulta na origem. Se utilizado o
-            source_table será ignorado
-        columns_to_ignore (list): list of columns to be ignored in the copy
-        destination_truncate (bool): booleano para truncar tabela de destino
-            antes do load. Default = True
-        chunksize (int): tamanho do bloco de leitura na origem.
-            Default = 1000 linhas
-        copy_table_comments (bool): flag if includes on the execution the
-            copy of table comments/descriptions. Default to False.
-        load_type (str): if "full" or "incremental". Default to "full"
+        source (Dict[str, str]): A dictionary containing connection
+            information for the source database.
+            conn_id (str): Airflow connection id.
+            schema (str): Source information `schema` name.
+            table (str): Source information `table` name.
+
+            source dict expects these keys:
+                * conn_id -> required
+                * schema and table -> required if `query` not provided.
+                * query -> required if `schema` and `table` not provided.
+
+        destination (Dict[str, str]): A dictionary containing connection
+            information for the destination database.
+            conn_id (str): Airflow connection id.
+            schema (str): Destination information `schema` name.
+            table (str): Destination information `table` name.
+
+            destination dict expects these keys:
+                * conn_id -> required
+                * schema -> required
+                * table -> required
+
+        columns_to_ignore (list, optional): A list of column names to
+            ignore during the copy operation. Defaults to None.
+        destination_truncate (bool, optional): If True, the destination
+            table will be truncated before copying data. Defaults to True.
+        chunksize (int, optional): The number of rows to copy at once.
+            Defaults to 1000.
+        copy_table_comments (bool, optional): If True, comments on the
+            source table will be copied to the destination table.
+            Defaults to False.
+        load_type (str, optional): The type of load to perform. Can be
+            "full" or "incremental". Defaults to "full".
 
     Return:
         None
@@ -354,8 +419,6 @@ def copy_db_to_db(
         * Possibilitar inserir data da carga na tabela de destino
         * Criar testes
     """
-    # source_schema_table = f"{source_conn['schema']}.{source_conn['table']}"
-    # dest_schema_table = f"{destination_conn['schema']}.{destination_conn['table']}"
 
     # validate connections
     source = SourceConnection(**source)
@@ -453,9 +516,11 @@ def copy_db_to_db(
 
 
 def _table_rows_count(db_hook, table: str, where_condition: str = None):
-    """Calcula a quantidade de linhas na tabela (table) e utiliza a
+    """
+    Calcula a quantidade de linhas na tabela (table) e utiliza a
     condição (where_condition) caso seja passada como parâmetro.
     """
+
     sql = f"SELECT COUNT(*) FROM {table}"
     sql += f" WHERE {where_condition};" if where_condition is not None else ";"
 
@@ -469,7 +534,8 @@ def _build_filter_condition(
     key_column: str,
     since_datetime: datetime = None,
 ) -> Tuple[str, str]:
-    """Monta o filtro (where) obtenção o valor max() da tabela,
+    """
+    Monta o filtro (where) obtenção o valor max() da tabela,
     distinguindo se a coluna é a "data ou data/hora de atualização"
     (date_column) ou outro número sequencial (key_column), por exemplo
     id, pk, etc. Se o parâmetro "since_datetime" for recebido, será
@@ -497,6 +563,7 @@ def _build_filter_condition(
                         where da query sql.
 
     """
+
     if since_datetime:
         max_value = since_datetime
     else:
@@ -525,10 +592,12 @@ def _build_filter_condition(
 def _build_incremental_sqls(
     dest_table: str, source_table: str, key_column: str, column_list: str
 ):
-    """Constrói as queries SQLs que realizam os Updates dos registros
+    """
+    Constrói as queries SQLs que realizam os Updates dos registros
     atualizados desde a última sincronização e os Inserts das novas
     linhas.
     """
+
     cols = ", ".join(f"{col} = orig.{col}" for col in column_list)
     updates_sql = f"""
             UPDATE {dest_table} SET {cols}
@@ -564,7 +633,8 @@ def sync_db_2_db(
     chunksize: int = 1000,
     copy_table_comments: bool = False,
 ) -> None:
-    """Realiza a atualização incremental de uma tabela. A sincronização
+    """
+    Realiza a atualização incremental de uma tabela. A sincronização
     é realizada em 3 etapas. 1-Envia as alterações necessárias para uma
     tabela intermediária localizada no esquema `increment_schema`.
     2-Realiza os Updates. 3-Realiza os Inserts. Apenas as colunas que
