@@ -218,7 +218,9 @@ def create_table_if_not_exists(
         destination.conn_id
     )
     try:
-        destination_hook.get_pandas_df(f"select * from {destination.table} where 1=2")
+        destination_hook.get_pandas_df(
+            f"select * from {destination.schema}.{destination.table} where 1=2"
+        )
     except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
         if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
             raise db_error
@@ -464,7 +466,7 @@ def copy_db_to_db(
                         select_sql = build_select_sql(
                             schema=source.schema,
                             table=source.table,
-                            column_list=col_list
+                            column_list=col_list,
                         )
 
                     # Remove as aspas na query para compatibilidade com o MYSQL
