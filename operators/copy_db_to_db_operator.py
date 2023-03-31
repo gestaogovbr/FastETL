@@ -1,17 +1,86 @@
 """
 Operador que realiza a cópia de dados seguindo uma estratégia completa
-(full) entre de um banco de dados para outro. Os BDs podem ser Postgres
-ou SQL Server. Internamente são utilizadas as bibliotecas psycopg2 e
+(full) ou incremental de um banco de dados para outro. Os BDs podem ser
+Postgres ou SQL Server. Internamente são utilizadas as bibliotecas psycopg2 e
 pyodbc. Os dados copiados podem ser oriundos de uma tabela ou de um
 Select SQL.
 
 Args:
-    destination_table (str): tabela de destino no formato schema.table
-    source_conn_id (str): connection origem do Airflow
-    destination_conn_id (str): connection destino do Airflow
-    source_table (str): tabela de origem no formato schema.table
-    select_sql (str): query sql para consulta na origem. Se utilizado o
-    source_table será ignorado
+    is_incremental (bool, optional): Whether to perform an incremental copy
+        based on a datetime or key column. Defaults to False.
+
+    (when full copy)
+    columns_to_ignore (List[str], optional): A list of column names to
+        ignore during the copy operation. Defaults to None.
+    destination_truncate (bool, optional): Whether to truncate the
+        destination table before copying data to it. Defaults to True.
+
+    (when incremental copy)
+    table (str, optional): The name of the table to copy in incremental
+        mode. Defaults to None.
+    date_column (str, optional): The name of the datetime column to use for
+        incremental copying. Defaults to None.
+    key_column (str, optional): The name of the key column to use for
+        incremental copying. Defaults to None.
+    since_datetime (datetime.datetime, optional): The datetime from
+        which to start the incremental copy. Defaults to None.
+    sync_exclusions (bool, optional): Whether to exclude some columns during
+        incremental copying. Defaults to False.
+
+    (both full and incremental)
+    source (Dict[str, str]): A dictionary containing the connection details
+        of the source database.
+
+        Depending on full or incremental copy, specific keys can be passed
+        on the source dictionary.
+
+        (full copy)
+        source full copy dict expects these keys:
+        * conn_id -> required
+        * schema and table -> required if `query` not provided.
+        * query -> required if `schema` and `table` not provided.
+
+        (incremental copy)
+        source incremental copy dict expects these keys:
+        * conn_id -> required
+        * schema -> required
+        * query -> optional
+        * source_exc_schema -> optional
+            Table `scheme` name at the source where exclusions are recorded.
+        * source_exc_table -> optional
+            Table `table` name at the source where exclusions are recorded.
+        * source_exc_column -> optional
+            Table `column` name at the source where exclusions are recorded.
+
+    destination (Dict[str, str]): A dictionary containing the connection
+        details of the destination database.
+
+        Depending on full or incremental copy, specific keys can be passed
+        on the destination dictionary.
+
+        (full copy)
+        destination full copy dict expects these keys:
+        * conn_id -> required
+        * schema -> required
+        * table -> required
+
+        (incremental copy)
+        source incremental copy dict expects these keys:
+        * conn_id -> required
+        * schema -> required
+        * increment_schema -> optional
+            Schema in the database used for temporary tables. If this
+            variable is None, this table will be created in the same
+            schema with the suffix '_alteracoes'.
+
+    chunksize (int, optional): The number of rows to fetch from the source
+        database at once. Defaults to 1000.
+    copy_table_comments (bool, optional): Whether to copy table comments
+        from the source database to the destination database.
+        Defaults to False.
+
+Raises:
+    TypeError: If `source` or `destination` is not a dictionary.
 """
 
 from datetime import datetime
