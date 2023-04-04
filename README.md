@@ -74,4 +74,51 @@ make down
 
 # Exemplo de uso
 
+A principal funcionalidade do FastETL é o operador
+`CopyDbToDbOperator`. Ele copia dados entre os bancos `postgres` e
+`mssql`.
+
+Aqui um exemplo:
+
+```
+from datetime import datetime
+from airflow import DAG
+from FastETL.operators.copy_db_to_db_operator import CopyDbToDbOperator
+
+default_args = {
+    "start_date": datetime(2023, 4, 1),
+}
+
+dag = DAG(
+    "copy_db_to_db_example",
+    default_args=default_args,
+    schedule_interval=None,
+)
+
+
+t0 = CopyDbToDbOperator(
+    task_id="copy_data",
+    source={
+        "conn_id": airflow_source_conn_id,
+        "schema": source_schema,
+        "table": table_name,
+    },
+    destination={
+        "conn_id": airflow_dest_conn_id,
+        "schema": dest_schema,
+        "table": table_name,
+    },
+    destination_truncate=True,
+    copy_table_comments=True,
+    chunksize=10000,
+    dag=dag,
+)
+```
+
+Mais detalhes sobre os parâmetros e funcionamento do `CopyDbToDbOperator`
+nos arquivos:
+
+* [fast_etl.py](custom_functions/fast_etl.py)
+* [copy_db_to_db_operator.py](operators/copy_db_to_db_operator.py)
+
 # Como colaborar
