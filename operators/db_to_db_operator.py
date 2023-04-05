@@ -91,7 +91,7 @@ from airflow.utils.decorators import apply_defaults
 
 from FastETL.hooks.db_to_db_hook import DbToDbHook
 
-class DbCopyOperator(BaseOperator):
+class DbToDbOperator(BaseOperator):
 
     def __init__(
             self,
