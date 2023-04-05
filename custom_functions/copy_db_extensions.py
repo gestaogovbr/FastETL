@@ -14,6 +14,7 @@ from FastETL.custom_functions.fast_etl import (
     build_dest_sqls,
     build_select_sql,
 )
+from FastETL.custom_functions.fast_etl import DestinationConnection
 
 
 def copy_by_key_interval(
@@ -87,12 +88,13 @@ def copy_by_key_interval(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
-                        {"conn_id": destination_conn_id,
-                         "schema": destination_table.split(".")[0],
-                         "table": destination_table.split(".")[1],
-                        },
-                        col_list,
-                        wildcard_symbol
+                        destination=DestinationConnection(
+                            conn_id=destination_conn_id,
+                            schema=destination_table.split(".")[0],
+                            table=destination_table.split(".")[1],
+                        ),
+                        column_list=col_list,
+                        wildcard_symbol=wildcard_symbol,
                     )
                     select_sql = build_select_sql(schema=source_table.split(".")[0],
                                                   table=source_table.split(".")[1],
@@ -320,12 +322,14 @@ def copy_by_limit_offset(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
-                        {"conn_id": destination_conn_id,
-                         "schema": destination_table.split(".")[0],
-                         "table": destination_table.split(".")[1],
-                        },
-                        col_list,
-                        "?")
+                        destination=DestinationConnection(
+                            conn_id=destination_conn_id,
+                            schema=destination_table.split(".")[0],
+                            table=destination_table.split(".")[1],
+                        ),
+                        column_list=col_list,
+                        wildcard_symbol="?",
+                    )
                     select_sql = build_select_sql(schema=source_table.split(".")[0],
                                                   table=source_table.split(".")[1],
                                                   column_list=col_list)
