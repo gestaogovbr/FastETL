@@ -4,7 +4,7 @@ diferenciais (patch) e controle de qualidade (qa).
 Fluxo para limpeza de dados:
 
 1. Criar diretório temporário para a dag run.
-2. Extrair da base com DownloadCSVFromDbOperator para gerar o arquivo CSV.
+2. Extrair da base com DbToCSVOperator para gerar o arquivo CSV.
 3. Retirar chaves duplicadas.
 4. Utilizar limpadores: para cada um deles, gera um arquivo com sufixo
    -patch e outro com sufixo -qa.
@@ -1133,7 +1133,7 @@ def merge_patches(tmp_dir: str, source: str, source_config: dict,
         adjust_dataframe (Callable[[pd.DataFrame], pd.DataFrame]): função
             opcional para realizar ajustes finais no dataframe antes da
             consolidação final.
-    
+
 
      Raises:
         ValueError: Se a quantidade de chaves informada em source_config

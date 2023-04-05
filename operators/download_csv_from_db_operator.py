@@ -30,7 +30,7 @@ from airflow.utils.decorators import apply_defaults
 from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
 
-class DownloadCSVFromDbOperator(BaseOperator):
+class DbToCSVOperator(BaseOperator):
     ui_color = '#95aad5'
     ui_fgcolor = '#000000'
     template_fields = ('select_sql', 'target_file_dir', 'file_name')
@@ -50,7 +50,7 @@ class DownloadCSVFromDbOperator(BaseOperator):
                  *args,
                  **kwargs
                  ):
-        super(DownloadCSVFromDbOperator, self).__init__(*args, **kwargs)
+        super(DbToCSVOperator, self).__init__(*args, **kwargs)
         self.conn_id = conn_id
         self.select_sql = select_sql
         self.table_name = table_name
