@@ -87,7 +87,12 @@ def copy_by_key_interval(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
-                        destination_table, col_list, wildcard_symbol
+                        {"conn_id": destination_conn_id,
+                         "schema": destination_table.split(".")[0],
+                         "table": destination_table.split(".")[1],
+                        },
+                        col_list,
+                        wildcard_symbol
                     )
                     select_sql = build_select_sql(schema=source_table.split(".")[0],
                                                   table=source_table.split(".")[1],
