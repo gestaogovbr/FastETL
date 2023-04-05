@@ -319,7 +319,13 @@ def copy_by_limit_offset(
                         schema=destination_table.split(".")[0],
                         table=destination_table.split(".")[1],
                     )
-                    insert, truncate = build_dest_sqls(destination_table, col_list, "?")
+                    insert, truncate = build_dest_sqls(
+                        {"conn_id": destination_conn_id,
+                         "schema": destination_table.split(".")[0],
+                         "table": destination_table.split(".")[1],
+                        },
+                        col_list,
+                        "?")
                     select_sql = build_select_sql(schema=source_table.split(".")[0],
                                                   table=source_table.split(".")[1],
                                                   column_list=col_list)
