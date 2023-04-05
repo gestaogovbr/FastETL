@@ -27,7 +27,7 @@ from airflow.utils.decorators import apply_defaults
 from FastETL.hooks.gsheet_hook import GSheetHook
 from FastETL.custom_functions.utils.db_connection import get_mssql_odbc_engine
 
-class LoadGSheetOperator(BaseOperator):
+class GSheetToDbOperator(BaseOperator):
     ui_color = '#72efdd'
     ui_fgcolor = '#000000'
     template_fields = ('sheet_name', 'column_name_to_add', 'value_to_add' )
@@ -44,7 +44,7 @@ class LoadGSheetOperator(BaseOperator):
                  value_to_add=None,
                  *args,
                  **kwargs):
-        super(LoadGSheetOperator, self).__init__(*args, **kwargs)
+        super(GSheetToDbOperator, self).__init__(*args, **kwargs)
         self.gsheet_conn_id = gsheet_conn_id
         self.spreadsheet_id = spreadsheet_id
         self.sheet_name = sheet_name
@@ -71,7 +71,7 @@ class LoadGSheetOperator(BaseOperator):
                   if_exists='append',
                   index=False)
 
-class LoadGSheetCSVOperator(BaseOperator):
+class GSheetToCSVOperator(BaseOperator):
     ui_color = '#72efdd'
     ui_fgcolor = '#000000'
 
@@ -83,7 +83,7 @@ class LoadGSheetCSVOperator(BaseOperator):
                  dest_path,
                  *args,
                  **kwargs):
-        super(LoadGSheetCSVOperator, self).__init__(*args, **kwargs)
+        super(GSheetToCSVOperator, self).__init__(*args, **kwargs)
         self.gsheet_conn_id = gsheet_conn_id
         self.spreadsheet_id = spreadsheet_id
         self.sheet_name = sheet_name

@@ -1,7 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 
-from FastETL.operators.copy_db_to_db_operator import CopyDbToDbOperator
+from FastETL.operators.copy_db_to_db_operator import DbCopyOperator
 
 default_args = {
     'owner': 'nitai',
@@ -19,7 +19,7 @@ with DAG(
     ]
     for source_conf in db_confs:
         for dest_conf in db_confs:
-            CopyDbToDbOperator(
+            DbCopyOperator(
                 task_id=f'test_from_{source_conf[0]}_to_{dest_conf[0]}',
                 source={
                     "conn_id": f'{source_conf[0]}-source-conn',
