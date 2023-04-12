@@ -3,6 +3,7 @@ Module for handling tables in Open Document Format (ODF) text documents
 and generating textual data dictionaries.
 """
 from typing import List
+import logging
 
 from frictionless import Package
 
@@ -345,6 +346,7 @@ class DocumentWithTables:
         Args:
             path (str): _description_
         """
+        logging.info("Writing file: %s", path)
         self.odf_document.save(path)
 
     def append_table(self, name: str, **kw_args):
