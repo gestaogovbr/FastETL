@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 """Perform the package apache-airflow-providers-fastetl setup."""
 setup(
@@ -24,6 +24,7 @@ setup(
         "apache-airflow-providers-microsoft-mssql",
         "apache-airflow-providers-mysql",
         "apache-airflow-providers-postgres",
+        "apache-airflow-providers-common-sql",
         "alembic>=1.8.1",
         "beautifulsoup4>=4.1.11",
         "ckanapi>=4.6",
