@@ -8,7 +8,7 @@ import logging
 
 from airflow.models.baseoperator import BaseOperator
 
-from FastETL.custom_functions.utils.odf_tables import create_data_dictionary
+from fastetl.custom_functions.utils.odf_tables import create_data_dictionary
 
 
 class TabularDataPackageToDataDictionaryOperator(BaseOperator):
