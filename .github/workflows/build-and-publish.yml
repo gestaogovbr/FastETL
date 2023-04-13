@@ -6,6 +6,9 @@ on:
       - "CI Tests"
     types:
       - completed
+  push:
+    branches:
+      - main
 
 jobs:
   build:
