@@ -8,13 +8,13 @@ from datetime import datetime
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from FastETL.custom_functions.utils.db_connection import DbConnection, get_conn_type
-from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
-from FastETL.custom_functions.fast_etl import (
+from fastetl.custom_functions.utils.db_connection import DbConnection, get_conn_type
+from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
+from fastetl.custom_functions.fast_etl import (
     build_dest_sqls,
     build_select_sql,
 )
-from FastETL.custom_functions.fast_etl import DestinationConnection
+from fastetl.custom_functions.fast_etl import DestinationConnection
 
 
 def copy_by_key_interval(

@@ -6,7 +6,7 @@ import logging
 
 from airflow.hooks.base import BaseHook
 
-from FastETL.custom_functions.utils.db_connection import get_conn_type
+from fastetl.custom_functions.utils.db_connection import get_conn_type
 
 class LoadInfo:
     """

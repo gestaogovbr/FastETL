@@ -12,8 +12,8 @@ from airflow.hooks.base import BaseHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
-from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
+from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
+from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
 
 
 class TableComments:
@@ -91,7 +91,7 @@ class TableComments:
             )
             rows_df["comment"] = rows_df["comment"].str.decode("utf-8")
             rows_df["database_level"] = database_level
-            table_comments = table_comments.append(rows_df, ignore_index=True)
+            table_comments = pd.concat([table_comments, rows_df], ignore_index=True)
 
         return table_comments
 
@@ -114,23 +114,34 @@ class TableComments:
             table_name=self.table, schema=self.schema
         )
         table_comments = self.table_comments_init.copy()
-        table_comments = table_comments.append(
-            {
-                "database_level": "table",
-                "name": self.table,
-                "comment": table_info["text"],
-            },
+
+        table_comments = pd.concat(
+            [
+                table_comments,
+                pd.DataFrame(
+                    {
+                        "database_level": ["table"],
+                        "name": [self.table],
+                        "comment": [table_info["text"]],
+                    }
+                ),
+            ],
             ignore_index=True,
         )
 
         columns_info = inspector.get_columns(table_name=self.table, schema=self.schema)
         for row in columns_info:
-            table_comments = table_comments.append(
-                {
-                    "database_level": "column",
-                    "name": row["name"],
-                    "comment": row["comment"],
-                },
+            table_comments = pd.concat(
+                [
+                    table_comments,
+                    pd.DataFrame(
+                        {
+                            "database_level": ["column"],
+                            "name": [row["name"]],
+                            "comment": [row["comment"]],
+                        }
+                    ),
+                ],
                 ignore_index=True,
             )
 
@@ -173,7 +184,7 @@ class TableComments:
                 columns={"Name": "name", "Description": "comment"}, inplace=True
             )
             rows_df["database_level"] = database_level
-            table_comments = table_comments.append(rows_df, ignore_index=True)
+            table_comments = pd.concat([table_comments, rows_df], ignore_index=True)
 
         return table_comments
 
@@ -283,7 +294,7 @@ class TableComments:
 
         # Convert None values to empty pd.Series
         if not comment.empty and comment.values[0] is None:
-            comment = pd.Series()
+            comment = pd.Series(dtype="object")
 
         return comment
 
@@ -323,7 +334,6 @@ class TableComments:
             )
 
         for col_name in self.cols_names:
-
             # Part 3 - check if columns description exists
 
             stored_procedure_str = self._get_mssql_stored_procedure_str(
@@ -379,7 +389,6 @@ class TableComments:
         # Part 2 - write columns comments
 
         for col_name in self.cols_names:
-
             comment = self._get_comment_value(
                 database_level="column", col_name=col_name
             )

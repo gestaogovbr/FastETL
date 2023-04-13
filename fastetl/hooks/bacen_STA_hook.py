@@ -18,7 +18,7 @@ from airflow.utils.email import send_email
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
-from FastETL.custom_functions.utils.encode_html import replace_to_html_encode
+from fastetl.custom_functions.utils.encode_html import replace_to_html_encode
 
 class BacenSTAHook(BaseHook):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"

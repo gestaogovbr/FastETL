@@ -87,9 +87,8 @@ from datetime import datetime
 from typing import Dict
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
-from FastETL.hooks.db_to_db_hook import DbToDbHook
+from fastetl.hooks.db_to_db_hook import DbToDbHook
 
 class DbToDbOperator(BaseOperator):
 

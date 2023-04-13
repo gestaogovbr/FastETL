@@ -9,7 +9,7 @@ from typing import Dict
 
 from airflow.hooks.base import BaseHook
 
-from FastETL.custom_functions.fast_etl import copy_db_to_db, sync_db_2_db
+from fastetl.custom_functions.fast_etl import copy_db_to_db, sync_db_2_db
 
 
 class DbToDbHook(BaseHook):

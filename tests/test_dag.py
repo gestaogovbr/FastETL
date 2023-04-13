@@ -1,7 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 
-from FastETL.operators.db_to_db_operator import DbToDbOperator
+from fastetl.operators.db_to_db_operator import DbToDbOperator
 
 default_args = {
     'owner': 'nitai',
