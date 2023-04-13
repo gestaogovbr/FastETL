@@ -8,10 +8,12 @@ from functools import cached_property
 from collections import ChainMap
 from airflow.hooks.base import BaseHook
 from urllib.parse import urljoin
+from typing import Union
 
 
 class DadosGovBrHook(BaseHook):
-    """Provides access to the API.
+    """
+    Provides access to the Dados Abertos Gov.br API and datasets resources
     """
 
     def __init__(self,
@@ -22,26 +24,46 @@ class DadosGovBrHook(BaseHook):
         self.conn_id = conn_id
 
     @cached_property
-    def api_connection(self) -> str:
-        """Gets the API host and token from the Airflow connection.
+    def api_connection(self) -> tuple:
         """
+        Retrieve the API connection details from the Airflow connection.
+
+        Returns:
+            tuple: A tuple containing the API URL and token.
+        """
+
         conn = BaseHook.get_connection(self.conn_id)
         url = getattr(conn, "host", None)
         token = getattr(conn, "password", None)
         return url, token
 
 
-    def _get_dataset(self, id: str):
-        """Return specified dataset information and resources.
-        Endpoint: /dados/api/publico/conjuntos-dados/{id}
+    def _get_dataset(self, id: str) -> dict:
         """
+        Retrieve a dataset from the API by its ID.
+        Endpoint: /dados/api/publico/conjuntos-dados/{id}
+
+        Args:
+            id (str): A string representing the ID of the dataset.
+
+        Returns:
+            dict: A dictionary containing the metadata and resources of
+            the retrieved dataset.
+
+        Raises:
+            Exception: If an error occurs while making the API request
+            or processing the response.
+        """
+
         slug = f"/dados/api/publico/conjuntos-dados/{id}"
+
+        api_url, token = self.api_connection
 
         headers = {
             "accept": "application/json",
-            "chave-api-dados-abertos": self.api_connection[1],
+            "chave-api-dados-abertos": token,
         }
-        req_url = urljoin(self.api_connection[0], slug)
+        req_url = urljoin(api_url, slug)
         response = requests.request(method="GET",
                             url=req_url,
                             headers=headers
@@ -58,24 +80,24 @@ class DadosGovBrHook(BaseHook):
 
     def _get_if_resource_exists(self,
                                   dataset:dict,
-                                  url: str):
+                                  url: str) -> Union[dict, bool]:
+        """ Check if a resource exists in a dataset by matching its URL.
+
+        Args:
+            dataset (dict): dataset dictionary as returned by the API
+            url (str): The URL file of the resource
+
+        Returns:
+            dict or bool: If a matching resource is found in the dataset,
+            return its dictionary representation. Otherwise, return False.
+        """
         matching_resources = [
             resource \
             for resource in dataset["recursos"] \
             if resource["link"] == url]
 
-        return matching_resources[0]
+        return (matching_resources[0] if matching_resources else False)
 
-            #update_method
-
-    # def update_dataset(
-    #     self,
-    #     dataset_id: str,
-    #     **properties
-    #     ):
-    #     "Update some properties of the dataset on CKAN."
-    #     catalog = self._get_catalog()
-    #     catalog.action.package_patch(id=dataset_id, **properties)
 
     def create_or_update_resource(
         self,
@@ -86,16 +108,52 @@ class DadosGovBrHook(BaseHook):
         description: str = None,
         type: str = "DADOS",
         ):
-        "Creates or updates a resource."
+        """
+        Create or update a resource for a given dataset.
+
+        Example:
+            create_or_update_resource(
+                dataset_id="3b8b981c-3e44-4df2-a9f6-2473ee4caf83",
+                name="SIORG - Distribuição de Cargos e Funções para o
+                mês de março/2023",
+                url="https://repositorio.dados.gov.br/seges/siorg/distribuicao/distribuicao-orgaos-siorg-2023-03.zip",
+                format="ZIP",
+                description="Contém a distribuição dos cargos e funções
+                    ao longo da estrutura organizacional dos órgãos e entidades
+                    que fazem parte do SIORG, para o mês de março/2023",
+                    type="DADOS",
+            )
+
+        Args:
+            dataset_id (str): A string representing the ID of the dataset
+                to create or update the resource for.
+            name (str): A string representing the title of the resource.
+            url (str): A string representing the URL link of the resource.
+            format (str): A string representing the format of the file.
+            description (str, optional): An optional string representing
+                the description of the resource. Defaults to None.
+            type (str, optional): An optional string representing the
+                type of the resource. Defaults to "DADOS".
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs while creating or updating the
+                resource.
+        """
+
         dataset = self._get_dataset(id=dataset_id)
-        existing_resource = self._get_if_resource_exists(dataset=dataset, url=url)
+        existing_resource = self._get_if_resource_exists(dataset=dataset,
+                                                         url=url)
 
         if existing_resource:
             resource = dict(ChainMap(
                 {
                     'titulo': name,
                     'link': url,
-                    'descricao': resource['descricao'] if description is None else description,
+                    'descricao': resource['descricao'] \
+                          if description is None else description,
                     'formato': format,
                 },
                 existing_resource
@@ -110,24 +168,22 @@ class DadosGovBrHook(BaseHook):
                 'formato': format,
             }
 
-        print (resource)
+        logging.info("Payload: " + str(resource))
 
         slug = "recurso/salvar"
-
+        api_url, token = self.api_connection
         headers = {
             "accept": "application/json",
-            "chave-api-dados-abertos": self.api_connection[1],
+            "chave-api-dados-abertos": token,
         }
 
-        req_url = urljoin(self.api_connection[1], slug)
+        req_url = urljoin(api_url, slug)
 
         response = requests.request(method="POST",
                                     url=req_url,
                                     headers=headers,
                                     json=resource,
                                     )
-
-        response = json.loads(response.text)
 
         try:
             response.raise_for_status()
