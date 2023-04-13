@@ -83,7 +83,7 @@ Aqui um exemplo:
 ```
 from datetime import datetime
 from airflow import DAG
-from FastETL.operators.db_to_db_operator import DbToDbOperator
+from fastetl.operators.db_to_db_operator import DbToDbOperator
 
 default_args = {
     "start_date": datetime(2023, 4, 1),

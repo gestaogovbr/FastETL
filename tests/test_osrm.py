@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from airflow.decorators import dag
 
-from FastETL.operators.osrm_distance_operator import OSRMDistanceDbOperator
+from fastetl.operators.osrm_distance_operator import OSRMDistanceDbOperator
 
 # need to create and configure Airflow connections
 MSSQL_STAGE_CONN_ID = "mssql_srv"

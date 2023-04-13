@@ -8,7 +8,7 @@ from airflow.hooks.base import BaseHook
 
 from ckanapi import RemoteCKAN
 
-from FastETL.custom_functions.config import USER_AGENT
+from fastetl.custom_functions.config import USER_AGENT
 
 class CKANHook(BaseHook):
     """Provides access to the CKAN API.
@@ -21,7 +21,7 @@ class CKANHook(BaseHook):
         **kwargs
         ):
         self.conn_id = conn_id
-    
+
     def _get_catalog(self):
         """Returns an instance of RemoteCKAN that can be used to operate
         the CKAN API.

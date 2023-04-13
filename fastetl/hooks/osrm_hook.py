@@ -10,7 +10,7 @@ import requests
 from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
-from FastETL.custom_functions.config import USER_AGENT
+from fastetl.custom_functions.config import USER_AGENT
 
 class OSRMHook(BaseHook):
     """Provides access to the Open Street Routing Machine (OSRM) API.

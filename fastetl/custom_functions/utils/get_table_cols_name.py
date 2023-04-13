@@ -4,7 +4,7 @@ Get database table columns names.
 
 from typing import List
 
-from FastETL.custom_functions.utils.db_connection import DbConnection
+from fastetl.custom_functions.utils.db_connection import DbConnection
 
 
 def get_table_cols_name(

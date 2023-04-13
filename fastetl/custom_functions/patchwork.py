@@ -29,7 +29,7 @@ from difflib import SequenceMatcher
 import pandas as pd
 from frictionless import Package, Resource, Schema, formats
 
-from FastETL.hooks.gsheet_hook import GSheetHook
+from fastetl.hooks.gsheet_hook import GSheetHook
 
 F11D_TO_PANDAS = {
     'integer': 'Int64',

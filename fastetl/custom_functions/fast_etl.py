@@ -20,15 +20,15 @@ import sqlalchemy.dialects as sa_dialects
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
-from FastETL.custom_functions.utils.db_connection import (
+from fastetl.custom_functions.utils.db_connection import (
     DbConnection,
     get_conn_type,
     get_mssql_odbc_engine,
     get_hook_and_engine_by_provider,
 )
-from FastETL.custom_functions.utils.load_info import LoadInfo
-from FastETL.custom_functions.utils.table_comments import TableComments
-from FastETL.custom_functions.utils.get_table_cols_name import (
+from fastetl.custom_functions.utils.load_info import LoadInfo
+from fastetl.custom_functions.utils.table_comments import TableComments
+from fastetl.custom_functions.utils.get_table_cols_name import (
     get_table_cols_name,
 )
 

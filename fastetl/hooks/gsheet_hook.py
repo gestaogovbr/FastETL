@@ -17,8 +17,8 @@ from apiclient import discovery
 
 import pygsheets
 
-from FastETL.custom_functions.utils.string_formatting import slugify_column_names
-from FastETL.custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
+from fastetl.custom_functions.utils.string_formatting import slugify_column_names
+from fastetl.custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
 
 class GSheetHook(BaseHook):
     """
@@ -215,7 +215,7 @@ class GSheetHook(BaseHook):
 
         return bool(update_date.date() >= until_date.date())
 
-    def format_sheet(self, sheet_name: str, start: str, end: str, fields: str, 
+    def format_sheet(self, sheet_name: str, start: str, end: str, fields: str,
         cell_json:str, model_cell: str = "A1"):
         """
         Altera a formatação do intervalo de células da planilha.
@@ -226,11 +226,11 @@ class GSheetHook(BaseHook):
                 (Ex.: "A1")
             - end (str): endereço da célula de final de intervalo
                 (Ex.: "A10")
-            - fields (str): lista de nomes de campos para aplicar à 
+            - fields (str): lista de nomes de campos para aplicar à
                 formatação de célula (Consulte doc. Pygsheets)
             - cell_json (str): JSON de formatação para aplicar à
                 célula (Consulte doc. Pygsheets)
-            - model_cell (:obj:`str`, optional): célula para ser 
+            - model_cell (:obj:`str`, optional): célula para ser
                 utilizada como modelo de formatação
         """
 
@@ -240,5 +240,5 @@ class GSheetHook(BaseHook):
 
         data_range = pygsheets.DataRange(start=start, end=end, worksheet=wst)
 
-        data_range.apply_format(cell=cell, fields=fields, 
+        data_range.apply_format(cell=cell, fields=fields,
             cell_json=cell_json)

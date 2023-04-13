@@ -27,8 +27,8 @@ import os
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from FastETL.custom_functions.utils.get_table_cols_name import get_table_cols_name
-from FastETL.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
+from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
+from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
 
 class DbToCSVOperator(BaseOperator):
     ui_color = '#95aad5'

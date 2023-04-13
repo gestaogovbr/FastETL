@@ -8,8 +8,7 @@ import pytest
 from frictionless import Package
 import odf.teletype, odf.opendocument
 
-import airflow
-from FastETL.custom_functions.utils.odf_tables import (
+from fastetl.custom_functions.utils.odf_tables import (
     DocumentWithTables,
     create_data_dictionary,
 )

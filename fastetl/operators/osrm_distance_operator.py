@@ -13,8 +13,8 @@ from airflow.models.connection import Connection
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from FastETL.hooks.osrm_hook import OSRMHook, get_shortest_distance
-from FastETL.custom_functions.utils.db_connection import DbConnection
+from fastetl.hooks.osrm_hook import OSRMHook, get_shortest_distance
+from fastetl.custom_functions.utils.db_connection import DbConnection
 
 class OSRMDistanceDbOperator(BaseOperator):
     """Enriches a database with distances calculated using the Open Street
