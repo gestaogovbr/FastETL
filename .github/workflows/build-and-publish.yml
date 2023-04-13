@@ -1,9 +1,11 @@
 name: Build and Publish
 
 on:
-  push:
-    tags:
-      - '*'
+  workflow_run:
+    workflows:
+      - "CI Tests"
+    types:
+      - completed
 
 jobs:
   build:
