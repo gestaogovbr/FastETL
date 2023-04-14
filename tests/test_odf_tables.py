@@ -84,7 +84,7 @@ def test_create_new_table_document(
 )
 def test_create_new_data_dictionary(data_package_descriptor: str):
     descriptor = yaml.safe_load(data_package_descriptor)
-    create_data_dictionary(descriptor, TEMP_DOCUMENT_NAME)
+    create_data_dictionary(Package(descriptor), TEMP_DOCUMENT_NAME)
 
     # verify contents of document file
     document = odf.opendocument.load(TEMP_DOCUMENT_NAME)
