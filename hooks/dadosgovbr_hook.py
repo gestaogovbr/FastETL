@@ -98,6 +98,49 @@ class DadosGovBrHook(BaseHook):
 
         return (matching_resources[0] if matching_resources else False)
 
+    # def update_dataset(
+    #     self,
+    #     dataset_id: str,
+    #     title: str,
+    #     description: str,
+    #     version: float, #confirmar se é float,
+    #     ):
+    #     "Update some properties of the dataset"
+
+    #     dataset = {
+    #         'idConjuntoDados': dataset_id,
+    #         'titulo': title,
+    #         'descricao': description,
+    #         'versao': version,
+    #         'temas': []
+    #     }
+
+    #     logging.info("Payload: " + str(dataset))
+
+    #     slug = f"public/conjunto-dados/{dataset_id}"
+    #     api_url, token = self.api_connection
+    #     headers = {
+    #         "accept": "application/json",
+    #         "chave-api-dados-abertos": token,
+    #     }
+
+    #     req_url = urljoin(api_url, slug)
+
+    #     response = requests.request(method="PATCH",
+    #                                 url=req_url,
+    #                                 headers=headers,
+    #                                 json=dataset,
+    #                                 )
+
+    #     try:
+    #         response.raise_for_status()
+    #         logging.info("Conjunto de Dados atualizado com sucesso")
+
+    #     except Exception as error:
+    #         raise Exception("Erro ao atualizar o Dataset") \
+    #         from error
+
+
     def create_or_update_resource(
         self,
         dataset_id: str,
