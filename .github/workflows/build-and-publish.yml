@@ -1,14 +1,9 @@
 name: Build and Publish
 
 on:
-  workflow_run:
-    workflows:
-      - "CI Tests"
-    types:
-      - completed
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 
 jobs:
   build:
