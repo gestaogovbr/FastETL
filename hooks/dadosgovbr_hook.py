@@ -98,7 +98,6 @@ class DadosGovBrHook(BaseHook):
 
         return (matching_resources[0] if matching_resources else False)
 
-
     def create_or_update_resource(
         self,
         dataset_id: str,
@@ -133,7 +132,9 @@ class DadosGovBrHook(BaseHook):
             description (str, optional): An optional string representing
                 the description of the resource. Defaults to None.
             type (str, optional): An optional string representing the
-                type of the resource. Defaults to "DADOS".
+                type of the resource. Defaults to "DADOS". Valid options:
+                [INVALIDO, DADOS, DOCUMENTACAO, DICIONARIO_DE_DADOS, API, OUTRO]
+
 
         Returns:
             None
@@ -164,7 +165,7 @@ class DadosGovBrHook(BaseHook):
                 'titulo': name,
                 'link': url,
                 'descricao': description,
-                'tipo': 'DADOS',
+                'tipo': type,
                 'formato': format,
             }
 
