@@ -5,7 +5,7 @@ and generating textual data dictionaries.
 from typing import List
 import logging
 
-from frictionless import Package
+from frictionless import Package, Resource
 
 import odf
 import odf.table, odf.text
@@ -358,9 +358,31 @@ class DocumentWithTables:
         """
         self.tables[name] = DocDataTable(document=self, name=name, **kw_args)
 
+    def append_heading(self, text: str, level: int = 1):
+        """Appends a heading section containing the text provided,
+
+        Args:
+            text (str): contents of the heading,
+            level (int): level of the heading. Defaults to 1.
+        """
+        heading = odf.text.H(stylename="Heading", text=text, outlinelevel=level)
+        self.odf_document.text.addElement(heading)
+
+    def append_paragraph(self, text: str):
+        """Appends a paragraph of text containing the text provided,
+
+        TODO: Add support for converting markdown text.
+
+        Args:
+            text (str): contents of the paragraph
+        """
+        for line in text.split("\n\n"):
+            paragraph = odf.text.P(stylename="Standard", text=line)
+            self.odf_document.text.addElement(paragraph)
+
 
 def create_data_dictionary(
-    data_package: str,
+    data_package: Package,
     output: str,
     lang: str = "en",
 ):
@@ -368,16 +390,19 @@ def create_data_dictionary(
     package and table schema.
 
     Args:
-        data_package (str): path to the Frictionless data package
-            descriptor.
+        data_package (Package): a Frictionless data package.
         output (str): path to the resulting odf file.
         lang (str): language code to use for the table column headers.
             Defaults to "en".
     """
-    package = Package(data_package)
-
     document = DocumentWithTables()
-    for resource in package.resources:
+
+    if data_package.title:
+        document.append_heading(data_package.title)
+    if data_package.description:
+        document.append_paragraph(data_package.description)
+
+    for resource in data_package.resources:
         document.append_table(
             resource.name,
             column_names=DATA_DICT_COLUMN_NAMES[lang],
@@ -392,10 +417,34 @@ def create_data_dictionary(
     document.save(output)
 
 
+def fill_template_table(
+    resource: Resource,
+    document: OpenDocumentText,
+) -> OpenDocumentText:
+    """Fills a table in a template document with data from the given
+    resource schema.
+
+    Args:
+        resource (Resource): a Frictionless Data Resource.
+        document (DocumentWithTables): a DocumentWithTables object.
+
+    Returns:
+        DocumentWithTables: the document with the table filled out.
+    """
+    if resource.name not in document.tables.keys():
+        raise ValueError(f"Table with id '{resource.name}' not found in document.")
+    table = document.tables[resource.name]
+    rows = []
+    for field in resource.schema.fields:
+        rows.append([field.name, field.type, field.description])
+    table.add_rows(rows)
+    return document
+
+
 def create_data_dictionary_from_template(
-    data_package: str,
+    data_package: Package,
     doc_template: str,
-    resource_name: str,
+    resource_names: List[str] = None,
     # after_heading: str = None, # TODO
     output: str = None,
 ):
@@ -408,12 +457,13 @@ def create_data_dictionary_from_template(
         doc_template (str): path to the odf file to be used as a
             template. If omitted, will create a new document from
             scratch.
-        resource_name (str): resource name in the data package
-            to use to describe the table.
+        resource_name (List[str]): list of resource names in the data
+            package which will update the table.
 
-            This must also match the exact id of the table in the
-            OpenDocumentText text file to be altered. The table must
-            contain only a header and one row.
+            Default to None.
+
+            If None, will update all tables whose name match the
+            resource names in the data package.
         after_heading (str, optional): Text of the heading under which
             the new table will be created.
             If None, will use the resource title from the data package
@@ -426,16 +476,13 @@ def create_data_dictionary_from_template(
             Caution: if None, will overwrite the original template
             document!
     """
-    package = Package(data_package)
-
     document = DocumentWithTables.load_from_template(doc_template, load_all_tables=True)
-    if resource_name not in document.tables.keys():
-        raise ValueError(f"Table with id '{resource_name}' not found in document.")
-    table = document.tables[resource_name]
-    resource = package.get_resource(resource_name)
-    rows = []
-    for field in resource.schema.fields:
-        rows.append([field.name, field.type, field.description])
-    table.add_rows(rows)
+
+    if resource_names is None:
+        resource_names = data_package.resource_names
+    for resource_name in resource_names:
+        if resource_name in document.tables.keys():
+            resource = data_package.get_resource(resource_name)
+            document = fill_template_table(resource, document)
 
     document.save(output)
