@@ -126,8 +126,8 @@ t0 = DbToDbOperator(
 Mais detalhes sobre os parâmetros e funcionamento do `DbToDbOperator`
 nos arquivos:
 
-* [fast_etl.py](custom_functions/fast_etl.py)
-* [db_to_db_operator.py](operators/db_to_db_operator.py)
+* [fast_etl.py](fastetl/custom_functions/fast_etl.py)
+* [db_to_db_operator.py](fastetl/operators/db_to_db_operator.py)
 
 # Como colaborar
 
