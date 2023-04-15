@@ -1,4 +1,4 @@
-![FastETL's logo. It's a Swiss army knife with some open tools](docs/logo.png)
+![FastETL's logo. It's a Swiss army knife with some open tools](docs/images/logo.svg)
 
 <p align="center">
     <em>FastETL framework, modern, versatile, does almost everything.</em>
