@@ -17,6 +17,9 @@ Principais funcionalidades:
   Server, Postgres e MySQL
 * Carga de dados a partir do **GSheets** e de planilhas na rede **Samba/Windows**
 * Extração de **CSV** a partir do SQL
+* Limpeza de dados usando tasks customizadas de *patch* de dados (ex.:
+  para coordenadas geográficas sujas, mapear valores canônicos em colunas,
+  etc.)
 * Consulta à API do Diário Oficial da União (**DOU**)
 * Usar um serviço [Open Street Routing Machine](https://project-osrm.org/)
   para calcular distâncias de rotas

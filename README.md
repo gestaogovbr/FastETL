@@ -19,6 +19,8 @@ Main features:
 * Load data from **GSheets** and from spreadsheets on **Samba/Windows**
   networks
 * Extracting **CSV** from SQL
+* Clean data using custom data patching tasks (e.g. for messy
+  geographical coordinates, mapping canonical values for columns, etc.)
 * Querying the Brazilian National Official Gazette's (**DOU**'s) API
 * Using a [Open Street Routing Machine](https://project-osrm.org/)
   service to calculate route distances
