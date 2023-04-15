@@ -17,7 +17,14 @@ Principais funcionalidades:
   Server, Postgres e MySQL
 * Carga de dados a partir do **GSheets** e de planilhas na rede **Samba/Windows**
 * Extração de **CSV** a partir do SQL
-* Consulta à API do **DOU**
+* Consulta à API do Diário Oficial da União (**DOU**)
+* Usar um serviço [Open Street Routing Machine](https://project-osrm.org/)
+  para calcular distâncias de rotas
+* Usar a API do [CKAN](https://docs.ckan.org/en/2.10/api/index.html) ou
+  do dados.gov.br para atualizar os metadados de um dataset
+* Usar Frictionless
+  [Tabular Data Packages](https://specs.frictionlessdata.io/tabular-data-package/)
+  para escrever dicionários de dados no formato OpenDocument Text
 
 <!-- Contar a história da origem do FastETL -->
 Este framework é mantido por uma rede de desenvolvedores de diversas

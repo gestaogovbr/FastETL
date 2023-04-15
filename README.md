@@ -20,6 +20,13 @@ Main features:
   networks
 * Extracting **CSV** from SQL
 * Querying the Brazilian National Official Gazette's (**DOU**'s) API
+* Using a [Open Street Routing Machine](https://project-osrm.org/)
+  service to calculate route distances
+* Using [CKAN](https://docs.ckan.org/en/2.10/api/index.html) or
+  dados.gov.br's API to update dataset metadata
+* Using Frictionless
+  [Tabular Data Packages](https://specs.frictionlessdata.io/tabular-data-package/)
+  to write OpenDocument Text format data dictionaries
 
 <!-- Contar a história da origem do FastETL -->
 This framework is maintained by a network of developers from many teams
