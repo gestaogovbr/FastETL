@@ -4,6 +4,8 @@
     <em>Framework fastETL, moderno, versátil, faz quase tudo.</em>
 </p>
 
+This text is also available in English: 🇬🇧[README.md](README.md).
+
 ---
 
 [![CI Tests](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml)
@@ -11,31 +13,37 @@
 O **FastETL** é um pacote de plugins do Airflow para construção de pipelines de dados para uma variedade de cenários comuns.
 
 Principais funcionalidades:
-* **Replicação** de tabelas *full* ou incremental em bancos de dados SQL Server e Postgres
+* **Replicação** de tabelas *full* ou incremental em bancos de dados SQL
+  Server, Postgres e MySQL
 * Carga de dados a partir do **GSheets** e de planilhas na rede **Samba/Windows**
 * Extração de **CSV** a partir do SQL
 * Consulta à API do **DOU**
 
 <!-- Contar a história da origem do FastETL -->
-Este framework é mantido por uma rede de desenvolvedores de diversas equipes do Ministério da Economia e é o resultado acumulado da utilização do [Apache Airflow](https://airflow.apache.org/), uma ferramenta livre de código aberto, a partir de 2019.
+Este framework é mantido por uma rede de desenvolvedores de diversas
+equipes do Ministério da Gestão e da Inovação em Serviços Públicos e é o
+resultado acumulado da utilização do
+[Apache Airflow](https://airflow.apache.org/), uma ferramenta livre de
+código aberto, a partir de 2019.
 
 **Para governo:** O fastETL é utilizado largamente para replicação de dados acessados via Quartzo (DaaS) do Serpro.
 
 # Instalação no Airflow
 
 O FastETL implementa os padrões de plugins do Airflow e para ser
-instalado basta que ele seja copiado para o diretório `plugins` no
-ambiente da instalação do Airflow.
+instalado, simplesmente adicione o pacote
+`apache-airflow-providers-fastetl` às suas dependências Python em seu
+ambiente Airflow.
 
-Atualmente o FastETL depende do nosso ambiente do Airflow com Docker
-definido no repositório
+Ou instale-o com
+
+```bash
+pip install apache-airflow-providers-fastetl
+```
+
+Para ver um exemplo de container do Apache Airflow que usa o FastETL,
+confira o repositório
 [airflow2-docker](https://github.com/economiagovbr/airflow2-docker).
-Caso utilize esse ambiente, o FastETl já vem integrado.
-
-No futuro pretendemos transformá-lo em um plugin independente de um
-ambiente específico, contendo instruções para instalado em qualquer
-ambiente. O primeiro passo para isso será
-[documentar as suas dependências](https://github.com/economiagovbr/FastETL/issues/5).
 
 # Testes
 
@@ -76,11 +84,11 @@ make down
 
 A principal funcionalidade do FastETL é o operador
 `DbToDbOperator`. Ele copia dados entre os bancos `postgres` e
-`mssql`.
+`mssql`. O MySQL também é suportado como fonte.
 
 Aqui um exemplo:
 
-```
+```python
 from datetime import datetime
 from airflow import DAG
 from fastetl.operators.db_to_db_operator import DbToDbOperator
@@ -122,3 +130,6 @@ nos arquivos:
 * [db_to_db_operator.py](operators/db_to_db_operator.py)
 
 # Como colaborar
+
+A escrever no documento `CONTRIBUTING.md` (issue
+[#4](/economiagovbr/FastETL/issues/4)).
