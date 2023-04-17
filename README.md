@@ -57,6 +57,9 @@ check out the
 [airflow2-docker](https://github.com/economiagovbr/airflow2-docker)
 repository.
 
+To ensure appropriate results, please make sure to install the
+`msodbcsql17` and `unixodbc-dev` libraries on your Apache Airflow workers.
+
 # Tests
 
 The test suite uses Docker containers to simulate a complete use

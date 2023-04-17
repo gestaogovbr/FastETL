@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 """Perform the package apache-airflow-providers-fastetl setup."""
 setup(
@@ -44,6 +44,7 @@ setup(
     setup_requires=["setuptools", "wheel"],
     author="Time de Dados CGINF",
     author_email="seges.cginf@economia.gov.br",
+    url="https://github.com/economiagovbr/FastETL",
     classifiers=[
         "Framework :: Apache Airflow",
         "Framework :: Apache Airflow :: Provider",

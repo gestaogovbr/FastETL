@@ -1,6 +1,6 @@
 # Thanks to Jedi Wash! *.*
 """
-Módulo cópia de dados entre Postgres e MsSql e outras coisas
+Copy tabular data between Postgres, MSSQL and MySQL.
 """
 
 import time
@@ -34,19 +34,21 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
 
 
 class SourceConnection:
-    """
-    Represents a source connection to a database, encapsulating the connection details
-    (e.g., connection ID, schema, table, query) required to read data from a database.
+    """Represents a source connection to a database, encapsulating the
+    connection details (e.g., connection ID, schema, table, query)
+    required to read data from a database.
 
     Args:
         conn_id (str): The unique identifier of the connection to use.
-        schema (str, optional): The name of the schema to use. Default is None.
-        table (str, optional): The name of the table to use. Default is None.
+        schema (str, optional): The name of the schema to use.
+            Default is None.
+        table (str, optional): The name of the table to use.
+            Default is None.
         query (str, optional): The SQL query to use. Default is None.
 
     Raises:
-        ValueError: If `conn_id` is empty or if neither `query` nor (`schema` and `table`)
-            is provided.
+        ValueError: If `conn_id` is empty or if neither `query` nor
+            (`schema` and `table`) is provided.
 
     Attributes:
         conn_id (str): The unique identifier of the connection.
@@ -71,9 +73,9 @@ class SourceConnection:
 
 
 class DestinationConnection:
-    """
-    Represents a destination connection to a database, encapsulating the connection details
-    (e.g., connection ID, schema, table) required to write data to a database.
+    """Represents a destination connection to a database, encapsulating
+    the connection details (e.g., connection ID, schema, table) required
+    to write data to a database.
 
     Args:
         conn_id (str): The unique identifier of the connection to use.
@@ -94,9 +96,7 @@ class DestinationConnection:
 
 
 def build_select_sql(schema: str, table: str, column_list: str) -> str:
-    """
-    Monta a string do select da origem
-    """
+    """Generates sql `select` query based on schema, table and columns."""
 
     columns = ", ".join(f'"{col}"' for col in column_list)
 
@@ -105,11 +105,20 @@ def build_select_sql(schema: str, table: str, column_list: str) -> str:
 
 def build_dest_sqls(
     destination: DestinationConnection, column_list: str, wildcard_symbol: str
-) -> Union[str, str, str]:
+) -> Union[str, str]:
+    """Generates sql `insert` and `truncate` queries.
+
+    Args:
+        destination (DestinationConnection): Object with connection
+            details as schema and table.
+        column_list (str): Columns names to be inserted on destination.
+        wildcard_symbol (str): Db symbol for insert statement.
+            E.g.: ? for mssql or %s to postgres
+
+    Returns:
+        Union[str, str]: `insert` and `truncate` sql queries.
     """
-    Monta a string do insert do destino
-    Monta a string de truncate do destino
-    """
+
 
     columns = ", ".join(f'"{col}"' for col in column_list)
 
@@ -131,12 +140,12 @@ def insert_df_to_db(
     table: str,
     reflect_col_table: bool = True,
 ):
-    """
-    Insere os registros do DataFrame df na tabela especificada. Insere
-    apenas as colunas que existem na tabela.
+    """Inserts the records from the DataFrame df into the specified
+    table. Inserts only the columns that exist in the table.
 
-    TODO: Implementar aqui o registro no LOG CONTROLE
+    TODO: Register operation on `log control`.
     """
+
     if reflect_col_table:
         # Filter existing table columns
         cols = get_table_cols_name(conn_id=conn_id, schema=schema, table=table)
@@ -158,8 +167,7 @@ def create_table_if_not_exists(
     destination: DestinationConnection,
     copy_table_comments: bool,
 ) -> None:
-    """
-    Creates a destination table if it does not already exist and copies
+    """Creates a destination table if it does not already exist and copies
     data from a source table to the destination.
 
     Args:
@@ -228,11 +236,10 @@ def create_table_if_not_exists(
         source_eng.echo = True
         try:
             insp = reflection.Inspector.from_engine(source_eng)
-        except AssertionError as e:
+        except AssertionError as e: # pylint: disable=invalid-name
             logging.error(
-                "Não é possível criar tabela automaticamente "
-                "a partir deste banco de dados. Crie a tabela "
-                "manualmente para executar a cópia dos dados. "
+                "Cannot create the table automatically from this database."
+                "Please create the table manually to execute data copying."
             )
             raise e
 
@@ -261,8 +268,7 @@ def create_table_if_not_exists(
 def _copy_table_comments(
     source: SourceConnection, destination: DestinationConnection
 ) -> None:
-    """
-    Copy table and column comments/descriptions between databases.
+    """Copy table and column comments/descriptions between databases.
 
     Args:
         source (SourceConnection): Connection object containing the
@@ -293,8 +299,7 @@ def save_load_info(
     load_type: str,
     rows_loaded: int,
 ):
-    """
-    Inserts metadata information into a database about a data ingestion
+    """Inserts metadata information into a database about a data ingestion
     process, including the origin of the data, the type of ingestion
     (full or incremental), the destination database, the schema where
     the control data will be stored, and the number of rows loaded.
@@ -323,25 +328,25 @@ def save_load_info(
     load_info.save(rows_loaded)
 
 
-def get_schema_table_from_query(query: str) -> str:
-    """Returns schema.table from a query statement.
+def get_schema_table_from_query(query: str) -> Union[str, str]:
+    """Returns schema and table from a sql query string statement.
 
     Args:
         query (str): sql query statement.
 
     Returns:
-        schema_table (str): table string in format `schema.table`
+        schema, table (Union[str, str]): schema and table strings.
     """
 
     # search pattern "from schema.table" on query
     sintax_from = re.search(
         r"from\s+\"?\'?\[?[\w|\.|\"|\'|\]|\]]*\"?\'?\]?", query, re.IGNORECASE
     ).group()
-    # split "from " from "schema.table" and get schema.table [-1]
+    # split "from " from "schema.table" and get schema.table[-1]
     db_schema_table = sintax_from.split()[-1]
-    # clean [, ], ", '
+    # clean `[`, `]`, `"`, `'`
     db_schema_table = re.sub(r"\[|\]|\"|\'", "", db_schema_table)
-    # clean "dbo." if exists on dbo.schema.table
+    # clean "dbo." if exists as dbo.schema.table
     schema, table = db_schema_table.split(".")[-2:]
 
     return schema, table
@@ -356,21 +361,24 @@ def copy_db_to_db(
     copy_table_comments: bool = False,
     load_type: str = "full",
 ) -> None:
-    """
-    Carrega dado do Postgres/MSSQL/MySQL para Postgres/MSSQL com psycopg2 e pyodbc
-    copiando todas as colunas e linhas já existentes na tabela de destino.
-    Tabela de destino deve ter a mesma estrutura e nome de tabela e colunas
-    que a tabela de origem, ou passar um select_sql que tenha as colunas de
-    destino.
+    """Load data from Postgres/MSSQL/MySQL to Postgres/MSSQL using psycopg2
+    and pyodbc copying all existing columns and rows in the destination
+    table.
 
-    Alguns tipos de dados utilizados na tabela destino podem gerar
-    problemas na cópia. Esta lista consolida os casos conhecidos:
-    * **float**: mude para **numeric(x,y)** ou **decimal(x,y)**
-    * **text**: mude para **varchar(max)** ou **nvarchar**
-    * para datas: utilize **date** para apenas datas, **datetime** para
-    data com hora, e **datetime2** para timestamp
+    The destination table:
+        * can be created if not exists
+        * must have matching `ddl` with source table column names
+        * can be loaded with provided query on the source table
 
-    Exemplo:
+    Some data types used in the destination table may cause problems
+    in copying.
+    This list consolidates known cases:
+    * **float**: change to **numeric(x,y)** or **decimal(x,y)**
+    * **text**: change to **varchar(max)** or **nvarchar**
+    * for dates: use **date** for only dates, **datetime** for
+    date with time, and **datetime2** for timestamp
+
+    Example:
         copy_db_to_db(
             {"conn_id": "conn_id", "schema": "schema", "table: "table"},
             {"conn_id": "conn_id", "schema": "schema", "table: "table"}
@@ -413,13 +421,6 @@ def copy_db_to_db(
 
     Return:
         None
-
-    Todo:
-        * Transformar em Classe ou em Airflow Operator
-        * Criar tabela no destino quando não existente
-        * Alterar conexão do Postgres para pyodbc
-        * Possibilitar inserir data da carga na tabela de destino
-        * Criar testes
     """
 
     # validate connections
@@ -449,7 +450,7 @@ def copy_db_to_db(
                     else:
                         wildcard_symbol = "%s"
 
-                    # gera queries
+                    # generate queries
                     col_list = get_table_cols_name(
                         conn_id=destination.conn_id,
                         schema=destination.schema,
@@ -469,11 +470,11 @@ def copy_db_to_db(
                             column_list=col_list,
                         )
 
-                    # Remove as aspas na query para compatibilidade com o MYSQL
+                    # remove quotes for mysql compatibility
                     if source_provider == "mysql":
                         select_sql = select_sql.replace('"', "")
 
-                    # truncate stg
+                    # truncate stage
                     if destination_truncate:
                         destination_cur.execute(truncate)
                         if destination_provider == "mssql":
@@ -486,7 +487,7 @@ def copy_db_to_db(
                     rows_inserted = 0
 
                     logging.info(
-                        "Inserindo linhas na tabela [%s].[%s]",
+                        "Loading rows on table [%s].[%s]",
                         destination.schema,
                         destination.table,
                     )
@@ -494,7 +495,7 @@ def copy_db_to_db(
                         destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
-                        logging.info("%d linhas inseridas!!", rows_inserted)
+                        logging.info("%d rows loaded!!", rows_inserted)
 
                     destination_conn.commit()
 
@@ -512,15 +513,14 @@ def copy_db_to_db(
                         rows_loaded=rows_inserted,
                     )
 
-                    logging.info("Tempo load: %f segundos", delta_time)
-                    logging.info("Linhas inseridas: %d", rows_inserted)
-                    logging.info("linhas/segundo: %f", rows_inserted / delta_time)
+                    logging.info("Load time: %f seconds", delta_time)
+                    logging.info("Rows insertes: %d", rows_inserted)
+                    logging.info("lines by second: %f", rows_inserted / delta_time)
 
 
 def _table_rows_count(db_hook, table: str, where_condition: str = None):
-    """
-    Calcula a quantidade de linhas na tabela (table) e utiliza a
-    condição (where_condition) caso seja passada como parâmetro.
+    """Calculates the number of rows in the table and uses the condition
+    (where_condition) if passed as a parameter.
     """
 
     sql = f"SELECT COUNT(*) FROM {table}"
@@ -536,34 +536,32 @@ def _build_filter_condition(
     key_column: str,
     since_datetime: datetime = None,
 ) -> Tuple[str, str]:
-    """
-    Monta o filtro (where) obtenção o valor max() da tabela,
-    distinguindo se a coluna é a "data ou data/hora de atualização"
-    (date_column) ou outro número sequencial (key_column), por exemplo
-    id, pk, etc. Se o parâmetro "since_datetime" for recebido, será
-    considerado em vez do valor max() da tabela.
+    """Builds the filter (where) by obtaining the max() value from the table,
+    distinguishing whether the column is the "date or update datetime"
+    (date_column) or another sequential number (key_column). For example,
+    id, pk, etc. If the "since_datetime" parameter is provided, it will
+    be considered instead of the max() value from the table.
 
-    Exemplo:
-        _build_filter_condition(dest_hook: hook,
+    Example:
+        _build_filter_condition(dest_hook=dest_hook,
                         table=table,
                         date_column=date_column,
                         key_column=key_column)
 
     Args:
-        dest_hook (str): hook de conexão do DB de destino
-        table (str): tabela a ser sincronizada
-        date_column (str): nome da coluna a ser utilizado para
-            identificação dos registros atualizados.
-        key_column (str): nome da coluna a ser utilizado como chave na
-            etapa de atualização dos registros antigos que sofreram
-            atualizações na origem.
-        since_datetime (datetime): data/hora a partir do qual o filtro será
-            montado, em vez de usar o max() da tabela.
+        dest_hook (str): destination database connection hook.
+        table (str): table to be synchronized.
+        date_column (str): name of the column to be used for
+            identification of updated records.
+        key_column (str): name of the column to be used as a key in the
+            step of updating old records that have been updated on
+            source.
+        since_datetime (datetime): date/time from which the filter will be
+            built, instead of using the max() value from the table.
 
-        Returns:
-                Tuple[str, str]: Tupla contendo o valor máximo e a condição
-                        where da query sql.
-
+    Returns:
+        Tuple[str, str]: Tuple containing the maximum value and the where
+            condition of the SQL query.
     """
 
     if since_datetime:
@@ -577,7 +575,7 @@ def _build_filter_condition(
         max_value = dest_hook.get_first(sql)[0]
 
     if date_column:
-        # Verifica se o formato do campo max_value é date ou datetime
+        # Checks if the format of the max_value field is date or datetime
         if isinstance(max_value, date):
             max_value = max_value.strftime("%Y-%m-%d")
         elif isinstance(max_value, datetime):
@@ -594,10 +592,8 @@ def _build_filter_condition(
 def _build_incremental_sqls(
     dest_table: str, source_table: str, key_column: str, column_list: str
 ):
-    """
-    Constrói as queries SQLs que realizam os Updates dos registros
-    atualizados desde a última sincronização e os Inserts das novas
-    linhas.
+    """Builds the SQL queries that perform the updates of the source updated
+    records since the last synchronization and the inserts of new records.
     """
 
     cols = ", ".join(f"{col} = orig.{col}" for col in column_list)
@@ -635,16 +631,18 @@ def sync_db_2_db(
     chunksize: int = 1000,
     copy_table_comments: bool = False,
 ) -> None:
-    """
-    Realiza a atualização incremental de uma tabela. A sincronização
-    é realizada em 3 etapas. 1-Envia as alterações necessárias para uma
-    tabela intermediária localizada no esquema `increment_schema`.
-    2-Realiza os Updates. 3-Realiza os Inserts. Apenas as colunas que
-    existam na tabela no BD destino serão sincronizadas. Funciona com
-    Postgres na origem e MsSql no destino. O algoritmo também realiza,
-    opcionalmente, sincronização de exclusões.
+    """Performs incremental update on a table. The synchronization is
+    performed in 3 steps.
+        1 - Sends the necessary changes to an intermediate table
+        located in the `increment_schema` schema.
+        2 - Performs Updates.
+        3 - Performs Inserts. Only columns that exists at destination
+        table will be synchronized.
 
-    Exemplo:
+    Works with Postgres as source and MsSql as destination. `sync_db_2_db`
+    also optionally performs synchronization of deletions.
+
+    Example:
         sync_db_2_db(source_conn_id=SOURCE_CONN_ID,
                      destination_conn_id=DEST_CONN_ID,
                      table=table,
@@ -655,46 +653,38 @@ def sync_db_2_db(
                      chunksize=CHUNK_SIZE)
 
     Args:
-        source_conn_id (str): string de conexão airflow do DB origem
-        destination_conn_id (str): string de conexão airflow do DB destino
-        table (str): tabela a ser sincronizada
-        date_column (str): nome da coluna a ser utilizado para
-            identificação dos registros atualizados na origem.
-        key_column (str): nome da coluna a ser utilizado como chave na
-            etapa de atualização dos registros antigos que sofreram
-            atualizações na origem.
-        source_eschema (str): esquema do BD na origem
-        destination_schema (str): esquema do BD no destino
-        increment_schema (str): Esquema no banco utilizado para tabelas
-            temporárias. Caso esta variável seja None, esta tabela será
-            criada no mesmo schema com sufixo '_alteracoes'
-        select_sql (str): select customizado para utilizar na carga ao invés
-            de replicar as colunas da tabela origem. Não deve ser utilizado com
-            JOINS, apenas para uma única tabela.
-        since_datetime (datetime): data/hora a partir da qual o incremento
-            será realizado, sobrepondo-se à data/hora máxima da tabela destino
-        sync_exclusions (bool): opção de sincronizar exclusões.
+        source_conn_id (str): Airflow connection string of the source DB.
+        destination_conn_id (str): Airflow connection string of the
+            destination DB.
+        table (str): Table to be synchronized
+        date_column (str): Name of the column to be used for
+            identifying updated records in the source.
+        key_column (str): Name of the column to be used as a key in
+            the update step of old records that have been updated in the source.
+        source_schema (str): Schema of the DB in the source.
+        destination_schema (str): schema of the DB in the destination.
+        increment_schema (str): Schema in the database used for temporary
+            tables. If this variable is None, the table will be created
+            at the same destiny schema with the suffix '_alteracoes'
+        select_sql (str): customized select to use in the load instead of
+            replicating the columns of the source table. Should not be used with
+            JOINS, only for a single table.
+        since_datetime (datetime): date/time from which the increment
+            will be performed, overriding the maximum date/time of the destination table.
+        sync_exclusions (bool): option to synchronize exclusions.
             Default = False.
-        source_exc_schema (str): esquema da tabela na origem onde estão
-            registradas exclusões
-        source_exc_table (str): tabela na origem onde estão registradas
-            exclusões
-        source_exc_column (str): coluna na tabela na origem onde estão
-            registradas exclusões
-        chunksize (int): tamanho do bloco de leitura na origem.
-        Default = 1000 linhas
+        source_exc_schema (str): schema of the table in the source where
+            exclusions are registered
+        source_exc_table (str): table in the source where exclusions are registered
+        source_exc_column (str): column in the table in the source where
+            exclusions are registered
+        chunksize (int): read block size in the source.
+        Default = 1000 rows
         copy_table_comments (bool): flag if includes on the execution the
             copy of table comments/descriptions. Default to False.
 
     Return:
         None
-
-    Todo:
-        * Automatizar a criação da tabela gêmea e remoção ao final
-        * Transformar em Airflow Operator
-        * Possibilitar ler de MsSql e escrever em Postgres
-        * Possibilitar inserir data da carga na tabela de destino
-        * Criar testes
     """
 
     def _divide_chunks(l, n):
@@ -716,24 +706,24 @@ def sync_db_2_db(
     col_list = get_table_cols_name(destination_conn_id, destination_schema, table)
 
     dest_rows_count = _table_rows_count(dest_hook, dest_table_name)
-    logging.info("Total de linhas atualmente na tabela destino: %d.", dest_rows_count)
-    # If de tabela vazia separado para evitar erro na _build_filter_condition()
+    logging.info("Total rows at destination table: %d.", dest_rows_count)
+    # If empty table, to avoid error on _build_filter_condition()
     if dest_rows_count == 0:
-        raise Exception("Tabela destino vazia! Utilize carga full!")
+        raise Exception("Destination table empty. Use full load option.")
 
     ref_value, where_condition = _build_filter_condition(
         dest_hook, dest_table_name, date_column, key_column, since_datetime
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
-    logging.info("Total de linhas novas ou modificadas: %d.", new_rows_count)
+    logging.info("New or modified rows total: %d.", new_rows_count)
 
-    # Guarda as alterações e inclusões necessárias
+    # store updates and inserts
     if not select_sql:
         select_sql = build_select_sql(
             schema=source_schema, table=table, column_list=col_list
         )
     select_diff = f"{select_sql} WHERE {where_condition}"
-    logging.info("SELECT para espelhamento: %s", select_diff)
+    logging.info("SQL Query to mirror tables: %s", select_diff)
 
     copy_db_to_db(
         source={
@@ -752,7 +742,7 @@ def sync_db_2_db(
         load_type="incremental",
     )
 
-    # Reconstrói índices
+    # rebuild index
     destination_conn_type = get_conn_type(destination_conn_id)
     if destination_conn_type == "mssql":
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
@@ -761,19 +751,18 @@ def sync_db_2_db(
 
     dest_hook.run(sql)
 
-    logging.info("Iniciando carga incremental na tabela %s.", dest_table_name)
+    logging.info("Starting incremental load on table %s.", dest_table_name)
     updates_sql, inserts_sql = _build_incremental_sqls(
         dest_table=f"{dest_table_name}",
         source_table=f"{inc_table_name}",
         key_column=key_column,
         column_list=col_list,
     )
-    # Realiza updates
+
     dest_hook.run(updates_sql)
-    # Realiza inserts de novas linhas
     dest_hook.run(inserts_sql)
 
-    # Se precisar aplicar as exclusões da origem no destino:
+    # if needed to delete rows at destination
     if sync_exclusions:
         source_exc_sql = f"""SELECT {key_column}
                              FROM {source_exc_schema}.{source_exc_table}
@@ -793,10 +782,10 @@ def sync_db_2_db(
                 dest_hook.run(sql)
 
         logging.info(
-            "Quantidade de linhas possivelmente excluídas: %d", len(ids_to_del)
+            "Approximated number of rows deleted: %d", len(ids_to_del)
         )
 
-    # atualiza comentários da tabela
+    # update table descriptions/comments
     if copy_table_comments:
         _copy_table_comments(
             source=SourceConnection(

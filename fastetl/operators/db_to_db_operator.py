@@ -1,13 +1,12 @@
 """
-Operador que realiza a cópia de dados seguindo uma estratégia completa
-(full) ou incremental de um banco de dados para outro. Os BDs podem ser
-Postgres ou SQL Server. Internamente são utilizadas as bibliotecas psycopg2 e
-pyodbc. Os dados copiados podem ser oriundos de uma tabela ou de um
-Select SQL.
+Airflow operator that performs data copying between DBs with complete
+or incremental strategy. The DBs can be Postgres, SQL Server or MySQL.
+It uses psycopg2 and pyodbc libraries. The copied data can
+come from a table or an SQL Query.
 
 Args:
-    is_incremental (bool, optional): Whether to perform an incremental copy
-        based on a datetime or key column. Defaults to False.
+    is_incremental (bool, optional): Whether to perform an incremental
+        copy based on a datetime or key column. Defaults to False.
 
     (when full copy)
     columns_to_ignore (List[str], optional): A list of column names to
@@ -46,7 +45,7 @@ Args:
         * schema -> required
         * query -> optional
         * source_exc_schema -> optional
-            Table `scheme` name at the source where exclusions are recorded.
+            Table `schema` name at the source where exclusions are recorded.
         * source_exc_table -> optional
             Table `table` name at the source where exclusions are recorded.
         * source_exc_column -> optional
