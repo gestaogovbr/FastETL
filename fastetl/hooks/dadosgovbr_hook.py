@@ -70,6 +70,8 @@ class DadosGovBrHook(BaseHook):
                             )
         try:
             response.raise_for_status()
+        except requests.exceptions.HTTPError as error:
+            raise error
         except Exception as error:
             raise Exception("Erro ao retornar o conjunto de dados na API") \
             from error
@@ -98,47 +100,51 @@ class DadosGovBrHook(BaseHook):
 
         return (matching_resources[0] if matching_resources else False)
 
-    # def update_dataset(
-    #     self,
-    #     dataset_id: str,
-    #     **properties
-    #     # title: str,
-    #     # description: str,
-    #     # version: float, #confirmar se é float,
-    #     ):
-    #     "Update some properties of the dataset"
+    def update_dataset(
+        self,
+        dataset_id: str,
+        **properties
+        ):
+        """ Update some properties of a given dataset
+            Endpoint: /dados/api/publico/conjuntos-dados/{id}
 
-    #     dataset = {
-    #         'idConjuntoDados': dataset_id,
-    #         'titulo': title,
-    #         'descricao': description,
-    #         'versao': version
-    #     }
+        Args:
+            dataset_id (str): The ID of the dataset to be updated.
+            **properties: Keyword arguments representing the properties to be updated.
 
-    #     logging.info("Payload: " + str(dataset))
+        Raises:
+            requests.exceptions.HTTPError: If the API returns an HTTP error status.
+            Exception: If an error occurs during the dataset update process.
+        """
 
-    #     slug = f"public/conjunto-dados/{dataset_id}"
-    #     api_url, token = self.api_connection
-    #     headers = {
-    #         "accept": "application/json",
-    #         "chave-api-dados-abertos": token,
-    #     }
+        print("Payload: " +
+            str(dataset_id) + ": " + str(properties))
 
-    #     req_url = urljoin(api_url, slug)
+        slug = f"publico/conjuntos-dados/{dataset_id}"
 
-    #     response = requests.request(method="PATCH",
-    #                                 url=req_url,
-    #                                 headers=headers,
-    #                                 json=dataset,
-    #                                 )
+        api_url, token = self.api_connection
 
-    #     try:
-    #         response.raise_for_status()
-    #         logging.info("Conjunto de Dados atualizado com sucesso")
+        headers = {
+            "accept": "application/json",
+            "chave-api-dados-abertos": token,
+        }
 
-    #     except Exception as error:
-    #         raise Exception("Erro ao atualizar o Dataset") \
-    #         from error
+        req_url = urljoin(api_url, slug)
+
+        response = requests.request(method="PATCH",
+                                    url=req_url,
+                                    headers=headers,
+                                    json=properties,
+                                    )
+
+        try:
+            response.raise_for_status()
+            print("Conjunto de Dados atualizado com sucesso")
+        except requests.exceptions.HTTPError as error:
+            raise error
+        except Exception as error:
+            raise Exception("Erro ao atualizar o dataset") \
+            from error
 
 
     def create_or_update_resource(
@@ -235,6 +241,8 @@ class DadosGovBrHook(BaseHook):
                 logging.info("Recurso atualizado com sucesso")
             else:
                 logging.info("Novo recurso inserido com sucesso")
+        except requests.exceptions.HTTPError as error:
+            raise error
         except Exception as error:
             raise Exception("Erro ao salvar o recurso") \
             from error
