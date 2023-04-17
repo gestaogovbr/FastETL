@@ -1,5 +1,6 @@
-""" Funções de uso comum para manipular datas e horas.
+"""Common use functions for manipulating dates and times.
 """
+
 import os
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
@@ -7,31 +8,40 @@ from dateutil.relativedelta import relativedelta
 AIRFLOW_TIMEZONE = os.getenv("AIRFLOW__CORE__DEFAULT_TIMEZONE")
 
 def remove_template_indentation(text: str) -> str:
-    """Remove a indentação em strings de templates.
+    """Remove indentation in template strings.
     """
+
     return ''.join(line.strip() for line in text.splitlines())
 
 def get_reference_date(context: dict) -> datetime:
-    """ Calcula a data de referência execução da DAG.
+    """Calculates the reference date of the DAG execution.
 
-        Caso seja uma execução agendada, será logical_date,
-        que no Airflow é a data do início do intervalo de execução da
-        DAG.
+    If it is a scheduled execution, it will be the logical_date, which
+    in Airflow is the start date of the execution interval for the DAG.
 
-        Caso seja feita ativação manual (trigger DAG), poderá ser
-        passado o parâmetro reference_date no JSON de configuração.
-        Nesse caso, valerá esta. O parâmetro deve ser passado no
-        formato ISO (ex.: 2021-01-02T12:00):
+    If it is triggered manually (trigger DAG), the reference_date
+    parameter can be passed in the configuration JSON. In this case,
+    it will be used instead of logical_date. The parameter must be
+    passed in ISO format (e.g., 2021-01-02T12:00):
 
-        {
-            "reference_date": "2021-01-02T12:00"
-        }
+    {
+        "reference_date": "2021-01-02T12:00"
+    }
 
-        Caso seja feita a ativação manual (trigger DAG) sem passar
-        esse parâmetro, será levantada uma exceção.
+    If manual activation (trigger DAG) is done without passing this
+    parameter, an exception will be raised.
+
+    Args:
+        context (dict): Airflow information about current task.
+
+    Raises:
+        ValueError: Manual trigger without reference_date parameter
+
+    Returns:
+        datetime: reference date based on how dag was triggered
     """
 
-    # trigger manual, sem especificar a variavel reference_date
+    # trigger manual, without variable reference_date defined
     if context["dag_run"].external_trigger and \
         context["dag_run"].conf is not None and \
         "reference_date" not in context["dag_run"].conf:
@@ -44,7 +54,7 @@ def get_reference_date(context: dict) -> datetime:
             context["dag_run"].conf["reference_date"]
         )
     ) if context["dag_run"].conf \
-        else context["logical_date"] # execução agendada da dag
+        else context["logical_date"] # dag run scheduled
 
     return reference_date
 
