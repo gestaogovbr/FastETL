@@ -347,7 +347,10 @@ def get_schema_table_from_query(query: str) -> Union[str, str]:
     # clean `[`, `]`, `"`, `'`
     db_schema_table = re.sub(r"\[|\]|\"|\'", "", db_schema_table)
     # clean "dbo." if exists as dbo.schema.table
-    schema, table = db_schema_table.split(".")[-2:]
+    try:
+        schema, table = db_schema_table.split(".")[-2:]
+    except ValueError:
+        schema, table = "multiple", "multiple"
 
     return schema, table
 
