@@ -90,6 +90,7 @@ from airflow.models.baseoperator import BaseOperator
 from fastetl.hooks.db_to_db_hook import DbToDbHook
 
 class DbToDbOperator(BaseOperator):
+    template_fields = ('source')
 
     def __init__(
             self,
