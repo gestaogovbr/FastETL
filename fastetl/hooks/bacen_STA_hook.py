@@ -49,6 +49,7 @@ class BacenSTAHook(BaseHook):
             }
         return headers
 
+
     def _get_correct_time_range(self, date_min, date_max=None):
         """
         Validate max_date and generate if its None. Also localize to
@@ -138,6 +139,8 @@ class BacenSTAHook(BaseHook):
     def _send_email_password_updated(self, new_pass, email_to_list):
         """Envia email para admins informando a nova senha após atualização
         """
+        conn_values = BaseHook.get_connection(self.conn_id)
+
         subject = "Atualização da senha da WS do BACEN (STA)"
         dag_id = 'update_password_sta_bacen'
         dag_url = f'http://airflow.seges.mp.intra/tree?dag_id={dag_id}'
@@ -151,7 +154,7 @@ class BacenSTAHook(BaseHook):
             <br>
             A nova senha é: <b>{new_pass}</b>
             <br>
-            O login é: <b>841260010.NITAI</b>
+            O login é: <b>{conn_values.login}</b>
             <br>
             Caso queira testar acesse:
             <a href="https://sta.bcb.gov.br/"
