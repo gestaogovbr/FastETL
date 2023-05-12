@@ -44,7 +44,7 @@ setup(
     setup_requires=["setuptools", "wheel"],
     author="Time de Dados CGINF",
     author_email="seges.cginf@economia.gov.br",
-    url="https://github.com/economiagovbr/FastETL",
+    url="https://github.com/gestaogovbr/FastETL",
     classifiers=[
         "Framework :: Apache Airflow",
         "Framework :: Apache Airflow :: Provider",

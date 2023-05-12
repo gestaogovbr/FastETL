@@ -2,7 +2,7 @@
 
 Here are only the breaking and most significant changes. For a full
 account of changes, please see the
-[commit history](https://github.com/economiagovbr/FastETL/commits/main).
+[commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 ## 0.0.4
 

@@ -8,7 +8,7 @@ Este texto também está disponível em português: 🇧🇷[LEIAME.md](LEIAME.m
 
 ---
 
-[![CI Tests](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml)
+[![CI Tests](https://github.com/gestaogovbr/FastETL/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/gestaogovbr/FastETL/actions/workflows/ci-tests.yml)
 
 **FastETL** is a plugins package for Airflow for building data pipelines
 for a number of common scenarios.
@@ -54,7 +54,7 @@ pip install apache-airflow-providers-fastetl
 
 To see an example of an Apache Airflow container that uses FastETL,
 check out the
-[airflow2-docker](https://github.com/economiagovbr/airflow2-docker)
+[airflow2-docker](https://github.com/gestaogovbr/airflow2-docker)
 repository.
 
 To ensure appropriate results, please make sure to install the
@@ -146,4 +146,4 @@ can bee seen on the following files:
 # How to contribute
 
 To be written on the `CONTRIBUTING.md` document (issue
-[#4](/economiagovbr/FastETL/issues/4)).
+[#4](/gestaogovbr/FastETL/issues/4)).

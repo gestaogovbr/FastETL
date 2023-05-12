@@ -8,7 +8,7 @@ This text is also available in English: 🇬🇧[README.md](README.md).
 
 ---
 
-[![CI Tests](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/economiagovbr/FastETL/actions/workflows/ci-tests.yml)
+[![CI Tests](https://github.com/gestaogovbr/FastETL/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/gestaogovbr/FastETL/actions/workflows/ci-tests.yml)
 
 O **FastETL** é um pacote de plugins do Airflow para construção de pipelines de dados para uma variedade de cenários comuns.
 
@@ -53,7 +53,7 @@ pip install apache-airflow-providers-fastetl
 
 Para ver um exemplo de container do Apache Airflow que usa o FastETL,
 confira o repositório
-[airflow2-docker](https://github.com/economiagovbr/airflow2-docker).
+[airflow2-docker](https://github.com/gestaogovbr/airflow2-docker).
 
 # Testes
 
@@ -142,4 +142,4 @@ nos arquivos:
 # Como colaborar
 
 A escrever no documento `CONTRIBUTING.md` (issue
-[#4](/economiagovbr/FastETL/issues/4)).
+[#4](/gestaogovbr/FastETL/issues/4)).

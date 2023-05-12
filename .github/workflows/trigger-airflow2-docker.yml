@@ -14,5 +14,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.AIRFLOW2_DOCKER_TOKEN }}
-          repository: economiagovbr/airflow2-docker
+          repository: gestaogovbr/airflow2-docker
           event-type: update-dependencies
