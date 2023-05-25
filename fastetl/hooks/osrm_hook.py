@@ -7,7 +7,6 @@ from typing import Tuple
 
 import requests
 
-from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.config import USER_AGENT
@@ -36,7 +35,6 @@ class OSRMHook(BaseHook):
         15.4438
     """
 
-    @apply_defaults
     def __init__(self,
         conn_id: str,
         *args,

@@ -15,7 +15,6 @@ import pytz
 from airflow import settings
 from airflow.models import Connection
 from airflow.utils.email import send_email
-from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.utils.encode_html import replace_to_html_encode
@@ -25,7 +24,6 @@ class BacenSTAHook(BaseHook):
     STA_URL = "https://sta.bcb.gov.br/staws"
     STA_PASSW_URL = 'https://www3.bcb.gov.br/senhaws/senha'
 
-    @apply_defaults
     def __init__(self,
                  conn_id,
                  *args,

@@ -22,7 +22,6 @@ Args:
 """
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from fastetl.hooks.gsheet_hook import GSheetHook
 from fastetl.custom_functions.utils.db_connection import get_mssql_odbc_engine
@@ -32,7 +31,6 @@ class GSheetToDbOperator(BaseOperator):
     ui_fgcolor = '#000000'
     template_fields = ('sheet_name', 'column_name_to_add', 'value_to_add' )
 
-    @apply_defaults
     def __init__(self,
                  gsheet_conn_id,
                  spreadsheet_id,
@@ -75,7 +73,6 @@ class GSheetToCSVOperator(BaseOperator):
     ui_color = '#72efdd'
     ui_fgcolor = '#000000'
 
-    @apply_defaults
     def __init__(self,
                  gsheet_conn_id,
                  spreadsheet_id,

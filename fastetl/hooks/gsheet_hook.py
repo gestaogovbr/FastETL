@@ -10,7 +10,6 @@ from datetime import datetime
 import pandas as pd
 
 from airflow import AirflowException
-from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 from google.oauth2 import service_account
 from apiclient import discovery
@@ -25,7 +24,6 @@ class GSheetHook(BaseHook):
     Hook for handling Google Spreadsheets in Apache Airflow.
     """
 
-    @apply_defaults
     def __init__(self,
                  conn_id: str,
                  spreadsheet_id: str,

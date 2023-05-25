@@ -25,7 +25,6 @@ Args:
 import os
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
@@ -35,7 +34,6 @@ class DbToCSVOperator(BaseOperator):
     ui_fgcolor = '#000000'
     template_fields = ('select_sql', 'target_file_dir', 'file_name')
 
-    @apply_defaults
     def __init__(self,
                  conn_id,
                  target_file_dir,

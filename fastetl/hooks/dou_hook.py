@@ -10,7 +10,6 @@ import json
 from typing import List
 import requests
 
-from airflow.utils.decorators import apply_defaults
 from airflow.hooks.base import BaseHook
 
 from bs4 import BeautifulSoup
@@ -74,7 +73,6 @@ class DOUHook(BaseHook):
         Section.TODOS.value: "Todas",
     }
 
-    @apply_defaults
     def __init__(self, *args, **kwargs):
         pass
 

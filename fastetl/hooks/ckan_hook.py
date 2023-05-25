@@ -2,11 +2,9 @@
 """
 
 from collections import ChainMap
-
-from airflow.utils.decorators import apply_defaults
-from airflow.hooks.base import BaseHook
-
 from ckanapi import RemoteCKAN
+
+from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.config import USER_AGENT
 
@@ -14,7 +12,6 @@ class CKANHook(BaseHook):
     """Provides access to the CKAN API.
     """
 
-    @apply_defaults
     def __init__(self,
         conn_id: str,
         *args,

@@ -9,20 +9,20 @@ default_args = {
 dag = DAG(
     "copy_db_to_db_example",
     default_args=default_args,
-    schedule_interval=None,
+    schedule=None,
 )
 
 t0 = DbToDbOperator(
     task_id="copy_data",
     source={
-        "conn_id": airflow_source_conn_id,
-        "schema": source_schema,
-        "table": table_name,
+        "conn_id": "airflow_source_conn_id",
+        "schema": "source_schema",
+        "table": "table_name",
     },
     destination={
-        "conn_id": airflow_dest_conn_id,
-        "schema": dest_schema,
-        "table": table_name,
+        "conn_id": "airflow_dest_conn_id",
+        "schema": "dest_schema",
+        "table": "table_name",
     },
     destination_truncate=True,
     copy_table_comments=True,

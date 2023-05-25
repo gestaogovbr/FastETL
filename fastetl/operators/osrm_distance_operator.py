@@ -11,7 +11,6 @@ from airflow.hooks.base import BaseHook
 from airflow.models.connection import Connection
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.decorators import apply_defaults
 
 from fastetl.hooks.osrm_hook import OSRMHook, get_shortest_distance
 from fastetl.custom_functions.utils.db_connection import DbConnection
@@ -47,7 +46,6 @@ class OSRMDistanceDbOperator(BaseOperator):
     """
     ui_color = '#90d572'
 
-    @apply_defaults
     def __init__(self,
         db_conn_id: str,
         osrm_conn_id: str,
