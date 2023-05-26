@@ -1,4 +1,4 @@
-FROM apache/airflow:2.5.0-python3.9
+FROM apache/airflow:2.6.1-python3.10
 
 USER root
 
@@ -6,6 +6,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
          build-essential \
          unixodbc-dev \
+         libpq-dev \
   && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add --no-tty - \
   && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
   && apt-get update -yqq \
