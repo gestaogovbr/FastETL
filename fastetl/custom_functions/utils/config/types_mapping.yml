@@ -1,0 +1,118 @@
+teiid:
+  string:
+    postgres:
+      dtype:
+        IsLengthFixed:
+          - true: CHAR
+          - false: VARCHAR
+      max_length:
+        - 8000: MAX
+    mssql:
+      dtype:
+        IsLengthFixed:
+          - true: CHAR
+          - false: VARCHAR
+      max_length:
+        - 8000: MAX
+  integer:
+    postgres:
+      dtype:
+        - 'INT'
+    mssql:
+      dtype:
+        - 'INT'
+  long:
+    postgres:
+      dtype:
+        - 'BIGINT'
+    mssql:
+      dtype:
+        - 'BIGINT'
+  short:
+    postgres:
+      dtype:
+        - 'SMALLINT'
+    mssql:
+      dtype:
+        - 'SMALLINT'
+  boolean:
+    postgres:
+      dtype:
+        - 'BOOLEAN'
+    mssql:
+      dtype:
+        - 'BIT'
+  float:
+    postgres:
+      dtype:
+        - 'FLOAT8'
+    mssql:
+      dtype:
+        - 'FLOAT'
+  double:
+    postgres:
+      dtype:
+        - 'FLOAT8'
+    mssql:
+      dtype:
+        - 'FLOAT'
+  decimal:
+    postgres:
+      dtype:
+        - 'DECIMAL'
+      max_width:
+        - 32767 : '(38, 8)'
+    mssql:
+      dtype:
+        - 'NUMERIC'
+      max_width:
+        - 32767 : '(38, 8)'
+  bigdecimal:
+    postgres:
+      dtype:
+        - 'FLOAT8'
+    mssql:
+      dtype:
+        - 'FLOAT'
+  date:
+    postgres:
+      dtype:
+        - 'DATE'
+    mssql:
+      dtype:
+        - 'DATE'
+  time:
+    postgres:
+      dtype:
+        - 'TIME'
+    mssql:
+      dtype:
+        - 'TIME'
+  timestamp:
+    postgres:
+      dtype:
+        - 'TIMESTAMP'
+    mssql:
+      dtype:
+        - 'DATETIME2'
+  object:
+    postgres:
+      dtype:
+        - 'BYTEA'
+    mssql:
+      dtype:
+        - 'VARBINARY'
+  xml:
+    postgres:
+      dtype:
+        - 'VARBINARY'
+    mssql:
+      dtype:
+        - 'VARBINARY'
+  geometry:
+    postgres:
+      dtype:
+        - 'GEOMETRY'
+    mssql:
+      dtype:
+        - 'GEOMETRY'
