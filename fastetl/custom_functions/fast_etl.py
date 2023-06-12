@@ -188,6 +188,15 @@ def create_table_if_not_exists(
         OperationalError: If there is an error with the database operation.
         NoSuchModuleError: If a required module is missing.
     """
+    def _check_is_teiid(conn_id):
+
+        sql = "SELECT * FROM SYS.Tables WHERE 1=2"
+        hook = PostgresHook(conn_id)
+        check = hook.get_first(sql)[0]
+        if check:
+            return True
+
+        return False
 
     def _convert_column(old_col: Column, db_provider: str) -> Column:
         """Convert column type.
@@ -214,55 +223,57 @@ def create_table_if_not_exists(
                 str(old_col["type"]._type_affinity()), old_col["type"]._type_affinity()
             ),
         )
+    if _check_is_teiid(source.conn_id):
+        create_table_from_teiid
+    else:
+        destination_provider = get_conn_type(destination.conn_id)
 
-    destination_provider = get_conn_type(destination.conn_id)
-
-    ERROR_TABLE_DOES_NOT_EXIST = {
-        "mssql": "Invalid object name",
-        "postgres": "does not exist",
-    }
-    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
-    destination_hook, destination_eng = get_hook_and_engine_by_provider(
-        destination.conn_id
-    )
-    try:
-        destination_hook.get_pandas_df(
-            f"select * from {destination.schema}.{destination.table} where 1=2"
+        ERROR_TABLE_DOES_NOT_EXIST = {
+            "mssql": "Invalid object name",
+            "postgres": "does not exist",
+        }
+        _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+        destination_hook, destination_eng = get_hook_and_engine_by_provider(
+            destination.conn_id
         )
-    except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
-        if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
-            raise db_error
-        # Table does not exist so we create it
-        source_eng.echo = True
         try:
-            insp = reflection.Inspector.from_engine(source_eng)
-        except AssertionError as e: # pylint: disable=invalid-name
-            logging.error(
-                "Cannot create the table automatically from this database."
-                "Please create the table manually to execute data copying."
+            destination_hook.get_pandas_df(
+                f"select * from {destination.schema}.{destination.table} where 1=2"
             )
-            raise e
+        except (DatabaseError, OperationalError, NoSuchModuleError) as db_error:
+            if not ERROR_TABLE_DOES_NOT_EXIST[destination_provider] in str(db_error):
+                raise db_error
+            # Table does not exist so we create it
+            source_eng.echo = True
+            try:
+                insp = reflection.Inspector.from_engine(source_eng)
+            except AssertionError as e: # pylint: disable=invalid-name
+                logging.error(
+                    "Cannot create the table automatically from this database."
+                    "Please create the table manually to execute data copying."
+                )
+                raise e
 
-        generic_columns = insp.get_columns(source.table, source.schema)
-        dest_columns = [
-            _convert_column(c, destination_provider) for c in generic_columns
-        ]
+            generic_columns = insp.get_columns(source.table, source.schema)
+            dest_columns = [
+                _convert_column(c, destination_provider) for c in generic_columns
+            ]
 
-        destination_meta = MetaData(bind=destination_eng)
-        Table(
-            destination.table,
-            destination_meta,
-            *dest_columns,
-            schema=destination.schema,
-        )
+            destination_meta = MetaData(bind=destination_eng)
+            Table(
+                destination.table,
+                destination_meta,
+                *dest_columns,
+                schema=destination.schema,
+            )
 
-        destination_meta.create_all(destination_eng)
+            destination_meta.create_all(destination_eng)
 
-    if copy_table_comments:
-        _copy_table_comments(
-            source=source,
-            destination=destination,
-        )
+        if copy_table_comments:
+            _copy_table_comments(
+                source=source,
+                destination=destination,
+            )
 
 
 def _copy_table_comments(
