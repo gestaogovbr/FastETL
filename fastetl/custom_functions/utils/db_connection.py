@@ -191,6 +191,9 @@ def get_hook_and_engine_by_provider(conn_id: str) -> Tuple[DbApiHook, Engine]:
     elif conn_type == "postgres":
         hook = PostgresHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
+    elif conn_type == "teiid":
+        hook = PostgresHook(conn_id)
+        engine = hook.get_sqlalchemy_engine()
     elif conn_type == "mysql":
         hook = MySqlHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
