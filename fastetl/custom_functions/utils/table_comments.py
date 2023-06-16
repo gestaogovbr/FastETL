@@ -12,8 +12,13 @@ from airflow.hooks.base import BaseHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
-from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
+from fastetl.custom_functions.utils.db_connection import (
+    get_hook_and_engine_by_provider,
+    get_conn_type,
+)
+from fastetl.custom_functions.utils.get_table_cols_name import (
+    get_table_cols_name,
+)
 
 
 class TableComments:
@@ -36,7 +41,7 @@ class TableComments:
         self.schema = schema
         self.table = table
         conn_values = BaseHook.get_connection(conn_id)
-        self.conn_type = conn_values.conn_type
+        self.conn_type = get_conn_type(conn_id)
         self.conn_database = conn_values.schema
         self.table_comments_init = pd.DataFrame(
             columns=["database_level", "name", "comment"]
@@ -91,7 +96,9 @@ class TableComments:
             )
             rows_df["comment"] = rows_df["comment"].str.decode("utf-8")
             rows_df["database_level"] = database_level
-            table_comments = pd.concat([table_comments, rows_df], ignore_index=True)
+            table_comments = pd.concat(
+                [table_comments, rows_df], ignore_index=True
+            )
 
         return table_comments
 
@@ -129,7 +136,9 @@ class TableComments:
             ignore_index=True,
         )
 
-        columns_info = inspector.get_columns(table_name=self.table, schema=self.schema)
+        columns_info = inspector.get_columns(
+            table_name=self.table, schema=self.schema
+        )
         for row in columns_info:
             table_comments = pd.concat(
                 [
@@ -181,10 +190,13 @@ class TableComments:
         for database_level, query in queries.items():
             rows_df = pg_hook.get_pandas_df(query)
             rows_df.rename(
-                columns={"Name": "name", "Description": "comment"}, inplace=True
+                columns={"Name": "name", "Description": "comment"},
+                inplace=True,
             )
             rows_df["database_level"] = database_level
-            table_comments = pd.concat([table_comments, rows_df], ignore_index=True)
+            table_comments = pd.concat(
+                [table_comments, rows_df], ignore_index=True
+            )
 
         return table_comments
 
@@ -383,7 +395,9 @@ class TableComments:
 
         if not comment.empty:
             op.create_table_comment(
-                table_name=self.table, schema=self.schema, comment=comment.values[0]
+                table_name=self.table,
+                schema=self.schema,
+                comment=comment.values[0],
             )
 
         # Part 2 - write columns comments
@@ -418,15 +432,10 @@ class TableComments:
 
         if self.conn_type == "mssql":
             table_comments = self._get_mssql_table_comments()
-
         elif self.conn_type == "postgres":
-            # Postgres Connection
-            try:
-                table_comments = self._get_pg_table_comments()
-
-            # teiid driver
-            except:
-                table_comments = self._get_teiid_table_comments()
+            table_comments = self._get_pg_table_comments()
+        elif self.conn_type == "teiid":
+            table_comments = self._get_teiid_table_comments()
         else:
             raise NotImplementedError(
                 "Database connection type not implemented. PR for the best."
