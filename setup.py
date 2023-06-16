@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 """Perform the package apache-airflow-providers-fastetl setup."""
 setup(
@@ -19,6 +19,8 @@ setup(
     entry_points={"apache_airflow_provider": ["provider_info=fastetl.__init__:get_provider_info"]},
     license="Apache License 2.0",
     packages=find_packages(exclude=["*tests.*", "*tests"]),
+    package_data={'': ['*.yml']},
+    include_package_data=True,
     install_requires=[
         "apache-airflow>=2.3",
         "apache-airflow-providers-microsoft-mssql",
@@ -39,7 +41,8 @@ setup(
         "python-slugify>=7.0.0",
         "pytz>=2022.6",
         "requests>=2.28.1",
-        "SQLAlchemy>=1.4.44"
+        "SQLAlchemy>=1.4.44",
+        "PyYAML==6.0"
     ],
     setup_requires=["setuptools", "wheel"],
     author="Time de Dados CGINF",
