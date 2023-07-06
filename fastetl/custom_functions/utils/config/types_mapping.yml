@@ -80,10 +80,20 @@ teiid:
   bigdecimal:
     postgres:
       dtype:
-        FLOAT8
+        DECIMAL
+      max_length:
+        32767 : '38, 8'
+      length_columns:
+        - Precision
+        - Scale
     mssql:
       dtype:
-        FLOAT
+        NUMERIC
+      max_length:
+        32767 : '38, 8'
+      length_columns:
+        - Precision
+        - Scale
   timestamp:
     postgres:
       dtype:
