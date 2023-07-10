@@ -9,6 +9,7 @@ import re
 from typing import Union, Tuple, Dict
 import logging
 import pandas as pd
+import psycopg2
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
@@ -321,7 +322,10 @@ def copy_db_to_db(
                         destination.table,
                     )
                     while rows:
-                        destination_cur.executemany(insert, rows)
+                        if destination.conn_type == "postgres":
+                            psycopg2.extras.execute_batch(destination_cur, insert, rows)
+                        else:
+                            destination_cur.executemany(insert, rows)                           
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
                         logging.info("%d rows loaded!!", rows_inserted)
