@@ -15,8 +15,6 @@ import os
 import logging
 import yaml
 import pandas as pd
-import psycopg2
-import pymssql
 
 from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.engine import reflection
@@ -69,11 +67,27 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             f"{row['Name']} {row['DataType']}{row['converted_length']}"
         )
 
-    query = (
-        f"CREATE TABLE {destination.schema}.{destination.table} ("
-        f"{', '.join(sql_columns)}"
-        ");"
-    )
+    sql_columns_str = ', '.join(sql_columns)
+
+    if destination.conn_type == "mssql":
+        query = f"""
+            IF OBJECT_ID(N'[{destination.schema}].[{destination.table}]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [{destination.schema}].[{destination.table}] (
+                    {sql_columns_str}
+                );
+            END;
+        """
+    elif destination.conn_type == "postgres":
+        query = f"""
+            CREATE TABLE IF NOT EXISTS {destination.schema}.{destination.table} (
+                {sql_columns_str}
+            );
+        """
+    else:
+        raise ValueError(
+            f"Connection type {destination.conn_type} no implemented yet."
+        )
 
     return query
 
@@ -269,7 +283,6 @@ def create_table_from_others(
             ),
         )
 
-    # Table does not exist so we create it
     _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
     _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
     source_eng.echo = True
@@ -295,48 +308,10 @@ def create_table_from_others(
         schema=destination.schema,
     )
 
+    # Metadata.create_all function:
+    # Conditional by default, will not attempt to recreate tables already
+    # present in the target database.
     destination_meta.create_all(destination_eng)
-
-
-def _check_if_table_exists(destination: DestinationConnection) -> bool:
-    """Checks if a table exists in the specified database connection.
-
-    Args:
-        destination (DestinationConnection): A `DestinationConnection`
-            object containing the connection details for the destination
-            database.
-
-    Returns:
-        bool: True if the table exists, False otherwise.
-
-    Raises:
-        Exception: If there is an error while checking for table existence.
-    """
-
-    conn = BaseHook.get_connection(destination.conn_id)
-    hook = conn.get_hook()
-
-    try:
-        # Query to check if the table exists
-        query = f"""
-            SELECT *
-            FROM {destination.schema}.{destination.table}
-            WHERE 1=2
-        """
-        hook.get_first(query)
-        return True
-    except ( # pylint: disable=invalid-name
-        psycopg2.errors.UndefinedTable,
-        pymssql._pymssql.ProgrammingError,
-    ) as e:
-        logging.info(
-            "Table `%s.%s` does not exists at connection `%s`. Exception: %s",
-            destination.schema,
-            destination.table,
-            destination.conn_id,
-            e,
-        )
-        return False
 
 
 def create_table_if_not_exists(
@@ -358,8 +333,7 @@ def create_table_if_not_exists(
         scenarios (source table from databases mssql and postgres)
     """
 
-    if not _check_if_table_exists(destination):
-        if source.conn_type == "teiid":
-            create_table_from_teiid(source, destination)
-        else:
-            create_table_from_others(source, destination)
+    if source.conn_type == "teiid":
+        create_table_from_teiid(source, destination)
+    else:
+        create_table_from_others(source, destination)

@@ -127,7 +127,6 @@ class DestinationConnection:
         self.conn_database = conn_values.schema
 
 
-
 def get_mssql_odbc_conn_str(conn_id: str, raw_str: bool = False) -> str:
     """
     Creates a default SQL Server database connection string
@@ -188,44 +187,16 @@ def get_hook_and_engine_by_provider(conn_id: str) -> Tuple[DbApiHook, Engine]:
     if conn_type == "mssql":
         hook = MsSqlHook(conn_id)
         engine = get_mssql_odbc_engine(conn_id)
-    elif conn_type == "postgres":
-        hook = PostgresHook(conn_id)
-        engine = hook.get_sqlalchemy_engine()
-    elif conn_type == "teiid":
+    elif conn_type == "postgres" or conn_type == "teiid":
         hook = PostgresHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
     elif conn_type == "mysql":
         hook = MySqlHook(conn_id)
         engine = hook.get_sqlalchemy_engine()
     else:
-        raise Exception(f"Connection type {conn_type} not implemented")
+        raise ValueError(f"Connection type {conn_type} not implemented")
 
     return hook, engine
-
-
-def check_is_teiid(conn_id: str) -> bool:
-    """Checks if a given connection is a Teiid connection.
-
-    Args:
-        conn_id (str): The connection ID or name.
-
-    Returns:
-        bool: True if the connection is a Teiid connection,
-            False otherwise.
-
-    Raises:
-        Exception: If there is an error while checking the connection.
-    """
-
-    conn = BaseHook.get_connection(conn_id)
-    hook = conn.get_hook()
-
-    try:
-        # access teiid SYS.Tables(specific on teiid)
-        hook.get_first("SELECT * FROM SYS.Tables WHERE 1=2")
-        return True
-    except psycopg2.errors.UndefinedTable:
-        return False
 
 
 def get_conn_type(conn_id: str) -> str:
@@ -239,9 +210,10 @@ def get_conn_type(conn_id: str) -> str:
     """
 
     conn_values = BaseHook.get_connection(conn_id)
-    conn_type = conn_values.conn_type
-
-    if conn_type == "postgres" and check_is_teiid(conn_id):
-        conn_type = "teiid"
+    conn_type = (
+        "teiid"
+        if "teiid" in conn_values.description
+        else conn_values.conn_type
+    )
 
     return conn_type
