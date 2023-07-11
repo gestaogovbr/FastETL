@@ -28,4 +28,4 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         # repository_url: https://upload.pypi.org/legacy/
-        packages: dist/*
+        packages-dir: dist/*
