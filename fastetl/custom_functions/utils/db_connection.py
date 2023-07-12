@@ -7,7 +7,6 @@ from typing import Tuple
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine, URL
 import pyodbc
-import psycopg2
 
 from airflow.hooks.base import BaseHook
 from airflow.providers.common.sql.hooks.sql import DbApiHook
@@ -212,7 +211,7 @@ def get_conn_type(conn_id: str) -> str:
     conn_values = BaseHook.get_connection(conn_id)
     conn_type = (
         "teiid"
-        if "teiid" in conn_values.description
+        if conn_values.description and "teiid" in conn_values.description
         else conn_values.conn_type
     )
 
