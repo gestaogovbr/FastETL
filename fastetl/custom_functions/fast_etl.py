@@ -262,10 +262,11 @@ def copy_db_to_db(
     destination = DestinationConnection(**destination)
 
     # create table if not exists in destination db
-    create_table_if_not_exists(source, destination)
+    if not source.query:
+        create_table_if_not_exists(source, destination)
 
-    if copy_table_comments:
-        _copy_table_comments(source, destination)
+        if copy_table_comments:
+            _copy_table_comments(source, destination)
 
     # create connections
     with DbConnection(source.conn_id) as source_conn:
@@ -293,6 +294,9 @@ def copy_db_to_db(
                     )
                     if source.query:
                         select_sql = source.query
+                        source.schema, source.table = get_schema_table_from_query(
+                            source.query
+                        )
                     else:
                         select_sql = build_select_sql(
                             schema=source.schema,
@@ -325,7 +329,7 @@ def copy_db_to_db(
                         if destination.conn_type == "postgres":
                             psycopg2.extras.execute_batch(destination_cur, insert, rows)
                         else:
-                            destination_cur.executemany(insert, rows)                           
+                            destination_cur.executemany(insert, rows)
                         rows_inserted += len(rows)
                         rows = source_cur.fetchmany(chunksize)
                         logging.info("%d rows loaded!!", rows_inserted)
@@ -333,11 +337,6 @@ def copy_db_to_db(
                     destination_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
-
-                    if source.query:
-                        source.schema, source.table = get_schema_table_from_query(
-                            source.query
-                        )
 
                     save_load_info(
                         source=source,
