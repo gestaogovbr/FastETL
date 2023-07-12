@@ -224,7 +224,7 @@ def create_table_from_teiid(
     """
 
     df_source_columns = _get_teiid_columns_datatype(source)
-    if df_source_columns.empty:
+    if not df_source_columns.empty:
         df_source_columns["converted_length"] = ""
         types_mapping = _load_yaml("config/types_mapping.yml")
         df_destination_columns = df_source_columns.apply(
