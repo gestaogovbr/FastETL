@@ -203,8 +203,6 @@ def _get_teiid_columns_datatype(source: SourceConnection) -> pd.DataFrame:
                 and TableName IN ('{source.table}')
         """
     )
-    if rows.empty:
-        raise Exception("Origin Teiid table not found.")
 
     rows.replace({'"': "", "'": ""}, regex=True, inplace=True)
 
@@ -226,19 +224,22 @@ def create_table_from_teiid(
     """
 
     df_source_columns = _get_teiid_columns_datatype(source)
-    df_source_columns["converted_length"] = ""
-    types_mapping = _load_yaml("config/types_mapping.yml")
-    df_destination_columns = df_source_columns.apply(
-        _convert_datatypes,
-        args=(
-            types_mapping,
-            source.conn_type,
-            destination.conn_type,
-        ),
-        axis=1,
-    )
-    table_ddl = _create_table_ddl(destination, df_destination_columns)
-    _execute_query(destination.conn_id, table_ddl)
+    if df_source_columns:
+        df_source_columns["converted_length"] = ""
+        types_mapping = _load_yaml("config/types_mapping.yml")
+        df_destination_columns = df_source_columns.apply(
+            _convert_datatypes,
+            args=(
+                types_mapping,
+                source.conn_type,
+                destination.conn_type,
+            ),
+            axis=1,
+        )
+        table_ddl = _create_table_ddl(destination, df_destination_columns)
+        _execute_query(destination.conn_id, table_ddl)
+    else:
+        logging.warning("Table from teiid could not be created")
 
 
 def create_table_from_others(
