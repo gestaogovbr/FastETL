@@ -20,6 +20,8 @@ from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes as sa_types
 import sqlalchemy.dialects as sa_dialects
+from sqlalchemy.exc import OperationalError
+
 
 from airflow.hooks.base import BaseHook
 
@@ -288,31 +290,36 @@ def create_table_from_others(
     source_eng.echo = True
     try:
         insp = reflection.Inspector.from_engine(source_eng)
+
+        generic_columns = insp.get_columns(source.table, source.schema)
+        dest_columns = [
+            _convert_column(c, destination.conn_type) for c in generic_columns
+        ]
+
+        destination_meta = MetaData(bind=destination_eng)
+        Table(
+            destination.table,
+            destination_meta,
+            *dest_columns,
+            schema=destination.schema,
+        )
+
+        # Metadata.create_all function:
+        # Conditional by default, will not attempt to recreate tables already
+        # present in the target database.
+        destination_meta.create_all(destination_eng)
+
+    except OperationalError:
+        logging.warning("Trying to create table from teiid...")
+        source.conn_type = "teiid"
+        create_table_from_teiid(source, destination)
+
     except AssertionError as e:  # pylint: disable=invalid-name
         logging.error(
             "Cannot create the table automatically from this database."
             "Please create the table manually to execute data copying."
         )
         raise e
-
-    generic_columns = insp.get_columns(source.table, source.schema)
-    dest_columns = [
-        _convert_column(c, destination.conn_type) for c in generic_columns
-    ]
-
-    destination_meta = MetaData(bind=destination_eng)
-    Table(
-        destination.table,
-        destination_meta,
-        *dest_columns,
-        schema=destination.schema,
-    )
-
-    # Metadata.create_all function:
-    # Conditional by default, will not attempt to recreate tables already
-    # present in the target database.
-    destination_meta.create_all(destination_eng)
-
 
 def create_table_if_not_exists(
     source: SourceConnection, destination: DestinationConnection

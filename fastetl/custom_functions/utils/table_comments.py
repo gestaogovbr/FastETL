@@ -5,6 +5,7 @@ target. Works between Postgres, MySql, MsSql.
 
 import pandas as pd
 from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 
@@ -433,7 +434,10 @@ class TableComments:
         if self.conn_type == "mssql":
             table_comments = self._get_mssql_table_comments()
         elif self.conn_type == "postgres":
-            table_comments = self._get_pg_table_comments()
+            try:
+                table_comments = self._get_pg_table_comments()
+            except OperationalError:
+                table_comments = self._get_teiid_table_comments()
         elif self.conn_type == "teiid":
             table_comments = self._get_teiid_table_comments()
         else:
