@@ -203,6 +203,8 @@ def _get_teiid_columns_datatype(source: SourceConnection) -> pd.DataFrame:
                 and TableName IN ('{source.table}')
         """
     )
+    if rows.empty:
+        raise Exception("Origin Teiid table not found.")
 
     rows.replace({'"': "", "'": ""}, regex=True, inplace=True)
 
