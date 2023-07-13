@@ -211,7 +211,7 @@ def get_conn_type(conn_id: str) -> str:
     conn_values = BaseHook.get_connection(conn_id)
     conn_type = (
         "teiid"
-        if conn_values.description and "teiid" in conn_values.description
+        if conn_values.description and "teiid" in conn_values.description.lower()
         else conn_values.conn_type
     )
 
