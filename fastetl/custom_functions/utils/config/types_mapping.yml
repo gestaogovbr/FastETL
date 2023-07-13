@@ -6,7 +6,7 @@ teiid:
         true: CHAR
         false: VARCHAR
       max_length:
-        8000: MAX
+        4000: 65535
       length_columns:
         - Length
     mssql:
@@ -15,7 +15,7 @@ teiid:
           true: CHAR
           false: VARCHAR
       max_length:
-        8000: MAX
+        4000: MAX
       length_columns:
         - Length
   integer:
