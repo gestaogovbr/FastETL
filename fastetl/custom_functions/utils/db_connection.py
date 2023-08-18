@@ -161,14 +161,14 @@ def get_mssql_odbc_conn_str(conn_id: str, raw_str: bool = False) -> str:
     return connection_url
 
 
-def get_mssql_odbc_engine(conn_id: str):
+def get_mssql_odbc_engine(conn_id: str, **kwargs):
     """
     Cria uma engine de conexão com banco SQL Server usando driver pyodbc.
     """
 
-    return create_engine(get_mssql_odbc_conn_str(conn_id))
+    return create_engine(get_mssql_odbc_conn_str(conn_id), **kwargs)
 
-
+ 
 def get_hook_and_engine_by_provider(conn_id: str) -> Tuple[DbApiHook, Engine]:
     """
     Creates connection hook and engine by connection type/provider.
