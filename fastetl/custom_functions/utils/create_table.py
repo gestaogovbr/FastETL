@@ -66,7 +66,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
     sql_columns = []
     for _, row in df.iterrows():
         sql_columns.append(
-            f"{row['Name']} {row['DataType']}{row['converted_length']}"
+            f"\"{row['Name']}\" {row['DataType']}{row['converted_length']}"
         )
 
     sql_columns_str = ', '.join(sql_columns)
