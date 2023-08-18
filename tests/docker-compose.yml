@@ -9,6 +9,7 @@ services:
       AIRFLOW__CORE__DEFAULT_TIMEZONE: 'America/Sao_Paulo'
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__PROVIDERS_ODBC__ALLOW_DRIVER_IN_EXTRA: 'true'
     volumes:
       - ../tests:/opt/airflow/tests
       - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
