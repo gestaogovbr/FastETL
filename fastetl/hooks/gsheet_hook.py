@@ -5,37 +5,40 @@ planilhas do Google através de sua API (google sheets).
 
 import json
 import os
+import io
+import logging
 from datetime import datetime
-
 import pandas as pd
+import pygsheets
+from apiclient import discovery
+from google.oauth2 import service_account
+from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 
 from airflow import AirflowException
 from airflow.hooks.base import BaseHook
-from google.oauth2 import service_account
-from apiclient import discovery
 
-import pygsheets
 
-from fastetl.custom_functions.utils.string_formatting import slugify_column_names
-from fastetl.custom_functions.utils.string_formatting import convert_gsheets_str_to_datetime
+from fastetl.custom_functions.utils.string_formatting import (
+    slugify_column_names,
+)
+from fastetl.custom_functions.utils.string_formatting import (
+    convert_gsheets_str_to_datetime,
+)
+
 
 class GSheetHook(BaseHook):
     """
     Hook for handling Google Spreadsheets in Apache Airflow.
     """
 
-    def __init__(self,
-                 conn_id: str,
-                 spreadsheet_id: str,
-                  *args,
-                  **kwargs):
+    def __init__(self, conn_id: str, spreadsheet_id: str, *args, **kwargs):
         self.conn_id = conn_id
         self.spreadsheet_id = spreadsheet_id
 
-    def get_google_service(self,
-        api_name: str,
-        api_version: str,
-        scopes: str) -> discovery.Resource:
+    def get_google_service(
+        self, api_name: str, api_version: str, scopes: str
+    ) -> discovery.Resource:
         """
         Get a service that communicates to the Google API.
 
@@ -53,16 +56,27 @@ class GSheetHook(BaseHook):
         try:
             key_value = json.loads(key_str)
         except Exception as error:
-            raise Exception("Erro na leitura da conexão. Tem que copiar o "
-                "conteúdo de Extra para Password.") from error
+            raise Exception(
+                "Erro na leitura da conexão. Tem que copiar o "
+                "conteúdo de Extra para Password."
+            ) from error
 
-        credentials = service_account.Credentials.from_service_account_info(key_value, scopes=scopes)
+        credentials = service_account.Credentials.from_service_account_info(
+            key_value, scopes=scopes
+        )
 
         # Build the service object
         try:
-            service = discovery.build(api_name, api_version, cache_discovery=False, credentials=credentials)
+            service = discovery.build(
+                api_name,
+                api_version,
+                cache_discovery=False,
+                credentials=credentials,
+            )
         except Exception as error:
-            raise AirflowException('Erro ao conectar Google Drive API') from error
+            raise AirflowException(
+                "Erro ao conectar Google Drive API"
+            ) from error
 
         return service
 
@@ -75,20 +89,21 @@ class GSheetHook(BaseHook):
         """
 
         # Define the auth scopes to request
-        scopes = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+        scopes = ["https://www.googleapis.com/auth/drive.metadata.readonly"]
 
         # Authenticate and construct service
         service = self.get_google_service(
-                api_name='drive',
-                api_version='v3',
-                scopes=scopes)
+            api_name="drive", api_version="v3", scopes=scopes
+        )
 
         # Get modifiedTime
-        results = service.files().get(
-                fileId=self.spreadsheet_id,
-                fields='modifiedTime').execute()
+        results = (
+            service.files()
+            .get(fileId=self.spreadsheet_id, fields="modifiedTime")
+            .execute()
+        )
 
-        return convert_gsheets_str_to_datetime(results['modifiedTime'])
+        return convert_gsheets_str_to_datetime(results["modifiedTime"])
 
     def _get_gsheet_api_service(self) -> discovery.Resource:
         """
@@ -101,16 +116,15 @@ class GSheetHook(BaseHook):
             write permissions.
         """
 
-        scopes = 'https://www.googleapis.com/auth/spreadsheets'
+        scopes = "https://www.googleapis.com/auth/spreadsheets"
 
         return self.get_google_service(
-            api_name='sheets',
-            api_version='v4',
-            scopes=scopes)
+            api_name="sheets", api_version="v4", scopes=scopes
+        )
 
-    def get_gsheet_df(self,
-        sheet_name: str,
-        has_header: bool = True) -> pd.DataFrame:
+    def get_gsheet_df(
+        self, sheet_name: str, has_header: bool = True
+    ) -> pd.DataFrame:
         """
         Extract data from google spreadsheet and return as a Pandas
         Dataframe.
@@ -155,14 +169,13 @@ class GSheetHook(BaseHook):
         os.environ[sa_env_var] = BaseHook.get_connection(self.conn_id).password
         gc = pygsheets.authorize(service_account_env_var=sa_env_var)
         sht = gc.open_by_key(self.spreadsheet_id)
-        wst = sht.worksheet('title', sheet_name)
+        wst = sht.worksheet("title", sheet_name)
 
         return wst
 
-    def set_df_to_gsheet(self,
-                         df: pd.DataFrame,
-                         sheet_name: str,
-                         copy_head: bool=True):
+    def set_df_to_gsheet(
+        self, df: pd.DataFrame, sheet_name: str, copy_head: bool = True
+    ):
         """
         Writes the pandas dataframe content to the specified spreadsheet. Writes
         the dataframe header as first row by default.
@@ -177,7 +190,7 @@ class GSheetHook(BaseHook):
         wst = self._get_worksheet(sheet_name=sheet_name)
 
         wst.clear()
-        wst.set_dataframe(df=df, start='A1', copy_head=copy_head, extend=True)
+        wst.set_dataframe(df=df, start="A1", copy_head=copy_head, extend=True)
 
     def get_sheet_id(self, sheet_name: str) -> int:
         """
@@ -193,7 +206,7 @@ class GSheetHook(BaseHook):
         """
         wst = self._get_worksheet(sheet_name=sheet_name)
 
-        return wst.jsonSheet['properties']['sheetId']
+        return wst.jsonSheet["properties"]["sheetId"]
 
     def check_gsheet_file_update(self, until_date: datetime):
         """
@@ -209,12 +222,19 @@ class GSheetHook(BaseHook):
 
         update_date = self._get_gsheet_modifiedTime()
 
-        print(f'Última atualização do arquivo em: {update_date}')
+        print(f"Última atualização do arquivo em: {update_date}")
 
         return bool(update_date.date() >= until_date.date())
 
-    def format_sheet(self, sheet_name: str, start: str, end: str, fields: str,
-        cell_json:str, model_cell: str = "A1"):
+    def format_sheet(
+        self,
+        sheet_name: str,
+        start: str,
+        end: str,
+        fields: str,
+        cell_json: str,
+        model_cell: str = "A1",
+    ):
         """
         Altera a formatação do intervalo de células da planilha.
 
@@ -238,5 +258,83 @@ class GSheetHook(BaseHook):
 
         data_range = pygsheets.DataRange(start=start, end=end, worksheet=wst)
 
-        data_range.apply_format(cell=cell, fields=fields,
-            cell_json=cell_json)
+        data_range.apply_format(cell=cell, fields=fields, cell_json=cell_json)
+
+    def save_file(self, io_content: bytes, file_path: str) -> None:
+        """
+        Save the provided bytes content to a file.
+
+        Args:
+            io_content (bytes): The bytes content to be saved to the file.
+            file_path (str): The path to the file where the content will be saved.
+
+        Returns:
+            None
+
+        Raises:
+            OSError: If there's an issue writing the content to the file.
+
+        Example:
+            io_content = b"Hello, this is some bytes content."
+            file_path = "example.txt"
+            save_file(io_content, file_path)
+        """
+
+        with open(file_path, "wb") as output_file:
+            output_file.write(io_content)
+
+        logging.info("File %s saved.", file_path)
+
+    def export_file(self, file_path: str, mime_type: str):
+        """
+        Export a Google Drive file in the specified MIME type and save
+        it locally.
+
+        This method uses the Google Drive API to export the content of a
+        file (specified by its ID) in the provided MIME type and save it
+        to the specified local file path.
+
+        Args:
+            file_path (str): The local file path where the exported
+                content will be saved.
+            mime_type (str): The MIME type in which to export the Google
+                Drive file.
+
+        Returns:
+            None
+
+        Raises:
+            AirflowException: If an error occurs during the export process.
+
+        Example:
+            spreadsheet_id = "your_spreadsheet_id"
+            export_mime_type = "application/pdf"
+            local_file_path = "/folder/to/export/exported_file.pdf"
+            export_file(spreadsheet_id, export_mime_type, local_file_path)
+
+        Link:
+            Export MIME types for Google Workspace documents:
+                https://developers.google.com/drive/api/guides/ref-export-formats
+        """
+
+        try:
+            scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+            service = self.get_google_service(
+                api_name="drive", api_version="v3", scopes=scopes
+            )
+
+            # pylint: disable=maybe-no-member
+            request = service.files().export_media(
+                fileId=self.spreadsheet_id, mimeType=mime_type
+            )
+            file = io.BytesIO()
+            downloader = MediaIoBaseDownload(file, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+                print(f"Download {int(status.progress() * 100)}.")
+
+            self.save_file(file.getvalue(), file_path)
+
+        except HttpError as error:
+            raise AirflowException(f"An error occurred: {error}") from error
