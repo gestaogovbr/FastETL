@@ -25,6 +25,7 @@ def copy_by_key_interval(
     key_column: str,
     key_start: int = 0,
     key_interval: int = 10000,
+    estimated_max_id: int = None,
     destination_truncate: bool = True,
 ):
     """
@@ -53,6 +54,7 @@ def copy_by_key_interval(
         key_column (str): nome da coluna chave da tabela origem
         key_start (int): id da chave a partir do qual a cópia é iniciada
         key_interval (int): intervalo de id's para ler da origem a cada vez
+        estimated_max_id (int): valor estimado do id máximo da tabela
         destination_truncate (bool): booleano para truncar tabela de destino
             antes do load. Default = True
 
@@ -131,17 +133,28 @@ def copy_by_key_interval(
                     last_sleep = datetime.now()
                     run_step = 60 * 30  # 30 minutos
 
-                    # Consulta max id na origem
-                    db_hook = PostgresHook(postgres_conn_id=source_conn_id)
-                    max_id_sql = f"""select COALESCE(max({key_column}),0)
-                                        FROM {source_table}"""
-                    max_id = int(db_hook.get_first(max_id_sql)[0])
+                    # O loop normal seria com `while rows:`, porém fica sujeito
+                    # a cargas incompletas quando existem grandes lacunas entre
+                    # as keys (lacunas maiores do o `key_interval`). Por isso,
+                    # verifica-se o max_id da tabela.
+                    # Como exceção, para tabelas em que o max(id) dá timeout na
+                    # consulta (exemplo: SIADS), usa-se o parâmetro informado
+                    # `estimated_max_id`.
 
-                    # while rows:
+                    if estimated_max_id:
+                        max_id = estimated_max_id
+                    else:
+                        # Consulta max id na origem
+                        db_hook = PostgresHook(postgres_conn_id=source_conn_id)
+                        max_id_sql = f"""select COALESCE(max({key_column}),0)
+                                            FROM {source_table}"""
+                        max_id = int(db_hook.get_first(max_id_sql)[0])
+
                     while key_begin <= max_id and max_id > 0:
                         if (datetime.now() - last_sleep).seconds > run_step:
                             logging.info(
-                                "Roda por %d segundos e dorme por 20 segundos para evitar o erro Negsignal.SIGKILL do Airflow!",
+                                "Roda por %d segundos e dorme por 20 segundos "
+                                "para evitar o erro Negsignal.SIGKILL do Airflow!",
                                 run_step,
                             )
                             time.sleep(20)
