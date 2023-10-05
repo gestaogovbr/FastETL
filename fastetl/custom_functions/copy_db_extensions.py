@@ -165,7 +165,7 @@ def copy_by_key_interval(
                         # Tenta ESCREVER no destino
                         if rows:
                             try:
-                                if destination_cur.conn_type == "postgres":
+                                if dest_conn_type == "postgres":
                                     psycopg2.extras.execute_batch(destination_cur, insert, rows)
                                 else:
                                     destination_cur.executemany(insert, rows)
