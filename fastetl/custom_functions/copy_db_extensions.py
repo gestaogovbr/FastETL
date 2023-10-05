@@ -4,6 +4,7 @@ Include database copy extensions.
 
 import time
 import logging
+import psycopg2
 from datetime import datetime
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -133,14 +134,15 @@ def copy_by_key_interval(
                     last_sleep = datetime.now()
                     run_step = 60 * 30  # 30 minutos
 
-                    # O loop normal seria com `while rows:`, porém fica sujeito
-                    # a cargas incompletas quando existem grandes lacunas entre
-                    # as keys (lacunas maiores do o `key_interval`). Por isso,
-                    # verifica-se o max_id da tabela.
-                    # Como exceção, para tabelas em que o max(id) dá timeout na
-                    # consulta (exemplo: SIADS), usa-se o parâmetro informado
-                    # `estimated_max_id`.
-
+                    """
+                    O loop normal seria com `while rows:`, porém fica sujeito
+                    a cargas incompletas quando existem grandes lacunas entre
+                    as keys (lacunas maiores do o `key_interval`). Por isso,
+                    verifica-se o max_id da tabela.
+                    Como exceção, para tabelas em que o max(id) dá timeout na
+                    consulta (exemplo: SIADS), usa-se o parâmetro informado
+                    `estimated_max_id`.
+                    """
                     if estimated_max_id:
                         max_id = estimated_max_id
                     else:
@@ -163,8 +165,11 @@ def copy_by_key_interval(
                         # Tenta ESCREVER no destino
                         if rows:
                             try:
-                                destination_cur.executemany(insert, rows)
-                                destination_conn.commit()
+                                if destination_cur.conn_type == "postgres":
+                                    psycopg2.extras.execute_batch(destination_cur, insert, rows)
+                                else:
+                                    destination_cur.executemany(insert, rows)
+                                # destination_conn.commit()
                             except Exception as e:
                                 logging.info(
                                     "Erro destino: %s. Key interval: %s-%s",
@@ -211,6 +216,7 @@ def copy_by_key_with_retry(
     key_column: str,
     key_start: int = 0,
     key_interval: int = 10000,
+    estimated_max_id: int = None,
     destination_truncate: bool = True,
     retries: int = 0,
     retry_delay: int = 600,
@@ -245,6 +251,7 @@ def copy_by_key_with_retry(
         key_column (str): nome da coluna chave da tabela origem
         key_start (int): id da chave a partir do qual a cópia é iniciada
         key_interval (int): intervalo de id's para ler da origem a cada vez
+        estimated_max_id (int): valor estimado do id máximo da tabela
         destination_truncate (bool): booleano para truncar tabela de destino
             antes do load. Default = True
         retries (int): número máximo de tentativas de reprocessamento
@@ -260,6 +267,7 @@ def copy_by_key_with_retry(
         key_column=key_column,
         key_start=key_start,
         key_interval=key_interval,
+        estimated_max_id=estimated_max_id,
         destination_truncate=destination_truncate,
     )
 
@@ -276,6 +284,7 @@ def copy_by_key_with_retry(
             key_column=key_column,
             key_start=next_key,
             key_interval=key_interval,
+            estimated_max_id=estimated_max_id,
             destination_truncate=False,
         )
 
