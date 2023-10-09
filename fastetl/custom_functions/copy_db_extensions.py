@@ -169,7 +169,7 @@ def copy_by_key_interval(
                                     psycopg2.extras.execute_batch(destination_cur, insert, rows)
                                 else:
                                     destination_cur.executemany(insert, rows)
-                                # destination_conn.commit()
+                                destination_conn.commit()
                             except Exception as e:
                                 logging.info(
                                     "Erro destino: %s. Key interval: %s-%s",
