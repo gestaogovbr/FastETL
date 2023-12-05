@@ -25,6 +25,13 @@ teiid:
     mssql:
       dtype:
         INT
+  biginteger:
+    postgres:
+      dtype:
+        BIGINT
+    mssql:
+      dtype:
+        BIGINT
   long:
     postgres:
       dtype:
