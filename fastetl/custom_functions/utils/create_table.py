@@ -221,25 +221,30 @@ def create_table_from_teiid(
         destination (DestinationConnection): A `DestinationConnection`
             object containing the connection details for the destination
             database.
+    Raises:
+        Exception: If there is an error while executing the query.
+        ValueError: If there is an empty dataframe of teiid_columns            
     """
-
-    df_source_columns = _get_teiid_columns_datatype(source)
-    if not df_source_columns.empty:
-        df_source_columns["converted_length"] = ""
-        types_mapping = _load_yaml("config/types_mapping.yml")
-        df_destination_columns = df_source_columns.apply(
-            _convert_datatypes,
-            args=(
-                types_mapping,
-                source.conn_type,
-                destination.conn_type,
-            ),
-            axis=1,
-        )
-        table_ddl = _create_table_ddl(destination, df_destination_columns)
-        _execute_query(destination.conn_id, table_ddl)
-    else:
-        logging.warning("Table from teiid could not be created")
+    try:
+        df_source_columns = _get_teiid_columns_datatype(source)
+        if not df_source_columns.empty:
+            df_source_columns["converted_length"] = ""
+            types_mapping = _load_yaml("config/types_mapping.yml")
+            df_destination_columns = df_source_columns.apply(
+                _convert_datatypes,
+                args=(
+                    types_mapping,
+                    source.conn_type,
+                    destination.conn_type,
+                ),
+                axis=1,
+            )
+            table_ddl = _create_table_ddl(destination, df_destination_columns)
+            _execute_query(destination.conn_id, table_ddl)
+        else:
+            raise ValueError("Source table from teiid columns are empty")
+    except Exception as e:
+        raise Exception(f"Table from teiid could not be created:", e)
 
 
 def create_table_from_others(
