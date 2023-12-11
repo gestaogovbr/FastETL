@@ -144,37 +144,69 @@ class DOUHook(BaseHook):
 
         publish_from = self.calculate_from_datetime(reference_date, search_date)
 
-        payload = [
-            ("q", self._get_query_str(search_term, field, is_exact_search)),
-            ("exactDate", "personalizado"),
-            ("publishFrom", publish_from.strftime("%d-%m-%Y")),
-            ("publishTo", reference_date.strftime("%d-%m-%Y")),
-            ("sortType", "0"),
-        ]
-        for section in sections:
-            payload.append(("s", section.value))
-
-        if with_retry:
-            page = self._request_with_retry(payload=payload)
-        else:
-            page = requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
+        payload = {
+            "q": self._get_query_str(search_term, field, is_exact_search),
+            "exactDate": "personalizado",
+            "publishFrom": publish_from.strftime("%d-%m-%Y"),
+            "publishTo": reference_date.strftime("%d-%m-%Y"),
+            "sortType": "0",    
+            "s": [section.value for section in sections]
+        }
+        page = self._request_page(payload=payload, with_retry=with_retry)
 
         soup = BeautifulSoup(page.content, "html.parser")
-
-        script_tag = soup.find(
-            "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
+        
+        # Checks if there is more than one page of results
+        pagination_tag = soup.find(
+            'button', id='lastPage'
         )
-        search_results = json.loads(script_tag.contents[0])["jsonArray"]
-        all_results = []
-        if search_results:
-            for content in search_results:
-                item = {}
-                item["section"] = content["pubName"].lower()
-                item["title"] = content["title"]
-                item["href"] = self.IN_WEB_BASE_URL + content["urlTitle"]
-                item["abstract"] = content["content"]
-                item["date"] = content["pubDate"]
+        
+        if (pagination_tag) is not None:
+            # Get the number of pages in the pagination bar
+            number_pages = int(pagination_tag.text.strip())
+        else:
+            # If is a single page
+            number_pages = 1
 
-                all_results.append(item)
+        logging.info("Total pages: %s", number_pages)
+
+        all_results = []
+
+        # Loop for each page of result
+        for page_num in range(number_pages):
+            logging.info("Searching in page %s", str(page_num + 1))
+            
+            # If there is more than one page add extra payload params and reload the page
+            if page_num > 0:
+                # The id is needed for pagination to work because it requires
+                # passing the last id from the previous item page in request URL          
+                # Delta is the number of records per page. By now is restricted up to 20.
+                payload.update({
+                    "id": item["id"],
+                    "displayDate": item["display_date_sortable"],
+                    # "delta": 20,
+                    "newPage": page_num + 1,
+                    "currentPage": page_num,
+                })
+                page = self._request_page(payload=payload, with_retry=with_retry)
+                soup = BeautifulSoup(page.content, "html.parser")            
+
+            script_tag = soup.find(
+                "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
+            )   
+            search_results = json.loads(script_tag.contents[0])["jsonArray"]
+
+            if search_results:
+                for content in search_results:
+                    item = {}
+                    item["section"] = content["pubName"].lower()
+                    item["title"] = content["title"]
+                    item["href"] = self.IN_WEB_BASE_URL + content["urlTitle"]
+                    item["abstract"] = content["content"]
+                    item["date"] = content["pubDate"]
+                    item["id"] = content["classPK"]
+                    item["display_date_sortable"] = content["displayDateSortable"]
+
+                    all_results.append(item)
 
         return all_results
