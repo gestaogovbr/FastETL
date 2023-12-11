@@ -111,13 +111,15 @@ class DOUHook(BaseHook):
         elif search_date == SearchDate.ANO:
             return publish_to_date - timedelta(days=364)
 
-    def _request_with_retry(self, payload: List):
+    def _request_page(self, with_retry: bool, payload: dict):
         try:
             return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
         except requests.exceptions.ConnectionError:
-            logging.info("Sleep for 30 seconds before retry requests.get().")
-            time.sleep(30)
-            return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
+            if with_retry:
+                logging.info("Sleep for 30 seconds before retry requests.get().")
+                time.sleep(30)
+                return requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)   
+
 
     def search_text(
         self,
