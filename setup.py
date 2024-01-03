@@ -2,12 +2,13 @@
 Setup.py for FastETL Airflow provider package.
 """
 
+import os
 from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-__version__ = "0.0.30"
+__version__ = os.environ["TAG_NAME"]
 
 """Perform the package apache-airflow-providers-fastetl setup."""
 setup(
