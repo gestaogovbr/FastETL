@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-__version__ = os.environ.get("TAG_NAME", "dev-build")
+__version__ = os.environ.get("TAG_NAME", "0.0.0-dev")
 
 """Perform the package apache-airflow-providers-fastetl setup."""
 setup(
