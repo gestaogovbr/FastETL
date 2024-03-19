@@ -26,6 +26,8 @@ jobs:
 
     - name: Setup environment
       working-directory: ./FastETL
+      env:
+        TAG_NAME: dev-build
       run: make setup
 
     - name: Run Tests
