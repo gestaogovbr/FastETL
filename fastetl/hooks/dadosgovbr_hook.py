@@ -1,27 +1,41 @@
-"""Airflow hooks to access the Dados Abertos Gov.br API to create and update resources.
+"""Airflow hooks to access the dados.gov.br API to create and update resources.
+
 API Documentation: https://dados.gov.br/swagger-ui.html
+Caveat: The API documentation is out of date in regards to the current way
+the API operates.
 """
-import requests
-import json
-import logging
-from functools import cached_property
+
 from collections import ChainMap
-from airflow.hooks.base import BaseHook
-from urllib.parse import urljoin
+from functools import cached_property
+import logging
 from typing import Union
+from urllib.parse import urljoin
+
+import requests
+
+from airflow.hooks.base import BaseHook
+
+REQUEST_TIMEOUT = 180
 
 
 class DadosGovBrHook(BaseHook):
     """
-    Provides access to the Dados Abertos Gov.br API and datasets resources
+    Provides access to the dados.gov.br API and datasets resources.
     """
 
-    def __init__(self,
-        conn_id: str,
-        *args,
-        **kwargs
-        ):
+    def __init__(
+        self, conn_id: str, *args, request_timeout: int = REQUEST_TIMEOUT, **kwargs
+    ):
+        """Instantiate the DadosGovBrHook.
+
+        Args:
+            conn_id (str): Airflow connection id.
+            request_timeout (int, optional): Maximum time to wait for a
+                request, in seconds. Defaults to 180.
+        """
+        super().__init__(*args, **kwargs)
         self.conn_id = conn_id
+        self.request_timeout = request_timeout
 
     @cached_property
     def api_connection(self) -> tuple:
@@ -37,14 +51,13 @@ class DadosGovBrHook(BaseHook):
         token = getattr(conn, "password", None)
         return url, token
 
-
-    def _get_dataset(self, id: str) -> dict:
+    def _get_dataset(self, dataset_id: str) -> dict:
         """
         Retrieve a dataset from the API by its ID.
-        Endpoint: /dados/api/publico/conjuntos-dados/{id}
+        Endpoint: /api/publico/conjuntos-dados/{id}
 
         Args:
-            id (str): A string representing the ID of the dataset.
+            dataset_id (str): A string representing the ID of the dataset.
 
         Returns:
             dict: A dictionary containing the metadata and resources of
@@ -55,7 +68,7 @@ class DadosGovBrHook(BaseHook):
             or processing the response.
         """
 
-        slug = f"/dados/api/publico/conjuntos-dados/{id}"
+        slug = f"/dados/api/publico/conjuntos-dados/{dataset_id}"
 
         api_url, token = self.api_connection
 
@@ -64,26 +77,17 @@ class DadosGovBrHook(BaseHook):
             "chave-api-dados-abertos": token,
         }
         req_url = urljoin(api_url, slug)
-        response = requests.request(method="GET",
-                            url=req_url,
-                            headers=headers
-                            )
-        try:
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as error:
-            raise error
-        except Exception as error:
-            raise Exception("Erro ao retornar o conjunto de dados na API") \
-            from error
+        response = requests.get(
+            url=req_url, headers=headers, timeout=self.request_timeout
+        )
+        response.raise_for_status()
 
-        dataset = json.loads(response.text)
+        dataset = response.json()
 
         return dataset
 
-    def _get_if_resource_exists(self,
-                                  dataset:dict,
-                                  link: str) -> Union[dict, bool]:
-        """ Check if a resource exists in a dataset by matching its URL.
+    def _get_if_resource_exists(self, dataset: dict, link: str) -> Union[dict, bool]:
+        """Check if a resource exists in a dataset by matching its URL.
 
         Args:
             dataset (dict): dataset dictionary as returned by the API
@@ -94,18 +98,13 @@ class DadosGovBrHook(BaseHook):
             return its dictionary representation. Otherwise, return False.
         """
         matching_resources = [
-            resource \
-            for resource in dataset["recursos"] \
-            if resource["link"] == link]
+            resource for resource in dataset["recursos"] if resource["link"] == link
+        ]
 
-        return (matching_resources[0] if matching_resources else False)
+        return matching_resources[0] if matching_resources else False
 
-    def update_dataset(
-        self,
-        dataset_id: str,
-        **properties
-        ):
-        """ Update some properties of a given dataset
+    def update_dataset(self, dataset_id: str, **properties):
+        """Update some properties of a given dataset
             Endpoint: /dados/api/publico/conjuntos-dados/{id}
 
         Args:
@@ -117,8 +116,7 @@ class DadosGovBrHook(BaseHook):
             Exception: If an error occurs during the dataset update process.
         """
 
-        print("Payload: " +
-            str(dataset_id) + ": " + str(properties))
+        logging.info("Payload: %s: %s", dataset_id, properties)
 
         slug = f"publico/conjuntos-dados/{dataset_id}"
 
@@ -131,21 +129,15 @@ class DadosGovBrHook(BaseHook):
 
         req_url = urljoin(api_url, slug)
 
-        response = requests.request(method="PATCH",
-                                    url=req_url,
-                                    headers=headers,
-                                    json=properties,
-                                    )
+        response = requests.patch(
+            url=req_url,
+            headers=headers,
+            json=properties,
+            timeout=self.request_timeout,
+        )
 
-        try:
-            response.raise_for_status()
-            print("Conjunto de Dados atualizado com sucesso")
-        except requests.exceptions.HTTPError as error:
-            raise error
-        except Exception as error:
-            raise Exception("Erro ao atualizar o dataset") \
-            from error
-
+        response.raise_for_status()
+        logging.info("Conjunto de Dados atualizado com sucesso.")
 
     def create_or_update_resource(
         self,
@@ -155,7 +147,7 @@ class DadosGovBrHook(BaseHook):
         formato: str,
         descricao: str = None,
         tipo: str = "DADOS",
-        ):
+    ):
         """
         Create or update a resource for a given dataset.
 
@@ -193,32 +185,34 @@ class DadosGovBrHook(BaseHook):
                 resource.
         """
 
-        dataset = self._get_dataset(id=dataset_id)
-        existing_resource = self._get_if_resource_exists(dataset=dataset,
-                                                         link=link)
+        dataset = self._get_dataset(dataset_id=dataset_id)
+        existing_resource = self._get_if_resource_exists(dataset=dataset, link=link)
 
         if existing_resource:
-            resource = dict(ChainMap(
-                {
-                    'titulo': titulo,
-                    'link': link,
-                    'descricao': resource['descricao'] \
-                          if descricao is None else descricao,
-                    'formato': formato,
-                },
-                existing_resource
-            ))
-        else: # create resource
+            resource = dict(
+                ChainMap(
+                    {
+                        "titulo": titulo,
+                        "link": link,
+                        "descricao": (
+                            resource["descricao"] if descricao is None else descricao
+                        ),
+                        "formato": formato,
+                    },
+                    existing_resource,
+                )
+            )
+        else:  # create resource
             resource = {
-                'idConjuntoDados': dataset_id,
-                'titulo': titulo,
-                'link': link,
-                'descricao': descricao,
-                'tipo': tipo,
-                'formato': formato,
+                "idConjuntoDados": dataset_id,
+                "titulo": titulo,
+                "link": link,
+                "descricao": descricao,
+                "tipo": tipo,
+                "formato": formato,
             }
 
-        logging.info("Payload: " + str(resource))
+        logging.info("Payload: %s", resource)
 
         slug = "recurso/salvar"
         api_url, token = self.api_connection
@@ -229,20 +223,15 @@ class DadosGovBrHook(BaseHook):
 
         req_url = urljoin(api_url, slug)
 
-        response = requests.request(method="POST",
-                                    url=req_url,
-                                    headers=headers,
-                                    json=resource,
-                                    )
+        response = requests.post(
+            url=req_url,
+            headers=headers,
+            json=resource,
+            timeout=self.request_timeout,
+        )
 
-        try:
-            response.raise_for_status()
-            if existing_resource:
-                logging.info("Recurso atualizado com sucesso")
-            else:
-                logging.info("Novo recurso inserido com sucesso")
-        except requests.exceptions.HTTPError as error:
-            raise error
-        except Exception as error:
-            raise Exception("Erro ao salvar o recurso") \
-            from error
+        response.raise_for_status()
+        if existing_resource:
+            logging.info("Recurso atualizado com sucesso")
+        else:
+            logging.info("Novo recurso inserido com sucesso")
