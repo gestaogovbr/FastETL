@@ -114,7 +114,8 @@ def _insert_initial_source_table_n_data(
 
 
 @pytest.mark.parametrize(
-    "source_conn_id, source_hook_cls, source_provider, dest_conn_id, dest_hook_cls, destination_provider, has_dest_table",
+    "source_conn_id, source_hook_cls, source_provider, dest_conn_id, "
+    "dest_hook_cls, destination_provider, has_dest_table",
     [
         (
             "postgres-source-conn",
