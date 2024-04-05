@@ -1,18 +1,17 @@
 from datetime import datetime
 import logging
-import subprocess
 import pytest
-
 from random import randint, uniform
-
-from airflow.providers.common.sql.hooks.sql import DbApiHook
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.odbc.hooks.odbc import OdbcHook
+import subprocess
 
 import pandas as pd
 from pandas._testing import assert_frame_equal
 from pyodbc import ProgrammingError
 from psycopg2.errors import UndefinedTable
+
+from airflow.providers.common.sql.hooks.sql import DbApiHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.odbc.hooks.odbc import OdbcHook
 
 
 def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
