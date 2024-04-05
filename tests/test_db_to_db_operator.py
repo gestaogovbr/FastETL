@@ -45,7 +45,16 @@ DATETIMES = [
 ACTIVES = [True, False]
 
 
-def generate_transactions(number):
+def generate_transactions(number: int) -> list[tuple[int, str, str, str, int, int, date, bool, datetime]]:
+    """Prepare random data for use in testing.
+
+    Args:
+        number (int): quantity of rows to return.
+
+    Returns:
+        list[tuple[int, str, str, str, int, int, date, bool, datetime]]: the
+            randomized transaction data for use in testing.
+    """
     transactions = []
     for x in range(0, number):
         transactions.append((x,
@@ -62,6 +71,14 @@ def generate_transactions(number):
 
 def _insert_initial_source_table_n_data(table_name: str, hook: DbApiHook,
                                         db_provider: str) -> None:
+    """Insert the simulated test data into the table.
+
+    Args:
+        table_name (str): name of the table to be inserted.
+        hook (DbApiHook): database hook.
+        db_provider (str): name of the database provider. Must be one
+            of the provided init sql files.
+    """
     _create_initial_table(table_name, hook, db_provider)
 
     transactions_df = pd.DataFrame(generate_transactions(1500),
