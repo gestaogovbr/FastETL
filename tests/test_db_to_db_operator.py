@@ -15,21 +15,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.odbc.hooks.odbc import OdbcHook
 
 
-def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
-    logging.info("Tentando apagar a tabela %s.", table_name)
-    try:
-        hook.run(f"DROP TABLE {table_name};")
-    except (UndefinedTable, ProgrammingError) as e:
-        logging.info(e)
-
-
-def _create_initial_table(table_name: str, hook: DbApiHook, db_provider: str) -> None:
-    filename = f"create_{table_name}_{db_provider.lower()}.sql"
-    path = "/opt/airflow/tests/sql/init/"
-    with open(os.path.join(path, filename), "r", encoding="utf-8") as file:
-        sql_statement = file.read()
-    hook.run(sql_statement.format(table_name=table_name))
-
+# Constants
 
 NAMES = ["hendrix", "nitai", "krishna", "jesus", "Danielle", "Augusto"]
 DESCRIPTIONS = [
@@ -47,10 +33,28 @@ DATETIMES = [
 ]
 ACTIVES = [True, False]
 
+# Auxiliary functions
+
+
+def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
+    logging.info("Tentando apagar a tabela %s.", table_name)
+    try:
+        hook.run(f"DROP TABLE {table_name};")
+    except (UndefinedTable, ProgrammingError) as e:
+        logging.info(e)
+
+
+def _create_initial_table(table_name: str, hook: DbApiHook, db_provider: str) -> None:
+    filename = f"create_{table_name}_{db_provider.lower()}.sql"
+    path = "/opt/airflow/tests/sql/init/"
+    with open(os.path.join(path, filename), "r", encoding="utf-8") as file:
+        sql_statement = file.read()
+    hook.run(sql_statement.format(table_name=table_name))
+
 
 def generate_transactions(
     number: int,
-) -> list[tuple[int, str, str, str, int, int, date, bool, datetime]]:
+) -> list[tuple[int, str, str, str, int, float, date, bool, datetime]]:
     """Prepare random data for use in testing.
 
     Args:
@@ -111,6 +115,9 @@ def _insert_initial_source_table_n_data(
         if_exists="append",
         index=False,
     )
+
+
+# Tests
 
 
 @pytest.mark.parametrize(
@@ -200,6 +207,18 @@ def test_full_table_replication_various_db_types(
     destination_provider: str,
     has_dest_table: bool,
 ):
+    """Test full table replication using various database types.
+
+    Args:
+        source_conn_id (str): source database connection id.
+        source_hook_cls (DbApiHook): source database hook class.
+        source_provider (str): source database provider.
+        dest_conn_id (str): destination database connection id.
+        dest_hook_cls (DbApiHook): destination database hook class.
+        destination_provider (str): destination database provider.
+        has_dest_table (bool): whether or not to create the table at
+            the destination database before testing replication.
+    """
     source_table_name = "source_table"
     dest_table_name = "destination_table"
     source_hook = source_hook_cls(source_conn_id)
