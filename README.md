@@ -65,13 +65,7 @@ The test suite uses Docker containers to simulate a complete use
 environment, including Airflow and the databases. For that reason, to
 execute the tests, you first need to install Docker and docker-compose.
 
-For people using Ubuntu 20.04, you can just type on the terminal:
-
-```bash
-snap install docker
-```
-
-For other versions and operating systems, see the
+For instructions on how to do this, see the
 [official Docker documentation](https://docs.docker.com/get-docker/).
 
 

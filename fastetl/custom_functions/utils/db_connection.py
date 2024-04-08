@@ -16,38 +16,45 @@ from airflow.providers.mysql.hooks.mysql import MySqlHook
 
 
 class DbConnection:
-    """
-    Gera as conexões origem e destino dependendo do tipo de provider.
-    Providers disponíveis: 'mssql', 'postgres' e 'mysql'
+    """Gera as conexões origem e destino dependendo do tipo de provider.
+    Providers disponíveis: 'mssql', 'postgres' e 'mysql'.
     """
 
-    def __init__(self, conn_id: str):
+    def __init__(self, conn_id: str, use: str = "connection"):
+        """Cria uma instância do context manager DBConnection.
+
+        Args:
+            conn_id (str): id da conexão no Airflow.
+            use (str, optional): "connection", "hook" ou "engine".
+                Determina o que será retornado pelo context manager
+                (cláusula "with"). Defaults to "connection".
+        """
         self.conn_type = get_conn_type(conn_id)
+        self.use = use
         self.conn = None
 
         if self.conn_type == "mssql":
             self.mssql_conn_string = get_mssql_odbc_conn_str(
                 conn_id=conn_id, raw_str=True
             )
-        else:
-            self.hook, _ = get_hook_and_engine_by_provider(conn_id)
+        self.hook, self.engine = get_hook_and_engine_by_provider(conn_id)
 
     def __enter__(self):
         if self.conn_type == "mssql":
             try:
                 self.conn = pyodbc.connect(self.mssql_conn_string)
             except Exception as exc:
-                raise Exception(
-                    f"{self.conn_type} connection failed."
-                ) from exc
+                raise IOError(f"{self.conn_type} connection failed.") from exc
         else:
             try:
                 self.conn = self.hook.get_conn()
             except Exception as exc:
-                raise Exception(
-                    f"{self.conn_type} connection failed."
-                ) from exc
+                raise IOError(f"{self.conn_type} connection failed.") from exc
 
+        if self.use == "engine":
+            return self.engine
+        if self.use == "hook":
+            return self.hook
         return self.conn
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -154,9 +161,7 @@ def get_mssql_odbc_conn_str(conn_id: str, raw_str: bool = False) -> str:
     if raw_str:
         return mssql_conn_str
 
-    connection_url = URL.create(
-        "mssql+pyodbc", query={"odbc_connect": mssql_conn_str}
-    )
+    connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": mssql_conn_str})
 
     return connection_url
 
@@ -168,7 +173,7 @@ def get_mssql_odbc_engine(conn_id: str, **kwargs):
 
     return create_engine(get_mssql_odbc_conn_str(conn_id), **kwargs)
 
- 
+
 def get_hook_and_engine_by_provider(conn_id: str) -> Tuple[DbApiHook, Engine]:
     """
     Creates connection hook and engine by connection type/provider.

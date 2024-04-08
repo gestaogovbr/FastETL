@@ -1,10 +1,10 @@
 .PHONY: setup
 setup:
-	docker-compose -f tests/docker-compose.yml up -d --force-recreate --remove-orphans
+	docker compose -f tests/docker-compose.yml up -d --force-recreate --remove-orphans
 
 .PHONY: down
 down:
-	docker-compose -f tests/docker-compose.yml down
+	docker compose -f tests/docker-compose.yml down
 
 .PHONY: tests
 tests:
