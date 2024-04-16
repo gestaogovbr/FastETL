@@ -2,7 +2,7 @@ ckanapi==4.6
 pysmb==1.2.6
 frictionless==5.11.1
 odfpy==1.4.1
-pandas==1.5.2,<2
+pandas==2.1.4
 psycopg2==2.9.5
 pygsheets==2.0.5
 google-api-python-client==2.102.0
