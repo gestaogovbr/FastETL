@@ -15,7 +15,7 @@ from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
-from airflow import AirflowException
+from airflow.exceptions import AirflowException
 from airflow.hooks.base import BaseHook
 
 
