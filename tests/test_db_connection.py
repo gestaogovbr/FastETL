@@ -113,20 +113,16 @@ def test_db_connection(conn_id: str, use: Literal["hook", "connection", "engine"
         conn_type = get_conn_type(conn_id)
         if conn_type == "postgres":
             assert (
-                isinstance(db_hook, PostgresHook)
-                or isinstance(db_hook, psycopg2.extensions.connection)
+                isinstance(db_hook, (PostgresHook, psycopg2.extensions.connection))
                 or str(db_hook) == "Engine(postgresql://root:***@postgres-source/db)"
             )
 
         elif conn_type == "mssql":
-            assert (
-                isinstance(db_hook, MsSqlHook)
-                or isinstance(db_hook, pyodbc.Connection)
-                or str(db_hook)
-                == (
-                    "Engine(mssql+pyodbc://?odbc_connect="
-                    "Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3B"
-                    "Server%3Dmssql-source%2C+1433%3B+++++++++++++++++++++"
-                    "Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
-                )
+            assert isinstance(db_hook, (MsSqlHook, pyodbc.Connection)) or str(
+                db_hook
+            ) == (
+                "Engine(mssql+pyodbc://?odbc_connect="
+                "Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3B"
+                "Server%3Dmssql-source%2C+1433%3B+++++++++++++++++++++"
+                "Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
             )
