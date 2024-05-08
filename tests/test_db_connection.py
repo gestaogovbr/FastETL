@@ -124,7 +124,8 @@ def test_db_connection(conn_id: str, use: Literal["hook", "connection", "engine"
                 or isinstance(db_hook, pyodbc.Connection)
                 or str(db_hook)
                 == (
-                    "Engine(mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3B"
+                    "Engine(mssql+pyodbc://?odbc_connect="
+                    "Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3B"
                     "Server%3Dmssql-source%2C+1433%3B+++++++++++++++++++++"
                     "Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
                 )
