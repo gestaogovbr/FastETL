@@ -126,3 +126,24 @@ def test_db_connection(conn_id: str, use: Literal["hook", "connection", "engine"
                 "Server%3Dmssql-source%2C+1433%3B+++++++++++++++++++++"
                 "Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
             )
+
+
+@pytest.mark.parametrize(
+    "conn_id",
+    [
+        "mssql-source-fake-conn",
+        "postgres-source-fake-conn",
+    ],
+)
+def test_db_fail_connection_wrong_credentials(
+    conn_id: str
+):
+    """Test that the DbConnection will fail for a connection that is using
+    wrong credentials.
+
+    Args:
+        conn_id (str): The connection id.
+    """
+    with pytest.raises((IOError, psycopg2.OperationalError)):
+        with DbConnection(conn_id=conn_id):
+            pass
