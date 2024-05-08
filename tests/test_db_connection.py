@@ -16,21 +16,24 @@ from fastetl.custom_functions.utils.db_connection import (
     get_conn_type,
 )
 
-#TODO:
+# TODO:
 # - Tests for Mysql Engine and Hooks
+
 
 # Tests
 @pytest.mark.parametrize(
     ("conn_id", "engine_str"),
     [
-        ("mssql-source-conn", "Engine(mssql+pyodbc:"),
+        (
+            "mssql-source-conn",
+            "Engine(mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D"
+            + "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)",
+        ),
     ],
 )
 def test_get_mssql_odbc_engine(conn_id: str, engine_str: str):
     engine = get_mssql_odbc_engine(conn_id)
-    assert str(engine) == \
-    "Engine(mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D" + \
-        "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
+    assert str(engine) == engine_str
 
 
 @pytest.mark.parametrize(
@@ -50,16 +53,20 @@ def test_get_conn_type(conn_id: str, expected_conn_type: str):
     ],
 )
 def test_get_hook_and_engine_by_provider(conn_id: str):
+
     hook, engine = get_hook_and_engine_by_provider(conn_id)
+
     if get_conn_type(conn_id) == "postgres":
         assert isinstance(hook, PostgresHook)
         assert str(engine.url) == "postgresql://root:root@postgres-source/db"
 
     elif get_conn_type(conn_id) == "mssql":
         assert isinstance(hook, MsSqlHook)
-        assert str(engine.url) == \
-            "mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D" + \
-            "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B"
+        assert (
+            str(engine.url)
+            == "mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D"
+            + "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B"
+        )
 
 
 @pytest.mark.parametrize(
@@ -88,7 +95,7 @@ def test_db_connection(conn_id: str, use: str):
             assert (
                 isinstance(db_hook, MsSqlHook)
                 or isinstance(db_hook, pyodbc.Connection)
-                or str(db_hook) == \
-                "Engine(mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D" + \
-                "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
+                or str(db_hook)
+                == "Engine(mssql+pyodbc://?odbc_connect=Driver%3D%7BODBC+Driver+17+for+SQL+Server%7D%3BServer%3D"
+                + "mssql-source%2C+1433%3B+++++++++++++++++++++Database%3Dmaster%3BUid%3Dsa%3BPwd%3DozoBaroF2021%3B)"
             )
