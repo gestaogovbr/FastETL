@@ -76,14 +76,15 @@ def test_get_hook_and_engine_by_provider(conn_id: str):
 def test_db_connection(conn_id: str, use: str):
 
     with DbConnection(conn_id=conn_id, use=use) as db_hook:
-        if get_conn_type(conn_id) == "postgres":
+        conn_type = get_conn_type(conn_id)
+        if conn_type == "postgres":
             assert (
                 isinstance(db_hook, PostgresHook)
                 or isinstance(db_hook, psycopg2.extensions.connection)
                 or str(db_hook) == "Engine(postgresql://root:***@postgres-source/db)"
             )
 
-        if get_conn_type(conn_id) == "mssql":
+        elif conn_type == "mssql":
             assert (
                 isinstance(db_hook, MsSqlHook)
                 or isinstance(db_hook, pyodbc.Connection)
