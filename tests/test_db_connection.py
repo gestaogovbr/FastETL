@@ -3,9 +3,6 @@
 import pytest
 import psycopg2
 import pyodbc
-from sqlalchemy import create_engine
-
-import airflow.providers.postgres.hooks.postgres as postgres
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
