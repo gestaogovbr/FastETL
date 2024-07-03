@@ -43,7 +43,8 @@ setup(
         "pytz>=2022.6",
         "requests>=2.28.1",
         "SQLAlchemy>=1.4.44",
-        "PyYAML==6.0"
+        "PyYAML==6.0",
+        "openmetadata-ingestion==1.4.1.0"
     ],
     setup_requires=["setuptools", "wheel"],
     author="Time de Dados CGINF",
