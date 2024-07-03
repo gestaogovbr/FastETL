@@ -82,50 +82,74 @@ Raises:
     TypeError: If `source` or `destination` is not a dictionary.
 """
 
+import random
 from datetime import datetime
 from typing import Dict
 
+from airflow.hooks.base import BaseHook
 from airflow.models.baseoperator import BaseOperator
+from airflow.utils.decorators import apply_defaults
+from metadata.generated.schema.entity.data.table import Table
+from metadata.ingestion.source.pipeline.airflow.lineage_parser import OMEntity
 
 from fastetl.hooks.db_to_db_hook import DbToDbHook
 
-class DbToDbOperator(BaseOperator):
-    template_fields = ['source']
 
+class DbToDbOperator(BaseOperator):
+    template_fields = ["source"]
+
+    @apply_defaults
     def __init__(
-            self,
-            source: Dict[str, str],
-            destination: Dict[str, str],
-            columns_to_ignore: list = None,
-            destination_truncate: bool = True,
-            chunksize: int = 1000,
-            copy_table_comments: bool = False,
-            is_incremental: bool = False,
-            table: str = None,
-            date_column: str = None,
-            key_column: str = None,
-            since_datetime: datetime = None,
-            sync_exclusions: bool = False,
-            *args, **kwargs) -> None:
+        self,
+        source: Dict[str, str],
+        destination: Dict[str, str],
+        columns_to_ignore: list = None,
+        destination_truncate: bool = True,
+        chunksize: int = 1000,
+        copy_table_comments: bool = False,
+        is_incremental: bool = False,
+        table: str = None,
+        date_column: str = None,
+        key_column: str = None,
+        since_datetime: datetime = None,
+        sync_exclusions: bool = False,
+        *args,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
-        self.source = source
-        self.destination = destination
         self.columns_to_ignore = columns_to_ignore
         self.destination_truncate = destination_truncate
         self.chunksize = chunksize
         self.copy_table_comments = copy_table_comments
-        self.is_incremental=is_incremental
-        self.table=table
-        self.date_column=date_column
-        self.key_column=key_column
-        self.since_datetime=since_datetime
-        self.sync_exclusions=sync_exclusions
+        self.is_incremental = is_incremental
+        self.table = table
+        self.date_column = date_column
+        self.key_column = key_column
+        self.since_datetime = since_datetime
+        self.sync_exclusions = sync_exclusions
+        # any value that needs to be the same for inlets and outlets
+        key = str(random.randint(10000000, 99999999))
+        if source.get("om_service", None):
+            self.inlets = [OMEntity(entity=Table, fqn=self._get_fqn(source), key=key)]
+        if destination.get("om_service", None):
+            self.outlets = [OMEntity(entity=Table, fqn=self._get_fqn(destination), key=key)]
+        # filter to keys accepted by DbToDbHook
+        keys_to_filter = ["conn_id", "schema", "table"]
+        self.source = {key: source[key] for key in keys_to_filter if key in source}
+        self.destination = {
+            key: destination[key] for key in keys_to_filter if key in destination
+        }
+
+    def _get_fqn(self, data):
+        data["database"] = BaseHook.get_connection(data["conn_id"]).schema
+        fqn = f'{data["om_service"]}.{data["database"]}.{data["schema"]}.{data["table"]}'
+        return fqn
 
     def execute(self, context):
         hook = DbToDbHook(
             source=self.source,
             destination=self.destination,
-            )
+        )
 
         if self.is_incremental:
             hook.incremental_copy(
@@ -142,5 +166,5 @@ class DbToDbOperator(BaseOperator):
                 columns_to_ignore=self.columns_to_ignore,
                 destination_truncate=self.destination_truncate,
                 chunksize=self.chunksize,
-                copy_table_comments=self.copy_table_comments
+                copy_table_comments=self.copy_table_comments,
             )
