@@ -8,3 +8,4 @@ pygsheets==2.0.5
 google-api-python-client==2.102.0
 google-auth==2.23.2
 Markdown==3.6
+openmetadata-ingestion==1.4.1.0
