@@ -132,17 +132,31 @@ class DbToDbOperator(BaseOperator):
         if source.get("om_service", None):
             self.inlets = [OMEntity(entity=Table, fqn=self._get_fqn(source), key=key)]
         if destination.get("om_service", None):
-            self.outlets = [OMEntity(entity=Table, fqn=self._get_fqn(destination), key=key)]
+            self.outlets = [
+                OMEntity(entity=Table, fqn=self._get_fqn(destination), key=key)
+            ]
+        # rename if schema_name is present
+        if source.get("schema_name", None):
+            source["schema"] = source.pop("schema_name")
+        if destination.get("schema_name", None):
+            destination["schema"] = destination.pop("schema_name")
         # filter to keys accepted by DbToDbHook
-        keys_to_filter = ["conn_id", "schema", "table"]
-        self.source = {key: source[key] for key in keys_to_filter if key in source}
+        self.source = {
+            key: source[key]
+            for key in ["conn_id", "schema", "table", "query"]
+            if key in source
+        }
         self.destination = {
-            key: destination[key] for key in keys_to_filter if key in destination
+            key: destination[key]
+            for key in ["conn_id", "schema", "table"]
+            if key in destination
         }
 
     def _get_fqn(self, data):
         data["database"] = BaseHook.get_connection(data["conn_id"]).schema
-        fqn = f'{data["om_service"]}.{data["database"]}.{data["schema"]}.{data["table"]}'
+        fqn = (
+            f'{data["om_service"]}.{data["database"]}.{data["schema"]}.{data["table"]}'
+        )
         return fqn
 
     def execute(self, context):
