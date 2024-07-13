@@ -86,24 +86,21 @@ class SourceConnection:
         conn_type (str): Connection type/provider.
     """
 
-    def __init__(
-        self,
-        conn_id: str,
-        schema: str = None,
-        table: str = None,
-        query: str = None,
-    ):
-        if not conn_id:
+    def __init__(self, params: dict):
+        self.conn_id = params.get("conn_id", None)
+        self.schema = params.get("schema", None)
+        self.table = params.get("table", None)
+        self.query = params.get("query", None)
+
+        if not self.conn_id:
             raise ValueError("conn_id argument cannot be empty")
-        if not query and not (schema or table):
+        if not self.query and not (
+            self.schema or self.table
+        ):
             raise ValueError("must provide either schema and table or query")
 
-        self.conn_id = conn_id
-        self.schema = schema
-        self.table = table
-        self.query = query
-        self.conn_type = get_conn_type(conn_id)
-        conn_values = BaseHook.get_connection(conn_id)
+        self.conn_type = get_conn_type(self.conn_id)
+        conn_values = BaseHook.get_connection(self.conn_id)
         self.conn_database = conn_values.schema
 
 
@@ -124,12 +121,12 @@ class DestinationConnection:
         conn_type (str): Connection type/provider.
     """
 
-    def __init__(self, conn_id: str, schema: str, table: str):
-        self.conn_id = conn_id
-        self.schema = schema
-        self.table = table
-        self.conn_type = get_conn_type(conn_id)
-        conn_values = BaseHook.get_connection(conn_id)
+    def __init__(self, params: dict):
+        self.conn_id = params.get("conn_id", None)
+        self.schema = params.get("schema", None)
+        self.table = params.get("table", None)
+        self.conn_type = get_conn_type(self.conn_id)
+        conn_values = BaseHook.get_connection(self.conn_id)
         self.conn_database = conn_values.schema
 
 

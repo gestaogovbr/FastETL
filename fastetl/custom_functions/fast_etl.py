@@ -258,8 +258,8 @@ def copy_db_to_db(
     """
 
     # validate connections
-    source = SourceConnection(**source)
-    destination = DestinationConnection(**destination)
+    source = SourceConnection(source)
+    destination = DestinationConnection(destination)
 
     # create table if not exists in destination db
     if not source.query:
@@ -621,13 +621,17 @@ def sync_db_2_db(
     if copy_table_comments:
         _copy_table_comments(
             source=SourceConnection(
-                conn_id=source_conn_id,
-                schema=source_table_name.split(".")[0],
-                table=source_table_name.split(".")[1],
+                {
+                    "conn_id": source_conn_id,
+                    "schema": source_table_name.split(".")[0],
+                    "table": source_table_name.split(".")[1],
+                }
             ),
             destination=DestinationConnection(
-                conn_id=destination_conn_id,
-                schema=dest_table_name.split(".")[0],
-                table=dest_table_name.split(".")[1],
+                {
+                    "conn_id": destination_conn_id,
+                    "schema": dest_table_name.split(".")[0],
+                    "table": dest_table_name.split(".")[1],
+                }
             ),
         )
