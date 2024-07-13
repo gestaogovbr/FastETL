@@ -98,7 +98,6 @@ from fastetl.hooks.db_to_db_hook import DbToDbHook
 class DbToDbOperator(BaseOperator):
     template_fields = ["source"]
 
-    @apply_defaults
     def __init__(
         self,
         source: Dict[str, str],
@@ -127,6 +126,15 @@ class DbToDbOperator(BaseOperator):
         self.key_column = key_column
         self.since_datetime = since_datetime
         self.sync_exclusions = sync_exclusions
+
+        # rename if schema_name is present
+        if source.get("schema_name", None):
+            source["schema"] = source.pop("schema_name")
+        if destination.get("schema_name", None):
+            destination["schema"] = destination.pop("schema_name")
+        self.source = source
+        self.destination = destination
+
         # any value that needs to be the same for inlets and outlets
         key = str(random.randint(10000000, 99999999))
         if source.get("om_service", None):
@@ -135,22 +143,6 @@ class DbToDbOperator(BaseOperator):
             self.outlets = [
                 OMEntity(entity=Table, fqn=self._get_fqn(destination), key=key)
             ]
-        # rename if schema_name is present
-        if source.get("schema_name", None):
-            source["schema"] = source.pop("schema_name")
-        if destination.get("schema_name", None):
-            destination["schema"] = destination.pop("schema_name")
-        # filter to keys accepted by DbToDbHook
-        self.source = {
-            key: source[key]
-            for key in ["conn_id", "schema", "table", "query"]
-            if key in source
-        }
-        self.destination = {
-            key: destination[key]
-            for key in ["conn_id", "schema", "table"]
-            if key in destination
-        }
 
     def _get_fqn(self, data):
         data["database"] = BaseHook.get_connection(data["conn_id"]).schema

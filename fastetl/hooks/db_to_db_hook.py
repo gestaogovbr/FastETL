@@ -51,14 +51,14 @@ class DbToDbHook(BaseHook):
         copy_table_comments: bool = False,
     ):
         sync_db_2_db(
-            source_conn_id=self.source.conn_id,
-            destination_conn_id=self.destination.conn_id,
-            source_schema=self.source.schema,
+            source_conn_id=self.source["conn_id"],
+            destination_conn_id=self.destination["conn_id"],
+            source_schema=self.source["schema"],
             source_exc_schema=self.source.get("source_exc_schema", None),
             source_exc_table=self.source.get("source_exc_table", None),
             source_exc_column=self.source.get("source_exc_column", None),
             select_sql=self.source.get("query", None),
-            destination_schema=self.destination.schema,
+            destination_schema=self.destination["schema"],
             increment_schema=self.destination.get("increment_schema", None),
             table=table,
             date_column=date_column,
