@@ -91,11 +91,11 @@ def copy_by_key_interval(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
-                        destination=DestinationConnection(
+                        destination=DestinationConnection(dict(
                             conn_id=destination_conn_id,
                             schema=destination_table.split(".")[0],
                             table=destination_table.split(".")[1],
-                        ),
+                        )),
                         column_list=col_list,
                         wildcard_symbol=wildcard_symbol,
                     )
@@ -344,11 +344,11 @@ def copy_by_limit_offset(
                         table=destination_table.split(".")[1],
                     )
                     insert, truncate = build_dest_sqls(
-                        destination=DestinationConnection(
+                        destination=DestinationConnection(dict(
                             conn_id=destination_conn_id,
                             schema=destination_table.split(".")[0],
                             table=destination_table.split(".")[1],
-                        ),
+                        )),
                         column_list=col_list,
                         wildcard_symbol="?",
                     )
