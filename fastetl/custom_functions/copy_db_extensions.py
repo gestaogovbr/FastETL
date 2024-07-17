@@ -291,7 +291,7 @@ def copy_by_key_with_retry(
     if succeeded:
         logging.info("Término com sucesso!")
     else:
-        logging.info("Término com erro após %d tentativas!", retries)
+        raise IOError(f"Término com erro após {retries} tentativas!")
 
 
 def copy_by_limit_offset(
