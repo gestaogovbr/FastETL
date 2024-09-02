@@ -4,7 +4,7 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
-## 0.0.36
+## 0.0.40
 * Update openmetadata-ingestion lib. It was affecting pydantic version.
 
 ## 0.0.35
