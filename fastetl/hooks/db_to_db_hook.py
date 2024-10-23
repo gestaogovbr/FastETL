@@ -28,7 +28,7 @@ class DbToDbHook(BaseHook):
         self,
         columns_to_ignore: list = None,
         destination_truncate: str = True,
-        chunksize: int = 100,
+        chunksize: int = 2000,
         copy_table_comments: bool = False,
     ):
         copy_db_to_db(
