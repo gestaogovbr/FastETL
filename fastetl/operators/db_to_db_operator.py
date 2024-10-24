@@ -77,6 +77,7 @@ Args:
     copy_table_comments (bool, optional): Whether to copy table comments
         from the source database to the destination database.
         Defaults to False.
+    debug_mode (bool, optional): Whether to enable debug mode. Defaults to False.
 
 Raises:
     TypeError: If `source` or `destination` is not a dictionary.
@@ -112,6 +113,7 @@ class DbToDbOperator(BaseOperator):
         key_column: str = None,
         since_datetime: datetime = None,
         sync_exclusions: bool = False,
+        debug_mode: bool = False,
         *args,
         **kwargs,
     ) -> None:
@@ -126,6 +128,7 @@ class DbToDbOperator(BaseOperator):
         self.key_column = key_column
         self.since_datetime = since_datetime
         self.sync_exclusions = sync_exclusions
+        self.debug_mode = debug_mode
 
         # rename if schema_name is present
         if source.get("schema_name", None):
@@ -166,6 +169,7 @@ class DbToDbOperator(BaseOperator):
                 sync_exclusions=self.sync_exclusions,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
+                debug_mode=self.debug_mode,
             )
         else:
             hook.full_copy(
@@ -173,4 +177,5 @@ class DbToDbOperator(BaseOperator):
                 destination_truncate=self.destination_truncate,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
+                debug_mode=self.debug_mode,
             )
