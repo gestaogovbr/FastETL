@@ -24,12 +24,14 @@ class DbToDbHook(BaseHook):
         self.source = source
         self.destination = destination
 
+
     def full_copy(
         self,
         columns_to_ignore: list = None,
         destination_truncate: str = True,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
+        debug_mode: bool = False
     ):
         copy_db_to_db(
             source=self.source,
@@ -38,6 +40,7 @@ class DbToDbHook(BaseHook):
             destination_truncate=destination_truncate,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
+            debug_mode=debug_mode
         )
 
     def incremental_copy(
@@ -49,6 +52,7 @@ class DbToDbHook(BaseHook):
         sync_exclusions: bool = False,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
+        debug_mode: bool = False
     ):
         sync_db_2_db(
             source_conn_id=self.source["conn_id"],
@@ -67,4 +71,5 @@ class DbToDbHook(BaseHook):
             sync_exclusions=sync_exclusions,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
+            debug_mode=debug_mode
         )

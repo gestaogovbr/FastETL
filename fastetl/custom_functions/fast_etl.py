@@ -194,6 +194,7 @@ def copy_db_to_db(
     chunksize: int = 1000,
     copy_table_comments: bool = False,
     load_type: str = "full",
+    debug_mode: bool = False,
 ) -> None:
     """Load data from Postgres/MSSQL/MySQL to Postgres/MSSQL using psycopg2
     and pyodbc copying all existing columns and rows in the destination
@@ -252,6 +253,8 @@ def copy_db_to_db(
             Defaults to False.
         load_type (str, optional): The type of load to perform. Can be
             "full" or "incremental". Defaults to "full".
+        debug_mode (bool, optional): If True, the function will print
+            debugging information. Defaults to False.
 
     Return:
         None
@@ -307,7 +310,8 @@ def copy_db_to_db(
                     # remove quotes for mysql compatibility
                     if source.conn_type == "mysql":
                         select_sql = select_sql.replace('"', "")
-
+                    if debug_mode:
+                        logging.info("Query: %s", select_sql)
                     # truncate stage
                     if destination_truncate:
                         destination_cur.execute(truncate)
@@ -462,6 +466,7 @@ def sync_db_2_db(
     source_exc_column: str = None,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
+    debug_mode: bool = False,
 ) -> None:
     """Performs incremental update on a table. The synchronization is
     performed in 3 steps.
@@ -514,6 +519,7 @@ def sync_db_2_db(
         Default = 1000 rows
         copy_table_comments (bool): flag if includes on the execution the
             copy of table comments/descriptions. Default to False.
+        debug_mode (bool): flag to enable debug mode. Default to False.
 
     Return:
         None
@@ -555,7 +561,9 @@ def sync_db_2_db(
             schema=source_schema, table=table, column_list=col_list
         )
     select_diff = f"{select_sql} WHERE {where_condition}"
-    logging.info("SQL Query to mirror tables: %s", select_diff)
+    if debug_mode:
+        logging.info("SQL Query to mirror tables: %s", select_diff)
+
 
     copy_db_to_db(
         source={
@@ -572,6 +580,7 @@ def sync_db_2_db(
         destination_truncate=True,
         chunksize=chunksize,
         load_type="incremental",
+        debug_mode=debug_mode,
     )
 
     # rebuild index
@@ -580,7 +589,8 @@ def sync_db_2_db(
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
     elif destination_conn_type == "postgres":
         sql = f"REINDEX TABLE {inc_table_name}"
-
+    if debug_mode:
+        logging.info("SQL Query to rebuild index: %s", sql)
     dest_hook.run(sql)
 
     logging.info("Starting incremental load on table %s.", dest_table_name)
