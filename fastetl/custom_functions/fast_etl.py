@@ -259,6 +259,8 @@ def copy_db_to_db(
     Return:
         None
     """
+    if debug_mode:
+        logging.info("Debug mode on")
 
     # validate connections
     source = SourceConnection(source)
@@ -524,6 +526,9 @@ def sync_db_2_db(
     Return:
         None
     """
+
+    if debug_mode:
+        logging.info("Debug mode on")
 
     def _divide_chunks(l, n):
         """Split list into a new list with n lists"""
