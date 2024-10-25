@@ -40,7 +40,6 @@ class DbToDbHook(BaseHook):
             destination_truncate=destination_truncate,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
-            debug_mode=debug_mode
         )
 
     def incremental_copy(
@@ -71,5 +70,4 @@ class DbToDbHook(BaseHook):
             sync_exclusions=sync_exclusions,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
-            debug_mode=debug_mode
         )
