@@ -292,6 +292,7 @@ def create_table_from_others(
     _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
     _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
     source_eng.echo = True
+
     try:
         insp = reflection.Inspector.from_engine(source_eng)
 
@@ -325,11 +326,79 @@ def create_table_from_others(
         )
         raise e
 
+def create_table_from_query(
+    source: SourceConnection, destination: DestinationConnection
+):
+    """Create table at destination database based on source database query
+    if it not exists already.
+
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+        destination (DestinationConnection): A `DestinationConnection`
+            object containing the connection details for the destination
+            database.
+    """
+
+    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+    _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
+    source_eng.echo = True
+
+    try:
+
+        # Check if destination table already exist:
+        inspector = reflection.Inspector.from_engine(destination_eng)
+        if destination.table not in inspector.get_table_names(schema=destination.schema):
+
+            # Remove semicolon if exists
+            query = source.query[:-1] if source.query.endswith(';') else source.query
+
+            # Get the first row of the query
+            if source.conn_type in ('postgres', 'mysql', 'teiid'):
+                metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+            elif source.conn_type == 'mssql':
+                metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
+            else:
+                raise ValueError
+
+            # Use pandas to execute the SQL and assign to the df
+            with source_eng.connect() as conn:
+                df_metadata = pd.read_sql(metadata_query, conn)
+
+            # Drop rows (keep the columns only)
+            df_metadata = df_metadata.drop(df_metadata.index)
+
+            # Create table in destination
+            df_metadata.to_sql(
+                destination.table,
+                destination_eng,
+                schema=destination.schema,
+                if_exists="replace",
+                index=False,
+            )
+
+            logging.info(f"Destination table {destination.schema}.{destination.table} created successfully.")
+
+    except AssertionError as e:  # pylint: disable=invalid-name
+        logging.error(
+            "Cannot create the table automatically from this database."
+            "Please create the table manually to execute data copying."
+        )
+        raise e
+
+    except ValueError as e:
+        # Make sure that if table exists will not raise error
+        if 'already exists' in str(e):
+            logging.info(f"{destination.table} already exists.")
+        else:
+            logging.error("Database engine not supported")
+        raise e
+
 def create_table_if_not_exists(
     source: SourceConnection, destination: DestinationConnection
 ):
     """Create table at destination database based on source database table
-    if it not exsists already.
+    or source query if it not exists already in destination.
 
     Args:
         source (SourceConnection): A `SourceConnection` object containing
@@ -343,8 +412,10 @@ def create_table_if_not_exists(
         to implement `create_table_from_others(source, destination)`
         scenarios (source table from databases mssql and postgres)
     """
-
-    if source.conn_type == "teiid":
-        create_table_from_teiid(source, destination)
+    if not source.query and source.table:
+        if source.conn_type == "teiid":
+            create_table_from_teiid(source, destination)
+        else:
+            create_table_from_others(source, destination)
     else:
-        create_table_from_others(source, destination)
+        create_table_from_query(source, destination)
