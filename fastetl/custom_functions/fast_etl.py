@@ -267,9 +267,9 @@ def copy_db_to_db(
     destination = DestinationConnection(destination)
 
     # create table if not exists in destination db
-    if not source.query:
-        create_table_if_not_exists(source, destination)
+    create_table_if_not_exists(source, destination)
 
+    if not source.query:
         if copy_table_comments:
             _copy_table_comments(source, destination)
 
