@@ -342,11 +342,11 @@ def query_first_row(source: SourceConnection):
 
     return metadata_query
 
-def create_table_from_query(
+def create_table_from_query_using_pandas(
     source: SourceConnection, destination: DestinationConnection
 ):
     """Create table at destination database based on source database query
-    if it not exists already.
+    if it not exists already using pandas to_sql method.
 
     Args:
         source (SourceConnection): A `SourceConnection` object containing
@@ -361,25 +361,16 @@ def create_table_from_query(
     source_eng.echo = True
 
     try:
-
         # Check if destination table already exist:
         inspector = reflection.Inspector.from_engine(destination_eng)
+
         if destination.table not in inspector.get_table_names(schema=destination.schema):
 
-            # Remove semicolon if exists
-            query = source.query[:-1] if source.query.endswith(';') else source.query
-
-            # Get the first row of the query
-            if source.conn_type in ('postgres', 'mysql', 'teiid'):
-                metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-            elif source.conn_type == 'mssql':
-                metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
-            else:
-                raise ValueError
+            query = query_first_row(source)
 
             # Use pandas to execute the SQL and assign to the df
             with source_eng.connect() as conn:
-                df_metadata = pd.read_sql(metadata_query, conn)
+                df_metadata = pd.read_sql(query, conn)
 
             # Drop rows (keep the columns only)
             df_metadata = df_metadata.drop(df_metadata.index)
@@ -406,11 +397,72 @@ def create_table_from_query(
 
     except ValueError as e:
         # Make sure that if table exists will not raise error
-        if 'already exists' in str(e):
+        if "already exists" in str(e):
             logging.info(f"{destination.table} already exists.")
         else:
             logging.error("Database engine not supported")
+            raise e
+
+def create_table_from_cursor(
+    source: SourceConnection, destination: DestinationConnection
+):
+    """Create table at destination database based on source database query
+    if it not exists already using database cursor (pyodbc, psycopg2, etc.).
+
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+        destination (DestinationConnection): A `DestinationConnection`
+            object containing the connection details for the destination
+            database.
+    """
+
+    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+    source_eng.echo = True
+
+    try:
+        query = query_first_row(source)
+
+        with DbConnection(source.conn_id) as source_conn:
+            with source_conn.cursor() as source_cur:
+                source_cur.execute(query)
+                df_source_columns = pd.DataFrame.from_records(
+                    ((col[0], col[1]) for col in source_cur.description),
+                    columns=["Name", "DataType"],
+                )
+                if not df_source_columns.empty:
+                    df_source_columns["converted_length"] = ""
+                    types_mapping = _load_yaml("config/types_mapping.yml")
+                    df_destination_columns = df_source_columns.apply(
+                        _convert_datatypes,
+                        args=(
+                            types_mapping,
+                            source.conn_type,
+                            destination.conn_type,
+                        ),
+                        axis=1,
+                    )
+                    table_ddl = _create_table_ddl(
+                        destination, df_destination_columns
+                    )
+                    _execute_query(destination.conn_id, table_ddl)
+                else:
+                    logging.warning("Source query metadata is empty")
+
+            source_cur.close()
+            source_conn.close()
+
+    except AssertionError as e:  # pylint: disable=invalid-name
+        logging.error(
+            "Cannot create the table automatically from this database."
+            "Please create the table manually to execute data copying."
+        )
         raise e
+
+    except ValueError as e:
+        logging.error("Database engine not supported")
+        raise e
+
 
 def create_table_if_not_exists(
     source: SourceConnection, destination: DestinationConnection
@@ -436,4 +488,4 @@ def create_table_if_not_exists(
         else:
             create_table_from_others(source, destination)
     else:
-        create_table_from_query(source, destination)
+        create_table_from_cursor(source, destination)
