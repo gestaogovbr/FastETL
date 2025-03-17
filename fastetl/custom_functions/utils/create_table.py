@@ -26,6 +26,7 @@ from sqlalchemy.exc import OperationalError
 from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.utils.db_connection import (
+    DbConnection,
     SourceConnection,
     DestinationConnection,
     get_hook_and_engine_by_provider,
@@ -69,7 +70,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             f"\"{row['Name']}\" {row['DataType']}{row['converted_length']}"
         )
 
-    sql_columns_str = ', '.join(sql_columns)
+    sql_columns_str = ", ".join(sql_columns)
 
     if destination.conn_type == "mssql":
         query = f"""
@@ -87,9 +88,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             );
         """
     else:
-        raise ValueError(
-            f"Connection type {destination.conn_type} no implemented yet."
-        )
+        raise ValueError(f"Connection type {destination.conn_type} no implemented yet.")
 
     return query
 
@@ -133,9 +132,7 @@ def _convert_datatypes(
             row["converted_length"] = f"({','.join(values)})"
 
             if "max_length" in types_node:
-                max_length, mapped_length = next(
-                    iter(types_node["max_length"].items())
-                )
+                max_length, mapped_length = next(iter(types_node["max_length"].items()))
                 # uses only the first length_column of a list to compare
                 # with column max_length
                 if row[length_columns[0]] >= max_length:
@@ -240,7 +237,6 @@ def create_table_from_teiid(
         _execute_query(destination.conn_id, table_ddl)
     else:
         logging.warning("Source table metadata from teiid is empty")
-
 
 
 def create_table_from_others(
@@ -377,7 +373,9 @@ def create_table_from_query(
                 index=False,
             )
 
-            logging.info(f"Destination table {destination.schema}.{destination.table} created successfully.")
+            logging.info(
+                f"Destination table {destination.schema}.{destination.table} created successfully."
+            )
 
     except AssertionError as e:  # pylint: disable=invalid-name
         logging.error(
