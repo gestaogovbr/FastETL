@@ -122,3 +122,165 @@ teiid:
     mssql:
       dtype:
         VARBINARY
+postgres:
+  16:
+    postgres:
+      dtype: BOOLEAN
+    mssql:
+      dtype: BIT
+  20:
+    postgres:
+      dtype: BIGINT
+    mssql:
+      dtype: BIGINT
+  21:
+    postgres:
+      dtype: SMALLINT
+    mssql:
+      dtype: SMALLINT
+  23:
+    postgres:
+      dtype: INTEGER
+    mssql:
+      dtype: INT
+  25:
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: TEXT
+  1043:
+    postgres:
+      dtype: VARCHAR
+    mssql:
+      dtype: NVARCHAR
+  1082:
+    postgres:
+      dtype: DATE
+    mssql:
+      dtype: DATE
+  1083:
+    postgres:
+      dtype: TIME
+    mssql:
+      dtype: TIME
+  1114:
+    postgres:
+      dtype: TIMESTAMP
+    mssql:
+      dtype: DATETIME
+  1184:
+    postgres:
+      dtype: TIMESTAMP WITH TZ
+    mssql:
+      dtype: DATETIME2
+  1700:
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: DECIMAL
+  701:
+    postgres:
+      dtype: DOUBLE PRECISION
+    mssql:
+      dtype: FLOAT
+  700:
+    postgres:
+      dtype: REAL
+    mssql:
+      dtype: FLOAT
+  17:
+    postgres:
+      dtype: BYTEA
+    mssql:
+      dtype: IMAGE
+  114:
+    postgres:
+      dtype: JSON
+    mssql:
+      dtype: TEXT
+  2950:
+    postgres:
+      dtype: UUID
+    mssql:
+      dtype: UNIQUEIDENTIFIER
+mssql:
+  34:
+    postgres:
+      dtype: BYTEA
+    mssql:
+      dtype: IMAGE
+  35:
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: TEXT
+  36:
+    postgres:
+      dtype: UUID
+    mssql:
+      dtype: UNIQUEIDENTIFIER
+  40:
+    postgres:
+      dtype: DATE
+    mssql:
+      dtype: DATE
+  41:
+    postgres:
+      dtype: TIME
+    mssql:
+      dtype: TIME
+  42:
+    postgres:
+      dtype: TIMESTAMP WITH TZ
+    mssql:
+      dtype: DATETIME2
+  52:
+    postgres:
+      dtype: SMALLINT
+    mssql:
+      dtype: SMALLINT
+  56:
+    postgres:
+      dtype: INTEGER
+    mssql:
+      dtype: INT
+  59:
+    postgres:
+      dtype: DOUBLE PRECISION
+    mssql:
+      dtype: FLOAT
+  60:
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: MONEY
+  61:
+    postgres:
+      dtype: TIMESTAMP
+    mssql:
+      dtype: DATETIME
+  106:
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: DECIMAL
+  108:
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: NUMERIC
+  127:
+    postgres:
+      dtype: BIGINT
+    mssql:
+      dtype: BIGINT
+  167:
+    postgres:
+      dtype: VARCHAR
+    mssql:
+      dtype: NVARCHAR
+  175:
+    postgres:
+      dtype: CHAR
+    mssql:
+      dtype: NCHAR
