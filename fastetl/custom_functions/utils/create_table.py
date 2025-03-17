@@ -321,6 +321,26 @@ def create_table_from_others(
             "Please create the table manually to execute data copying."
         )
         raise e
+def query_first_row(source: SourceConnection):
+    """Query to get the first row of a table or query.
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+    Returns:
+        str: SQL query to get the first row of a table or query.
+    """
+    # Remove semicolon if exists
+    query = source.query[:-1] if source.query.endswith(";") else source.query
+
+    # Get the first row of the query
+    if source.conn_type in ("postgres", "mysql", "teiid"):
+        metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+    elif source.conn_type == "mssql":
+        metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
+    else:
+        raise ValueError
+
+    return metadata_query
 
 def create_table_from_query(
     source: SourceConnection, destination: DestinationConnection
