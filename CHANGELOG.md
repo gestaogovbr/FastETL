@@ -4,6 +4,10 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
+
+## 0.0.43
+* Update DbtoDbOperator to create destination table from a query source
+
 ## 0.0.40
 * Update openmetadata-ingestion lib. It was affecting pydantic version.
 
