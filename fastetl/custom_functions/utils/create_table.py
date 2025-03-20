@@ -333,7 +333,7 @@ def query_first_row(source: SourceConnection):
     query = source.query[:-1] if source.query.endswith(";") else source.query
 
     # Get the first row of the query
-    if source.conn_type in ("postgres", "mysql", "teiid"):
+    if source.conn_type in ("postgres", "mysql"):
         metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
     elif source.conn_type == "mssql":
         metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
@@ -403,7 +403,7 @@ def create_table_from_query_using_pandas(
             logging.error("Database engine not supported")
             raise e
 
-def create_table_from_cursor(
+def create_table_from_query_using_cursor(
     source: SourceConnection, destination: DestinationConnection
 ):
     """Create table at destination database based on source database query
@@ -426,10 +426,18 @@ def create_table_from_cursor(
         with DbConnection(source.conn_id) as source_conn:
             with source_conn.cursor() as source_cur:
                 source_cur.execute(query)
-                df_source_columns = pd.DataFrame.from_records(
-                    ((col[0], col[1]) for col in source_cur.description),
-                    columns=["Name", "DataType"],
-                )
+                # Cursor using pyodbc
+                if source.conn_type in ("mssql", 'mysql'):
+                    df_source_columns = pd.DataFrame.from_records(
+                        ((col[0], col[1].__name__) for col in source_cur.description),
+                        columns=["Name", "DataType"],
+                    )
+                # Cursor using psycopg2
+                elif source.conn_type == "postgres":
+                    df_source_columns = pd.DataFrame.from_records(
+                        ((col[0], col[1]) for col in source_cur.description),
+                        columns=["Name", "DataType"],
+                    )
                 if not df_source_columns.empty:
                     df_source_columns["converted_length"] = ""
                     types_mapping = _load_yaml("config/types_mapping.yml")
@@ -448,9 +456,6 @@ def create_table_from_cursor(
                     _execute_query(destination.conn_id, table_ddl)
                 else:
                     logging.warning("Source query metadata is empty")
-
-            source_cur.close()
-            source_conn.close()
 
     except AssertionError as e:  # pylint: disable=invalid-name
         logging.error(
