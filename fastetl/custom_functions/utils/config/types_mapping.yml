@@ -147,12 +147,12 @@ postgres:
     postgres:
       dtype: TEXT
     mssql:
-      dtype: TEXT
+      dtype: NVARCHAR(MAX)
   1043:
     postgres:
       dtype: VARCHAR
     mssql:
-      dtype: NVARCHAR
+      dtype: NVARCHAR(MAX)
   1082:
     postgres:
       dtype: DATE
@@ -167,7 +167,7 @@ postgres:
     postgres:
       dtype: TIMESTAMP
     mssql:
-      dtype: DATETIME
+      dtype: DATETIME2
   1184:
     postgres:
       dtype: TIMESTAMP WITH TZ
@@ -204,83 +204,45 @@ postgres:
     mssql:
       dtype: UNIQUEIDENTIFIER
 mssql:
-  34:
+  int:
     postgres:
-      dtype: BYTEA
+      dtype:
+        INTEGER
     mssql:
-      dtype: IMAGE
-  35:
+      dtype:
+        INT
+  str:
     postgres:
-      dtype: TEXT
+      dtype:
+        TEXT
     mssql:
-      dtype: TEXT
-  36:
+      dtype:
+        NVARCHAR(MAX)
+  float:
     postgres:
-      dtype: UUID
+      dtype:
+        DOUBLE PRECISION
     mssql:
-      dtype: UNIQUEIDENTIFIER
-  40:
+      dtype:
+        FLOAT
+  bool:
     postgres:
-      dtype: DATE
+      dtype:
+        BOOLEAN
     mssql:
-      dtype: DATE
-  41:
+      dtype:
+        BIT
+  datetime:
     postgres:
-      dtype: TIME
+      dtype:
+        TIMESTAMP
     mssql:
-      dtype: TIME
-  42:
+      dtype:
+        DATETIME2
+  date:
     postgres:
-      dtype: TIMESTAMP WITH TZ
+      dtype:
+        DATE
     mssql:
-      dtype: DATETIME2
-  52:
-    postgres:
-      dtype: SMALLINT
-    mssql:
-      dtype: SMALLINT
-  56:
-    postgres:
-      dtype: INTEGER
-    mssql:
-      dtype: INT
-  59:
-    postgres:
-      dtype: DOUBLE PRECISION
-    mssql:
-      dtype: FLOAT
-  60:
-    postgres:
-      dtype: NUMERIC
-    mssql:
-      dtype: MONEY
-  61:
-    postgres:
-      dtype: TIMESTAMP
-    mssql:
-      dtype: DATETIME
-  106:
-    postgres:
-      dtype: NUMERIC
-    mssql:
-      dtype: DECIMAL
-  108:
-    postgres:
-      dtype: NUMERIC
-    mssql:
-      dtype: NUMERIC
-  127:
-    postgres:
-      dtype: BIGINT
-    mssql:
-      dtype: BIGINT
-  167:
-    postgres:
-      dtype: VARCHAR
-    mssql:
-      dtype: NVARCHAR
-  175:
-    postgres:
-      dtype: CHAR
-    mssql:
-      dtype: NCHAR
+      dtype:
+        DATE
