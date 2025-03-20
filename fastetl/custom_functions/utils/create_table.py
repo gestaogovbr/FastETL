@@ -487,10 +487,13 @@ def create_table_if_not_exists(
         to implement `create_table_from_others(source, destination)`
         scenarios (source table from databases mssql and postgres)
     """
-    if not source.query and source.table:
+    if not source.query:
         if source.conn_type == "teiid":
             create_table_from_teiid(source, destination)
         else:
             create_table_from_others(source, destination)
     else:
-        create_table_from_cursor(source, destination)
+        if source.conn_type == "teiid":
+            create_table_from_query_using_pandas(source, destination)
+        else:
+            create_table_from_query_using_cursor(source, destination)
