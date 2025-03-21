@@ -88,7 +88,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             );
         """
     else:
-        raise ValueError(f"Connection type {destination.conn_type} no implemented yet.")
+        raise ValueError(f"Connection type {destination.conn_type} not implemented yet.")
 
     return query
 
