@@ -110,6 +110,7 @@ class DbToDbOperator(BaseOperator):
         is_incremental: bool = False,
         table: str = None,
         date_column: str = None,
+        until_column: str = None,
         key_column: str = None,
         since_datetime: datetime = None,
         sync_exclusions: bool = False,
@@ -125,6 +126,7 @@ class DbToDbOperator(BaseOperator):
         self.is_incremental = is_incremental
         self.table = table
         self.date_column = date_column
+        self.until_column = until_column
         self.key_column = key_column
         self.since_datetime = since_datetime
         self.sync_exclusions = sync_exclusions
@@ -164,8 +166,10 @@ class DbToDbOperator(BaseOperator):
             hook.incremental_copy(
                 table=self.table,
                 date_column=self.date_column,
+                until_column=self.until_column,
                 key_column=self.key_column,
                 since_datetime=self.since_datetime,
+                until_datetime=self.until_datetime,
                 sync_exclusions=self.sync_exclusions,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
