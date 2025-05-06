@@ -373,6 +373,7 @@ def _build_filter_condition(
     date_column: str,
     key_column: str,
     since_datetime: datetime = None,
+    until_datetime: datetime = None,
 ) -> Tuple[str, str]:
     """Builds the filter (where) by obtaining the max() value from the table,
     distinguishing whether the column is the "date or update datetime"
@@ -401,7 +402,7 @@ def _build_filter_condition(
         Tuple[str, str]: Tuple containing the maximum value and the where
             condition of the SQL query.
     """
-
+    
     if since_datetime:
         max_value = since_datetime
     else:
@@ -420,6 +421,12 @@ def _build_filter_condition(
             max_value = max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
         where_condition = f"{date_column} > '{max_value}'"
+        if until_datetime:
+            if isinstance(until_datetime, date):
+                until_value = until_datetime.strftime("%Y-%m-%d")
+            elif isinstance(until_datetime, datetime):
+                until_value = until_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            where_condition += f" AND {date_column} <= '{until_value}'"        
     else:
         max_value = str(max_value)
         where_condition = f"{key_column} > '{max_value}'"
@@ -446,7 +453,7 @@ def _build_incremental_sqls(
             FROM {source_table} AS inc
             WHERE NOT EXISTS
             (SELECT 1 FROM {dest_table} AS atual
-                WHERE atual.{key_column} = inc.{key_column})
+                WHERE atual.{key_column} = inc.{key_column} )
             """
     return updates_sql, inserts_sql
 
@@ -462,6 +469,7 @@ def sync_db_2_db(
     increment_schema: str,
     select_sql: str = None,
     since_datetime: datetime = None,
+    until_datetime: datetime = None,
     sync_exclusions: bool = False,
     source_exc_schema: str = None,
     source_exc_table: str = None,
@@ -555,7 +563,7 @@ def sync_db_2_db(
         raise Exception("Destination table empty. Use full load option.")
 
     ref_value, where_condition = _build_filter_condition(
-        dest_hook, dest_table_name, date_column, key_column, since_datetime
+        dest_hook, dest_table_name, date_column, key_column, since_datetime, until_datetime
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
     logging.info("New or modified rows total: %d.", new_rows_count)
@@ -604,6 +612,7 @@ def sync_db_2_db(
         source_table=f"{inc_table_name}",
         key_column=key_column,
         column_list=col_list,
+        until_datetime=until_datetime
     )
 
     dest_hook.run(updates_sql)
