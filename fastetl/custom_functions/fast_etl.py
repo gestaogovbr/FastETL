@@ -11,6 +11,7 @@ import logging
 import pandas as pd
 import psycopg2
 
+from airflow.providers.common.sql.hooks.sql import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
@@ -368,12 +369,12 @@ def _table_rows_count(db_hook, table: str, where_condition: str = None):
 
 
 def _build_filter_condition(
-    dest_hook: MsSqlHook,
+    dest_hook: DbApiHook,
     table: str,
-    date_column: str,
-    key_column: str,
-    since_datetime: Optional[datetime] = None,
-    until_datetime: Optional[datetime] = None,
+    date_column: Optional[str] = None,
+    key_column: Optional[str] = None,
+    since_datetime: Optional[datetime|date] = None,
+    until_datetime: Optional[datetime|date] = None,
 ) -> Tuple[str, str]:
     """Builds the filter (where) by obtaining the max() value from the table,
     distinguishing whether the column is the "date or update datetime"
@@ -389,24 +390,39 @@ def _build_filter_condition(
                         key_column=key_column)
 
     Args:
-        dest_hook (str): destination database connection hook.
+        dest_hook (DbApiHook): destination database connection hook.
         table (str): table to be synchronized.
-        date_column (str): name of the column to be used for
-            identification of updated records.
-        key_column (str): name of the column to be used as a key in the
-            step of updating old records that have been updated on
-            source.
+        date_column (Optional[str]): name of the column to be used for
+            identification of updated records. Defaults to None.
+        key_column (Optional[str]): name of the column to be used as a
+            key in the step of updating old records that have been
+            updated on source. Defaults to None.
         since_datetime (Optional[datetime]): date/time from which the
-            filter will be built, instead of using the min() value from
-            the table. Defaults to None.
+            filter will be built, instead of using the max() value from
+            the destination table. Defaults to None.
         until_datetime (Optional[datetime]): date/time until which the
             filter will be built, instead of using the max() value from
-            the table. Defaults to None.
+            the source table. Defaults to None.
 
     Returns:
         Tuple[str, str]: Tuple containing the maximum value and the where
             condition of the SQL query.
     """
+
+    # arguments sanity checks
+    if key_column and (since_datetime or until_datetime):
+        raise ValueError(
+            'Either the "key_column" or the "since_datetime"/"until_datetime" '
+            "arguments must be used. The following were provided:\n"
+            f"key_column={key_column}\n"
+            f"since_datetime={since_datetime}\n"
+            f"until_datetime={until_datetime}"
+        )
+    if (since_datetime or until_datetime) and not date_column:
+        raise ValueError(
+            'When using "since_datetime" and/or "until_datetime" arguments '
+            "is provided date_column is mandatory, but none was provided."
+        )
 
     if since_datetime:
         max_value = since_datetime
@@ -433,6 +449,7 @@ def _build_filter_condition(
                 until_value = until_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             where_condition += f" AND {date_column} <= '{until_value}'"
     else:
+        # Incremental load based on the key_column
         max_value = str(max_value)
         where_condition = f"{key_column} > '{max_value}'"
 
