@@ -380,8 +380,8 @@ def _build_filter_condition(
     distinguishing whether the column is the "date or update datetime"
     (date_column) or another sequential number (key_column). For example,
     id, pk, etc. If the "since_datetime" and/or "until_datetime"
-    parameters are provided, they will be considered instead of the min()
-    and max() values from the table.
+    parameters are provided, they will be considered instead of the max()
+    values from the destination and source table respectively.
 
     Example:
         _build_filter_condition(dest_hook=dest_hook,
@@ -424,36 +424,39 @@ def _build_filter_condition(
             "is provided date_column is mandatory, but none was provided."
         )
 
-    if since_datetime:
-        max_value = since_datetime
-    else:
+    # get the maximum value already loaded at the desintation
+    max_loaded_value = None
+
+    if not since_datetime:
         if date_column:
             sql = f"SELECT MAX({date_column}) FROM {table}"
         else:
             sql = f"SELECT MAX({key_column}) FROM {table}"
-
-        max_value = dest_hook.get_first(sql)[0]
+        max_loaded_value = dest_hook.get_first(sql)[0]
 
     if date_column:
         # Checks if the format of the max_value field is date or datetime
-        if isinstance(max_value, date):
-            max_value = max_value.strftime("%Y-%m-%d")
-        elif isinstance(max_value, datetime):
-            max_value = max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        if isinstance(since_datetime, date):
+            first_value = since_datetime.isoformat()
+        elif isinstance(since_datetime, datetime):
+            first_value = since_datetime.isoformat(sep=" ")[:-3]
+        else:
+            first_value = str(max_loaded_value)
 
-        where_condition = f"{date_column} > '{max_value}'"
+        where_condition = f"{date_column} > '{first_value}'"
         if until_datetime:
             if isinstance(until_datetime, date):
-                until_value = until_datetime.strftime("%Y-%m-%d")
+                last_value = until_datetime.isoformat()
             elif isinstance(until_datetime, datetime):
-                until_value = until_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            where_condition += f" AND {date_column} <= '{until_value}'"
+                last_value = until_datetime.isoformat(sep=" ")[:-3]
+            else:
+                last_value = str(max_loaded_value)
+            where_condition += f" AND {date_column} <= '{last_value}'"
     else:
         # Incremental load based on the key_column
-        max_value = str(max_value)
-        where_condition = f"{key_column} > '{max_value}'"
+        where_condition = f"{key_column} > '{max_loaded_value}'"
 
-    return max_value, where_condition
+    return str(max_loaded_value), where_condition
 
 
 def _build_incremental_sqls(
