@@ -6,7 +6,7 @@ Copy tabular data between Postgres, MSSQL and MySQL.
 import time
 from datetime import datetime, date
 import re
-from typing import Union, Tuple, Dict
+from typing import Dict, Optional, Tuple, Union
 import logging
 import pandas as pd
 import psycopg2
@@ -372,14 +372,15 @@ def _build_filter_condition(
     table: str,
     date_column: str,
     key_column: str,
-    since_datetime: datetime = None,
-    until_datetime: datetime = None,
+    since_datetime: Optional[datetime] = None,
+    until_datetime: Optional[datetime] = None,
 ) -> Tuple[str, str]:
     """Builds the filter (where) by obtaining the max() value from the table,
     distinguishing whether the column is the "date or update datetime"
     (date_column) or another sequential number (key_column). For example,
-    id, pk, etc. If the "since_datetime" parameter is provided, it will
-    be considered instead of the max() value from the table.
+    id, pk, etc. If the "since_datetime" and/or "until_datetime"
+    parameters are provided, they will be considered instead of the min()
+    and max() values from the table.
 
     Example:
         _build_filter_condition(dest_hook=dest_hook,
@@ -395,14 +396,18 @@ def _build_filter_condition(
         key_column (str): name of the column to be used as a key in the
             step of updating old records that have been updated on
             source.
-        since_datetime (datetime): date/time from which the filter will be
-            built, instead of using the max() value from the table.
+        since_datetime (Optional[datetime]): date/time from which the
+            filter will be built, instead of using the min() value from
+            the table. Defaults to None.
+        until_datetime (Optional[datetime]): date/time until which the
+            filter will be built, instead of using the max() value from
+            the table. Defaults to None.
 
     Returns:
         Tuple[str, str]: Tuple containing the maximum value and the where
             condition of the SQL query.
     """
-    
+
     if since_datetime:
         max_value = since_datetime
     else:
@@ -426,7 +431,7 @@ def _build_filter_condition(
                 until_value = until_datetime.strftime("%Y-%m-%d")
             elif isinstance(until_datetime, datetime):
                 until_value = until_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            where_condition += f" AND {date_column} <= '{until_value}'"        
+            where_condition += f" AND {date_column} <= '{until_value}'"
     else:
         max_value = str(max_value)
         where_condition = f"{key_column} > '{max_value}'"
