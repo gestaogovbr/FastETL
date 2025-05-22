@@ -55,7 +55,6 @@ def build_dest_sqls(
         Union[str, str]: `insert` and `truncate` sql queries.
     """
 
-
     columns = ", ".join(f'"{col}"' for col in column_list)
 
     values = ", ".join([wildcard_symbol for i in range(len(column_list))])
@@ -96,6 +95,7 @@ def insert_df_to_db(
         if_exists="append",
         index=False,
     )
+
 
 def _copy_table_comments(
     source: SourceConnection, destination: DestinationConnection
@@ -588,7 +588,12 @@ def sync_db_2_db(
         raise Exception("Destination table empty. Use full load option.")
 
     ref_value, where_condition = _build_filter_condition(
-        dest_hook, dest_table_name, date_column, key_column, since_datetime, until_datetime
+        dest_hook,
+        dest_table_name,
+        date_column,
+        key_column,
+        since_datetime,
+        until_datetime,
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
     logging.info("New or modified rows total: %d.", new_rows_count)
@@ -601,7 +606,6 @@ def sync_db_2_db(
     select_diff = f"{select_sql} WHERE {where_condition}"
     if debug_mode:
         logging.info("SQL Query to mirror tables: %s", select_diff)
-
 
     copy_db_to_db(
         source={
@@ -637,7 +641,7 @@ def sync_db_2_db(
         source_table=f"{inc_table_name}",
         key_column=key_column,
         column_list=col_list,
-        until_datetime=until_datetime
+        until_datetime=until_datetime,
     )
 
     dest_hook.run(updates_sql)
@@ -662,9 +666,7 @@ def sync_db_2_db(
                 """
                 dest_hook.run(sql)
 
-        logging.info(
-            "Approximated number of rows deleted: %d", len(ids_to_del)
-        )
+        logging.info("Approximated number of rows deleted: %d", len(ids_to_del))
 
     # update table descriptions/comments
     if copy_table_comments:
