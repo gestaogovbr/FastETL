@@ -10,7 +10,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__PROVIDERS_ODBC__ALLOW_DRIVER_IN_EXTRA: 'true'
     volumes:
-      - ../tests:/opt/airflow/tests
+      - ../fastetl:/opt/airflow/fastetl/fastetl
+      - ../tests:/opt/airflow/fastetl/tests
       - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
     container_name: airflow
     ports:

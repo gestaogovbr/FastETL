@@ -23,9 +23,9 @@ USER airflow
 RUN pip install --no-cache-dir \
     apache-airflow[microsoft.mssql,odbc,samba] \
     apache-airflow-providers-common-sql \
-    pytest==6.2.5 \
-    /opt/airflow/fastetl \
-    && rm -rf /opt/airflow/fastetl
+    pytest==6.2.5
+
+RUN pip install -e /opt/airflow/fastetl
 
 RUN airflow db init
 

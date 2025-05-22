@@ -46,7 +46,7 @@ def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
 
 def _create_initial_table(table_name: str, hook: DbApiHook, db_provider: str) -> None:
     filename = f"create_{table_name}_{db_provider.lower()}.sql"
-    path = "/opt/airflow/tests/sql/init/"
+    path = "/opt/airflow/fastetl/tests/sql/init/"
     with open(os.path.join(path, filename), "r", encoding="utf-8") as file:
         sql_statement = file.read()
     hook.run(sql_statement.format(table_name=table_name))
