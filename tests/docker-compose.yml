@@ -23,7 +23,7 @@ services:
     restart: always
 
   postgres-source:
-    image: postgres:11.4-alpine
+    image: postgres:16-alpine
     restart: always
     container_name: postgres-source
     ports:
@@ -34,7 +34,7 @@ services:
       - POSTGRES_DB=db
 
   postgres-destination:
-    image: postgres:11.4-alpine
+    image: postgres:16-alpine
     restart: always
     container_name: postgres-destination
     ports:
