@@ -373,15 +373,16 @@ def _build_filter_condition(
     table: str,
     date_column: Optional[str] = None,
     key_column: Optional[str] = None,
-    since_datetime: Optional[datetime|date] = None,
-    until_datetime: Optional[datetime|date] = None,
+    since_datetime: Optional[Union[datetime, date]] = None,
+    until_datetime: Optional[Union[datetime, date]] = None,
 ) -> Tuple[str, str]:
-    """Builds the filter (where) by obtaining the max() value from the table,
-    distinguishing whether the column is the "date or update datetime"
-    (date_column) or another sequential number (key_column). For example,
-    id, pk, etc. If the "since_datetime" and/or "until_datetime"
-    parameters are provided, they will be considered instead of the max()
-    values from the destination and source table respectively.
+    """Builds the filter (where) by obtaining the max() values from the
+    tables, distinguishing whether the column is the "date or update
+    datetime" (date_column) or another sequential number (key_column).
+    For example, id, pk, etc. If the "since_datetime" and/or
+    "until_datetime" parameters are provided, they will be considered
+    instead of the max() values from the destination and source table
+    respectively.
 
     Example:
         _build_filter_condition(dest_hook=dest_hook,
@@ -408,24 +409,27 @@ def _build_filter_condition(
         Tuple[str, str]: Tuple containing the maximum value and the where
             condition of the SQL query.
     """
+    max_loaded_value = ""
 
     # arguments sanity checks
-    if key_column and (since_datetime or until_datetime):
+    if key_column == "":
+        raise ValueError("key_column cannot be an empty string")
+    if date_column == "":
+        raise ValueError("date_column cannot be an empty string")
+    if all(arg is None for arg in (key_column, date_column)):
+        return max_loaded_value, "1 = 1"
+    if key_column and date_column:
         raise ValueError(
-            'Either the "key_column" or the "since_datetime"/"until_datetime" '
-            "arguments must be used. The following were provided:\n"
+            'Either the "key_column" or the "date_column" arguments'
+            "must be used. The following were provided:\n"
             f"key_column={key_column}\n"
-            f"since_datetime={since_datetime}\n"
-            f"until_datetime={until_datetime}"
+            f"date_column={date_column}\n"
         )
     if (since_datetime or until_datetime) and not date_column:
         raise ValueError(
             'When using "since_datetime" and/or "until_datetime" arguments '
             "is provided date_column is mandatory, but none was provided."
         )
-
-    # get the maximum value already loaded at the desintation
-    max_loaded_value = None
 
     if not since_datetime:
         if date_column:
@@ -438,20 +442,17 @@ def _build_filter_condition(
         # Checks if the format of the max_value field is date or datetime
         if isinstance(since_datetime, date):
             first_value = since_datetime.isoformat()
-        elif isinstance(since_datetime, datetime):
-            first_value = since_datetime.isoformat(sep=" ")[:-3]
         else:
-            first_value = str(max_loaded_value)
+            if isinstance(max_loaded_value, date):
+                first_value = max_loaded_value.isoformat()
+            else:
+                first_value = str(max_loaded_value)
 
         where_condition = f"{date_column} > '{first_value}'"
         if until_datetime:
             if isinstance(until_datetime, date):
                 last_value = until_datetime.isoformat()
-            elif isinstance(until_datetime, datetime):
-                last_value = until_datetime.isoformat(sep=" ")[:-3]
-            else:
-                last_value = str(max_loaded_value)
-            where_condition += f" AND {date_column} <= '{last_value}'"
+                where_condition += f" AND {date_column} <= '{last_value}'"
     else:
         # Incremental load based on the key_column
         where_condition = f"{key_column} > '{max_loaded_value}'"
