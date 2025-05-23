@@ -6,6 +6,7 @@ Copy tabular data between Postgres, MSSQL and MySQL.
 import time
 from datetime import datetime, date
 import re
+from textwrap import dedent
 from typing import Dict, Optional, Tuple, Union
 import logging
 import pandas as pd
@@ -16,6 +17,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
 from fastetl.custom_functions.utils.db_connection import (
+    DatabaseType,
     DbConnection,
     SourceConnection,
     DestinationConnection,
@@ -31,7 +33,7 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
 from fastetl.custom_functions.utils.create_table import create_table_if_not_exists
 
 
-def build_select_sql(schema: str, table: str, column_list: str) -> str:
+def build_select_sql(schema: str, table: str, column_list: list[str]) -> str:
     """Generates sql `select` query based on schema, table and columns."""
 
     columns = ", ".join(f'"{col}"' for col in column_list)
@@ -371,8 +373,8 @@ def _table_rows_count(db_hook, table: str, where_condition: str = None):
 def _build_filter_condition(
     dest_hook: DbApiHook,
     table: str,
+    key_column: str,
     date_column: Optional[str] = None,
-    key_column: Optional[str] = None,
     since_datetime: Optional[Union[datetime, date]] = None,
     until_datetime: Optional[Union[datetime, date]] = None,
 ) -> Tuple[str, str]:
@@ -387,17 +389,17 @@ def _build_filter_condition(
     Example:
         _build_filter_condition(dest_hook=dest_hook,
                         table=table,
-                        date_column=date_column,
-                        key_column=key_column)
+                        key_column=key_column,
+                        date_column=date_column)
 
     Args:
         dest_hook (DbApiHook): destination database connection hook.
         table (str): table to be synchronized.
+        key_column (str): name of the column to be used as a
+            key in the step of updating old records that have been
+            updated on source.
         date_column (Optional[str]): name of the column to be used for
             identification of updated records. Defaults to None.
-        key_column (Optional[str]): name of the column to be used as a
-            key in the step of updating old records that have been
-            updated on source. Defaults to None.
         since_datetime (Optional[datetime]): date/time from which the
             filter will be built, instead of using the max() value from
             the destination table. Defaults to None.
@@ -412,19 +414,10 @@ def _build_filter_condition(
     max_loaded_value = ""
 
     # arguments sanity checks
-    if key_column == "":
-        raise ValueError("key_column cannot be an empty string")
+    if not key_column:
+        raise ValueError("key_column is mandatory")
     if date_column == "":
         raise ValueError("date_column cannot be an empty string")
-    if all(arg is None for arg in (key_column, date_column)):
-        return max_loaded_value, "1 = 1"
-    if key_column and date_column:
-        raise ValueError(
-            'Either the "key_column" or the "date_column" arguments'
-            "must be used. The following were provided:\n"
-            f"key_column={key_column}\n"
-            f"date_column={date_column}\n"
-        )
     if (since_datetime or until_datetime) and not date_column:
         raise ValueError(
             'When using "since_datetime" and/or "until_datetime" arguments '
@@ -461,26 +454,34 @@ def _build_filter_condition(
 
 
 def _build_incremental_sqls(
-    dest_table: str, source_table: str, key_column: str, column_list: str
-):
+    dest_table: str,
+    source_table: str,
+    key_column: str,
+    column_list: list[str],
+) -> Tuple[str, str]:
     """Builds the SQL queries that perform the updates of the source updated
     records since the last synchronization and the inserts of new records.
     """
 
     cols = ", ".join(f"{col} = orig.{col}" for col in column_list)
-    updates_sql = f"""
-            UPDATE {dest_table} SET {cols}
-            FROM {source_table} orig
-            WHERE orig.{key_column} = {dest_table}.{key_column}
-            """
+    updates_sql = dedent(
+        f"""
+        UPDATE {dest_table} SET {cols}
+        FROM {source_table} orig
+        WHERE orig.{key_column} = {dest_table}.{key_column}
+        """.strip()
+    )
     cols = ", ".join(column_list)
-    inserts_sql = f"""INSERT INTO {dest_table} ({cols})
-            SELECT {cols}
-            FROM {source_table} AS inc
-            WHERE NOT EXISTS
-            (SELECT 1 FROM {dest_table} AS atual
-                WHERE atual.{key_column} = inc.{key_column} )
-            """
+    inserts_sql = dedent(
+        f"""
+        INSERT INTO {dest_table} ({cols})
+        SELECT {cols}
+        FROM {source_table} AS inc
+        WHERE NOT EXISTS
+        (SELECT 1 FROM {dest_table} AS atual
+            WHERE atual.{key_column} = inc.{key_column} )
+        """.strip()
+    )
     return updates_sql, inserts_sql
 
 
@@ -488,18 +489,18 @@ def sync_db_2_db(
     source_conn_id: str,
     destination_conn_id: str,
     table: str,
-    date_column: str,
     key_column: str,
     source_schema: str,
     destination_schema: str,
-    increment_schema: str,
-    select_sql: str = None,
-    since_datetime: datetime = None,
-    until_datetime: datetime = None,
+    date_column: Optional[str] = None,
+    increment_schema: Optional[str] = None,
+    select_sql: Optional[str] = None,
+    since_datetime: Optional[datetime] = None,
+    until_datetime: Optional[datetime] = None,
     sync_exclusions: bool = False,
-    source_exc_schema: str = None,
-    source_exc_table: str = None,
-    source_exc_column: str = None,
+    source_exc_schema: Optional[str] = None,
+    source_exc_table: Optional[str] = None,
+    source_exc_column: Optional[str] = None,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
     debug_mode: bool = False,
@@ -519,10 +520,10 @@ def sync_db_2_db(
         sync_db_2_db(source_conn_id=SOURCE_CONN_ID,
                      destination_conn_id=DEST_CONN_ID,
                      table=table,
-                     date_column=date_column,
                      key_column=key_column,
                      source_schema=SOURCE_SCHEMA,
                      destination_schema=STG_SCHEMA,
+                     date_column=date_column,
                      chunksize=CHUNK_SIZE)
 
     Args:
@@ -530,12 +531,12 @@ def sync_db_2_db(
         destination_conn_id (str): Airflow connection string of the
             destination DB.
         table (str): Table to be synchronized
-        date_column (str): Name of the column to be used for
-            identifying updated records in the source.
         key_column (str): Name of the column to be used as a key in
             the update step of old records that have been updated in the source.
         source_schema (str): Schema of the DB in the source.
         destination_schema (str): schema of the DB in the destination.
+        date_column (str): Name of the column to be used for
+            identifying updated records in the source. Defaults to None.
         increment_schema (str): Schema in the database used for temporary
             tables. If this variable is None, the table will be created
             at the same destiny schema with the suffix '_alteracoes'
@@ -586,15 +587,15 @@ def sync_db_2_db(
     logging.info("Total rows at destination table: %d.", dest_rows_count)
     # If empty table, to avoid error on _build_filter_condition()
     if dest_rows_count == 0:
-        raise Exception("Destination table empty. Use full load option.")
+        raise ValueError("Destination table empty. Use full load option.")
 
     ref_value, where_condition = _build_filter_condition(
-        dest_hook,
-        dest_table_name,
-        date_column,
-        key_column,
-        since_datetime,
-        until_datetime,
+        dest_hook=dest_hook,
+        table=dest_table_name,
+        key_column=key_column,
+        date_column=date_column,
+        since_datetime=since_datetime,
+        until_datetime=until_datetime,
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
     logging.info("New or modified rows total: %d.", new_rows_count)
@@ -628,10 +629,15 @@ def sync_db_2_db(
 
     # rebuild index
     destination_conn_type = get_conn_type(destination_conn_id)
-    if destination_conn_type == "mssql":
+    if destination_conn_type == DatabaseType.MSSQL:
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
-    elif destination_conn_type == "postgres":
+    elif destination_conn_type == DatabaseType.POSTGRES:
         sql = f"REINDEX TABLE {inc_table_name}"
+    else:
+        raise NotImplementedError(
+            f"Suporte ao tipo de banco de dados {destination_conn_type}"
+            " não implementado."
+        )
     if debug_mode:
         logging.info("SQL Query to rebuild index: %s", sql)
     dest_hook.run(sql)
@@ -642,7 +648,6 @@ def sync_db_2_db(
         source_table=f"{inc_table_name}",
         key_column=key_column,
         column_list=col_list,
-        until_datetime=until_datetime,
     )
 
     dest_hook.run(updates_sql)
