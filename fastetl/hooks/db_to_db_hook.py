@@ -5,7 +5,7 @@ data following full and incremental strategies.
 """
 
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 from airflow.hooks.base import BaseHook
 
@@ -48,8 +48,8 @@ class DbToDbHook(BaseHook):
         table: str,
         date_column: str,
         key_column: str,
-        since_datetime: datetime = None,
-        until_datetime: datetime = None,
+        since_datetime: Optional[datetime] = None,
+        until_datetime: Optional[datetime] = None,
         sync_exclusions: bool = False,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
