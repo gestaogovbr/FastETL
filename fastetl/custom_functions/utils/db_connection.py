@@ -3,6 +3,7 @@ Class and functions to connect mssql, postgres and mysql databases with
 airflow hooks, sqlalchemy and pyodbc.
 """
 
+from enum import Enum
 from typing import Tuple
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine, URL
@@ -13,6 +14,15 @@ from airflow.providers.common.sql.hooks.sql import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
+
+class DatabaseType(str, Enum):
+    """
+    Enum class to represent the database type.
+    """
+    MSSQL = 'mssql'
+    POSTGRES = 'postgres'
+    MYSQL = 'mysql'
+    TEIID = 'teiid'
 
 
 class DbConnection:
@@ -200,14 +210,14 @@ def get_hook_and_engine_by_provider(conn_id: str) -> Tuple[DbApiHook, Engine]:
     return hook, engine
 
 
-def get_conn_type(conn_id: str) -> str:
+def get_conn_type(conn_id: str) -> DatabaseType:
     """Get connection type from Airflow connections.
 
     Args:
         conn_id (str): Airflow connection id.
 
     Returns:
-        str: type of connection. Ex: mssql, postgres, teiid, ...
+        DatabaseType: type of connection. Ex: mssql, postgres, teiid, ...
     """
 
     conn_values = BaseHook.get_connection(conn_id)
@@ -217,4 +227,4 @@ def get_conn_type(conn_id: str) -> str:
         else conn_values.conn_type
     )
 
-    return conn_type
+    return  DatabaseType(conn_type)
