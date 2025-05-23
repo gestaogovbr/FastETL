@@ -5,6 +5,15 @@ account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 
+## 0.1.0
+
+* In development environment using docker compose, install fastetl
+  as an editable package with a mounted volume, so edited code has
+  an effect when running tests
+* Add support for 'until_datetime' in incremental data sync
+* Reorder arguments to sync_db_2_db: date_column is optional
+
+
 ## 0.0.43
 * Update DbtoDbOperator to create destination table from a query source
 
