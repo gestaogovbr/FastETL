@@ -46,7 +46,7 @@ services:
       - POSTGRES_DB=db
 
   mssql-source:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql-source
     ports:
       - 1433:1433
@@ -55,7 +55,7 @@ services:
       ACCEPT_EULA: Y
 
   mssql-destination:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql-destination
     ports:
       - 1434:1433
