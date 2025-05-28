@@ -88,7 +88,6 @@ from typing import Dict
 
 from airflow.hooks.base import BaseHook
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.decorators import apply_defaults
 from metadata.generated.schema.entity.data.table import Table
 from metadata.ingestion.source.pipeline.airflow.lineage_parser import OMEntity
 
