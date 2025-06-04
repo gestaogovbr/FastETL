@@ -5,6 +5,11 @@ account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 
+## 0.2.0
+
+* Removed module bacen_STA_hook
+
+
 ## 0.1.0
 
 * In development environment using docker compose, install fastetl
