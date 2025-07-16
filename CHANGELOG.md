@@ -4,6 +4,9 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
+## 0.2.1
+* Fix bug error when creating table with CTE statement
+  [issue-213](https://github.com/gestaogovbr/FastETL/issues/213)
 
 ## 0.2.0
 
