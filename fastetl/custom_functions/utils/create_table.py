@@ -334,11 +334,19 @@ def query_first_row(source: SourceConnection):
 
     # Get the first row of the query
     if source.conn_type in ("postgres", "mysql"):
-        metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+        # If contains CTE expression, use it directly
+        if query.strip().lower().startswith("with"):
+            metadata_query = query + " LIMIT 1"
+        else:
+            metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
     elif source.conn_type == "mssql":
-        metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
+        # If contains CTE expression, use it directly without limiting
+        if query.strip().lower().startswith("with"):
+            metadata_query = query
+        else:
+            metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
     else:
-        raise ValueError
+        raise ValueError(f"Unsupported database engine: {source.conn_type}")
 
     return metadata_query
 
