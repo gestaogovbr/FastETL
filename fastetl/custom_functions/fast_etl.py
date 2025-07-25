@@ -32,6 +32,13 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
 )
 from fastetl.custom_functions.utils.create_table import create_table_if_not_exists
 
+def _format_date_value(value):
+    # Checks if is a date or datetime.
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    elif isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)
 
 def build_select_sql(schema: str, table: str, column_list: list[str]) -> str:
     """Generates sql `select` query based on schema, table and columns."""
@@ -375,8 +382,8 @@ def _build_filter_condition(
     table: str,
     key_column: str,
     date_column: Optional[str] = None,
-    since_datetime: Optional[Union[datetime, date]] = None,
-    until_datetime: Optional[Union[datetime, date]] = None,
+    since_datetime: Optional[datetime|date] = None,
+    until_datetime: Optional[datetime|date] = None,
 ) -> Tuple[str, str]:
     """Builds the filter (where) by obtaining the max() values from the
     tables, distinguishing whether the column is the "date or update
@@ -432,20 +439,16 @@ def _build_filter_condition(
         max_loaded_value = dest_hook.get_first(sql)[0]
 
     if date_column:
-        # Checks if the format of the max_value field is date or datetime
-        if isinstance(since_datetime, date):
-            first_value = since_datetime.isoformat()
+        if since_datetime:
+            first_value = _format_date_value(since_datetime)
         else:
-            if isinstance(max_loaded_value, date):
-                first_value = max_loaded_value.isoformat()
-            else:
-                first_value = str(max_loaded_value)
+            first_value = _format_date_value(max_loaded_value)
 
         where_condition = f"{date_column} > '{first_value}'"
+
         if until_datetime:
-            if isinstance(until_datetime, date):
-                last_value = until_datetime.isoformat()
-                where_condition += f" AND {date_column} <= '{last_value}'"
+            last_value = _format_date_value(until_datetime)
+            where_condition += f" AND {date_column} <= '{last_value}'"
     else:
         # Incremental load based on the key_column
         where_condition = f"{key_column} > '{max_loaded_value}'"
