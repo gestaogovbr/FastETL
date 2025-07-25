@@ -14,21 +14,19 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
         (
             "last_updated",
             "id",
-            datetime(2022, 1, 1),
+            date(2022, 1, 1),
             None,
-            "last_updated > '2022-01-01T00:00:00'",
+            "last_updated > '2022-01-01'",
         ),
-        # Test case 2: Using date_column and since_datetime with until_datetime
+        # Test case 2: Using date_column and since_datetime
         (
             "last_updated",
             "id",
-            datetime(2022, 1, 1),
-            datetime(2022, 1, 31),
-            "last_updated > '2022-01-01T00:00:00' AND last_updated <= '2022-01-31T00:00:00'",
+            datetime(2022, 1, 1, 12, 30, 0),
+            None,
+            "last_updated > '2022-01-01 12:30:00.000'",
         ),
-        # Test case 3: Using date_column with date type since_datetime
-        ("last_updated", "id", date(2022, 1, 1), None, "last_updated > '2022-01-01'"),
-        # Test case 4: Using date_column with date type since_datetime and until_datetime
+        # Test case 3: Using date_column and since_datetime with until_datetime
         (
             "last_updated",
             "id",
@@ -36,7 +34,25 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
             date(2022, 1, 31),
             "last_updated > '2022-01-01' AND last_updated <= '2022-01-31'",
         ),
-        # Test case 5: Using key_column without date_column
+        # Test case 4: Using date_column with date type since_datetime
+        ("last_updated", "id", date(2022, 1, 1), None, "last_updated > '2022-01-01'"),
+        # Test case 5: Using date_column with date type since_datetime and until_datetime
+        (
+            "last_updated",
+            "id",
+            date(2022, 1, 1),
+            date(2022, 1, 31),
+            "last_updated > '2022-01-01' AND last_updated <= '2022-01-31'",
+        ),
+       # Test case 6: Using date_column with datetime type since_datetime and until_datetime
+        (
+            "last_updated",
+            "id",
+            datetime(2022, 1, 1, 12,  30, 0),
+            datetime(2022, 1, 31, 12, 30, 0),
+            "last_updated > '2022-01-01 12:30:00.000' AND last_updated <= '2022-01-31 12:30:00.000'",
+        ),
+        # Test case 7: Using key_column without date_column
         (
             None,
             "id",
@@ -44,7 +60,7 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
             None,
             "id > '1'",
         ),
-        # Test case 7: Omitting all arguments
+        # Test case 8: Omitting all arguments
         (
             None,
             None,
@@ -52,7 +68,7 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
             None,
             ValueError,
         ),
-        # Test case 8: Using since_datetime without date_column
+        # Test case 9: Using since_datetime without date_column
         (
             None,
             "id",
@@ -60,7 +76,7 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
             None,
             ValueError,
         ),
-        # Test case 9: Using empty string for date_column
+        # Test case 10: Using empty string for date_column
         (
             "",
             "id",
@@ -68,7 +84,7 @@ from fastetl.custom_functions.fast_etl import _build_filter_condition
             None,
             ValueError,
         ),
-        # Test case 10: Using empty string for key_column
+        # Test case 11: Using empty string for key_column
         (
             None,
             "",
