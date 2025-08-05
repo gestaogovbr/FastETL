@@ -105,6 +105,7 @@ class DbToDbOperator(BaseOperator):
         destination: Dict[str, str],
         columns_to_ignore: list = None,
         destination_truncate: bool = True,
+        destination_create: bool = True,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
         is_incremental: bool = False,
@@ -121,6 +122,7 @@ class DbToDbOperator(BaseOperator):
         super().__init__(*args, **kwargs)
         self.columns_to_ignore = columns_to_ignore
         self.destination_truncate = destination_truncate
+        self.destination_create = destination_create
         self.chunksize = chunksize
         self.copy_table_comments = copy_table_comments
         self.is_incremental = is_incremental
@@ -179,6 +181,7 @@ class DbToDbOperator(BaseOperator):
             hook.full_copy(
                 columns_to_ignore=self.columns_to_ignore,
                 destination_truncate=self.destination_truncate,
+                destination_create=self.destination_create,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
                 debug_mode=self.debug_mode,
