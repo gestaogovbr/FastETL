@@ -325,9 +325,11 @@ def create_table_from_others(
 
 def query_first_row(source: SourceConnection):
     """Query to get the first row of a table or query.
+
     Args:
         source (SourceConnection): A `SourceConnection` object containing
             the connection details for the source database.
+
     Returns:
         str: SQL query to get the first row of a table or query.
     """
