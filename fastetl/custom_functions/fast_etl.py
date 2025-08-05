@@ -201,6 +201,7 @@ def copy_db_to_db(
     destination: Dict[str, str],
     columns_to_ignore: list = None,
     destination_truncate: bool = True,
+    destination_create: bool = True,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
     load_type: str = "full",
@@ -254,6 +255,9 @@ def copy_db_to_db(
 
         columns_to_ignore (list, optional): A list of column names to
             ignore during the copy operation. Defaults to None.
+        destination_create (bool, optional): If True, the destination
+            table may be created if it does not already exist. Defaults
+            to True.
         destination_truncate (bool, optional): If True, the destination
             table will be truncated before copying data. Defaults to True.
         chunksize (int, optional): The number of rows to copy at once.
@@ -276,8 +280,9 @@ def copy_db_to_db(
     source = SourceConnection(source)
     destination = DestinationConnection(destination)
 
-    # create table if not exists in destination db
-    create_table_if_not_exists(source, destination)
+    if destination_create:
+        # create table if not exists in destination db
+        create_table_if_not_exists(source, destination)
 
     if not source.query:
         if copy_table_comments:
