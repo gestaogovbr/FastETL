@@ -354,6 +354,7 @@ def query_first_row(source: SourceConnection):
 
     return metadata_query
 
+
 def create_table_from_query_using_pandas(
     source: SourceConnection, destination: DestinationConnection
 ):
