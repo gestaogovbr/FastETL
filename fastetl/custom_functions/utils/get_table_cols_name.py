@@ -2,13 +2,13 @@
 Get database table columns names.
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastetl.custom_functions.utils.db_connection import DbConnection
 
 
 def get_table_cols_name(
-    conn_id: str, schema: str, table: str, columns_to_ignore: List = None
+    conn_id: str, schema: str, table: str, columns_to_ignore: Optional[List[str]] = None
 ) -> List[str]:
     """
     Obtem a lista de colunas de uma tabela.

@@ -49,19 +49,21 @@ def build_select_sql(schema: str, table: str, column_list: list[str]) -> str:
 
 
 def build_dest_sqls(
-    destination: DestinationConnection, column_list: str, wildcard_symbol: str
-) -> Union[str, str]:
+    destination: DestinationConnection,
+    column_list: list[str],
+    wildcard_symbol: str
+) -> tuple[str, str]:
     """Generates sql `insert` and `truncate` queries.
 
     Args:
         destination (DestinationConnection): Object with connection
             details as schema and table.
-        column_list (str): Columns names to be inserted on destination.
+        column_list (list[str]): Columns names to be inserted on destination.
         wildcard_symbol (str): Db symbol for insert statement.
             E.g.: ? for mssql or %s to postgres
 
     Returns:
-        Union[str, str]: `insert` and `truncate` sql queries.
+        tuple[str, str]: `insert` and `truncate` sql queries.
     """
 
     columns = ", ".join(f'"{col}"' for col in column_list)
@@ -169,20 +171,25 @@ def save_load_info(
     load_info.save(rows_loaded)
 
 
-def get_schema_table_from_query(query: str) -> Union[str, str]:
+def get_schema_table_from_query(query: str) -> tuple[str, str]:
     """Returns schema and table from a sql query string statement.
 
     Args:
         query (str): sql query statement.
 
     Returns:
-        schema, table (Union[str, str]): schema and table strings.
+        schema, table (tuple[str, str]): schema and table strings.
     """
 
     # search pattern "from schema.table" on query
-    sintax_from = re.search(
+    search_result = re.search(
         r"from\s+\"?\'?\[?[\w|\.|\"|\'|\]|\]]*\"?\'?\]?", query, re.IGNORECASE
-    ).group()
+    )
+    if search_result is None:
+        raise ValueError("Invalid query")
+
+    # get schema and table from the search result
+    sintax_from = search_result.group()
     # split "from " from "schema.table" and get schema.table[-1]
     db_schema_table = sintax_from.split()[-1]
     # clean `[`, `]`, `"`, `'`
@@ -199,7 +206,7 @@ def get_schema_table_from_query(query: str) -> Union[str, str]:
 def copy_db_to_db(
     source: Dict[str, str],
     destination: Dict[str, str],
-    columns_to_ignore: list = None,
+    columns_to_ignore: Optional[list[str]] = None,
     destination_truncate: bool = True,
     destination_create: bool = True,
     chunksize: int = 1000,
@@ -277,25 +284,25 @@ def copy_db_to_db(
         logging.info("Debug mode on")
 
     # validate connections
-    source = SourceConnection(source)
-    destination = DestinationConnection(destination)
+    source_conn = SourceConnection(source)
+    destination_conn = DestinationConnection(destination)
 
     if destination_create:
         # create table if not exists in destination db
-        create_table_if_not_exists(source, destination)
+        create_table_if_not_exists(source_conn, destination_conn)
 
-    if not source.query:
+    if not source_conn.query:
         if copy_table_comments:
-            _copy_table_comments(source, destination)
+            _copy_table_comments(source_conn, destination_conn)
 
     # create connections
-    with DbConnection(source.conn_id) as source_conn:
-        with DbConnection(destination.conn_id) as destination_conn:
-            with source_conn.cursor() as source_cur:
-                with destination_conn.cursor() as destination_cur:
+    with DbConnection(source_conn.conn_id) as source_db_conn:
+        with DbConnection(destination_conn.conn_id) as destination_db_conn:
+            with source_db_conn.cursor() as source_cur:
+                with destination_db_conn.cursor() as destination_cur:
                     # Fast etl
-                    if destination.conn_type == "mssql":
-                        destination_conn.autocommit = False
+                    if destination_conn.conn_type == "mssql":
+                        destination_db_conn.autocommit = False
                         destination_cur.fast_executemany = True
                         wildcard_symbol = "?"
                     else:
@@ -303,36 +310,38 @@ def copy_db_to_db(
 
                     # generate queries
                     col_list = get_table_cols_name(
-                        conn_id=destination.conn_id,
-                        schema=destination.schema,
-                        table=destination.table,
+                        conn_id=destination_conn.conn_id,
+                        schema=destination_conn.schema,
+                        table=destination_conn.table,
                         columns_to_ignore=columns_to_ignore,
                     )
 
                     insert, truncate = build_dest_sqls(
-                        destination, col_list, wildcard_symbol
+                        destination=destination_conn,
+                        column_list=col_list,
+                        wildcard_symbol=wildcard_symbol,
                     )
-                    if source.query:
-                        select_sql = source.query
-                        source.schema, source.table = get_schema_table_from_query(
-                            source.query
+                    if source_conn.query:
+                        select_sql = source_conn.query
+                        source_conn.schema, source_conn.table = get_schema_table_from_query(
+                            source_conn.query
                         )
                     else:
                         select_sql = build_select_sql(
-                            schema=source.schema,
-                            table=source.table,
+                            schema=source_conn.schema,
+                            table=source_conn.table,
                             column_list=col_list,
                         )
 
                     # remove quotes for mysql compatibility
-                    if source.conn_type == "mysql":
+                    if source_conn.conn_type == "mysql":
                         select_sql = select_sql.replace('"', "")
                     if debug_mode:
                         logging.info("Query: %s", select_sql)
                     # truncate stage
                     if destination_truncate:
                         destination_cur.execute(truncate)
-                        if destination.conn_type == "mssql":
+                        if destination_conn.conn_type == "mssql":
                             destination_cur.commit()
 
                     # download data
@@ -343,11 +352,11 @@ def copy_db_to_db(
 
                     logging.info(
                         "Loading rows on table [%s].[%s]",
-                        destination.schema,
-                        destination.table,
+                        destination_conn.schema,
+                        destination_conn.table,
                     )
                     while rows:
-                        if destination.conn_type == "postgres":
+                        if destination_conn.conn_type == "postgres":
                             psycopg2.extras.execute_batch(destination_cur, insert, rows)
                         else:
                             destination_cur.executemany(insert, rows)
@@ -355,13 +364,13 @@ def copy_db_to_db(
                         rows = source_cur.fetchmany(chunksize)
                         logging.info("%d rows loaded!!", rows_inserted)
 
-                    destination_conn.commit()
+                    destination_db_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
 
                     save_load_info(
-                        source=source,
-                        destination=destination,
+                        source=source_conn,
+                        destination=destination_conn,
                         load_type=load_type,
                         rows_loaded=rows_inserted,
                     )
