@@ -333,8 +333,12 @@ def query_first_row(source: SourceConnection):
     Returns:
         str: SQL query to get the first row of a table or query.
     """
-    # Remove semicolon if exists
-    query = source.query[:-1] if source.query.endswith(";") else source.query
+    # Remove whitespace around query, if any
+    query = source.query.strip()
+
+    # Remove semicolon at the end, if present
+    if query.endswith(";"):
+        query = query[:-1]
 
     # Get the first row of the query
     if source.conn_type in ("postgres", "mysql"):
