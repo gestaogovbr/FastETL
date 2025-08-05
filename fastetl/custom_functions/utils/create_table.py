@@ -321,6 +321,8 @@ def create_table_from_others(
             "Please create the table manually to execute data copying."
         )
         raise e
+
+
 def query_first_row(source: SourceConnection):
     """Query to get the first row of a table or query.
     Args:
