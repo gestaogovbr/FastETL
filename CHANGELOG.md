@@ -4,13 +4,29 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
+
+## 0.2.3
+
+* Add a flag in DbtoDbOperator whether or not to attempt to create table
+  at the destination
+  ([issue-219](https://github.com/gestaogovbr/FastETL/issues/219))
+* Remove any surrounding whitespace from query before fetching first row
+  ([issue-217](https://github.com/gestaogovbr/FastETL/issues/217))
+* Use white space as a separator in datetimes instead of `T`
+  (for compatibility with teiid,
+  [issue-215](https://github.com/gestaogovbr/FastETL/issues/215))
+
+
 ## 0.2.2
+
 * Fix bug on Teiid when formatting date to isoformat
-  [issue-215](https://github.com/gestaogovbr/FastETL/issues/215)
+  ([issue-215](https://github.com/gestaogovbr/FastETL/issues/215))
+
 
 ## 0.2.1
 * Fix bug error when creating table with CTE statement
-  [issue-213](https://github.com/gestaogovbr/FastETL/issues/213)
+  ([issue-213](https://github.com/gestaogovbr/FastETL/issues/213))
+
 
 ## 0.2.0
 
