@@ -35,9 +35,9 @@ from fastetl.custom_functions.utils.create_table import create_table_if_not_exis
 def _format_date_value(value):
     # Checks if is a date or datetime.
     if isinstance(value, datetime):
-        return value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    elif isinstance(value, date):
-        return value.strftime("%Y-%m-%d")
+        return value.isoformat(sep=" ", timespec="milliseconds")
+    if isinstance(value, date):
+        return value.isoformat()
     return str(value)
 
 def build_select_sql(schema: str, table: str, column_list: list[str]) -> str:
