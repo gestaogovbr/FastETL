@@ -7,7 +7,7 @@ import time
 from datetime import datetime, date
 import re
 from textwrap import dedent
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 import logging
 import pandas as pd
 import psycopg2
