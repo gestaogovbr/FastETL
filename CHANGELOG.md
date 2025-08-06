@@ -4,6 +4,31 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
+## 0.2.2
+* Fix bug on Teiid when formatting date to isoformat
+  [issue-215](https://github.com/gestaogovbr/FastETL/issues/215)
+
+## 0.2.1
+* Fix bug error when creating table with CTE statement
+  [issue-213](https://github.com/gestaogovbr/FastETL/issues/213)
+
+## 0.2.0
+
+* Removed module bacen_STA_hook
+
+
+## 0.1.0
+
+* In development environment using docker compose, install fastetl
+  as an editable package with a mounted volume, so edited code has
+  an effect when running tests
+* Add support for 'until_datetime' in incremental data sync
+* Reorder arguments to sync_db_2_db: date_column is optional
+
+
+## 0.0.43
+* Update DbtoDbOperator to create destination table from a query source
+
 ## 0.0.40
 * Update openmetadata-ingestion lib. It was affecting pydantic version.
 

@@ -26,6 +26,7 @@ from sqlalchemy.exc import OperationalError
 from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.utils.db_connection import (
+    DbConnection,
     SourceConnection,
     DestinationConnection,
     get_hook_and_engine_by_provider,
@@ -69,7 +70,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             f"\"{row['Name']}\" {row['DataType']}{row['converted_length']}"
         )
 
-    sql_columns_str = ', '.join(sql_columns)
+    sql_columns_str = ", ".join(sql_columns)
 
     if destination.conn_type == "mssql":
         query = f"""
@@ -87,9 +88,7 @@ def _create_table_ddl(destination: DestinationConnection, df: pd.DataFrame):
             );
         """
     else:
-        raise ValueError(
-            f"Connection type {destination.conn_type} no implemented yet."
-        )
+        raise ValueError(f"Connection type {destination.conn_type} not implemented yet.")
 
     return query
 
@@ -133,9 +132,7 @@ def _convert_datatypes(
             row["converted_length"] = f"({','.join(values)})"
 
             if "max_length" in types_node:
-                max_length, mapped_length = next(
-                    iter(types_node["max_length"].items())
-                )
+                max_length, mapped_length = next(iter(types_node["max_length"].items()))
                 # uses only the first length_column of a list to compare
                 # with column max_length
                 if row[length_columns[0]] >= max_length:
@@ -242,7 +239,6 @@ def create_table_from_teiid(
         logging.warning("Source table metadata from teiid is empty")
 
 
-
 def create_table_from_others(
     source: SourceConnection, destination: DestinationConnection
 ):
@@ -292,6 +288,7 @@ def create_table_from_others(
     _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
     _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
     source_eng.echo = True
+
     try:
         insp = reflection.Inspector.from_engine(source_eng)
 
@@ -325,11 +322,175 @@ def create_table_from_others(
         )
         raise e
 
+
+def query_first_row(source: SourceConnection):
+    """Query to get the first row of a table or query.
+
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+
+    Returns:
+        str: SQL query to get the first row of a table or query.
+    """
+    # Remove whitespace around query, if any
+    query = source.query.strip()
+
+    # Remove semicolon at the end, if present
+    if query.endswith(";"):
+        query = query[:-1]
+
+    # Get the first row of the query
+    if source.conn_type in ("postgres", "mysql"):
+        # If contains CTE expression, use it directly
+        if query.strip().lower().startswith("with"):
+            metadata_query = query + " LIMIT 1"
+        else:
+            metadata_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+    elif source.conn_type == "mssql":
+        # If contains CTE expression, use it directly without limiting
+        if query.strip().lower().startswith("with"):
+            metadata_query = query
+        else:
+            metadata_query = f"SELECT TOP 1 subquery.* FROM ({query}) AS subquery"
+    else:
+        raise ValueError(f"Unsupported database engine: {source.conn_type}")
+
+    return metadata_query
+
+
+def create_table_from_query_using_pandas(
+    source: SourceConnection, destination: DestinationConnection
+):
+    """Create table at destination database based on source database query
+    if it not exists already using pandas to_sql method.
+
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+        destination (DestinationConnection): A `DestinationConnection`
+            object containing the connection details for the destination
+            database.
+    """
+
+    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+    _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
+    source_eng.echo = True
+
+    try:
+        # Check if destination table already exist:
+        inspector = reflection.Inspector.from_engine(destination_eng)
+
+        if destination.table not in inspector.get_table_names(schema=destination.schema):
+
+            query = query_first_row(source)
+
+            # Use pandas to execute the SQL and assign to the df
+            with source_eng.connect() as conn:
+                df_metadata = pd.read_sql(query, conn)
+
+            # Drop rows (keep the columns only)
+            df_metadata = df_metadata.drop(df_metadata.index)
+
+            # Create table in destination
+            df_metadata.to_sql(
+                destination.table,
+                destination_eng,
+                schema=destination.schema,
+                if_exists="replace",
+                index=False,
+            )
+
+            logging.info(
+                f"Destination table {destination.schema}.{destination.table} created successfully."
+            )
+
+    except AssertionError as e:  # pylint: disable=invalid-name
+        logging.error(
+            "Cannot create the table automatically from this database."
+            "Please create the table manually to execute data copying."
+        )
+        raise e
+
+    except ValueError as e:
+        # Make sure that if table exists will not raise error
+        if "already exists" in str(e):
+            logging.info(f"{destination.table} already exists.")
+        else:
+            logging.error("Database engine not supported")
+            raise e
+
+def create_table_from_query_using_cursor(
+    source: SourceConnection, destination: DestinationConnection
+):
+    """Create table at destination database based on source database query
+    if it not exists already using database cursor (pyodbc, psycopg2, etc.).
+
+    Args:
+        source (SourceConnection): A `SourceConnection` object containing
+            the connection details for the source database.
+        destination (DestinationConnection): A `DestinationConnection`
+            object containing the connection details for the destination
+            database.
+    """
+
+    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+    source_eng.echo = True
+
+    try:
+        query = query_first_row(source)
+
+        with DbConnection(source.conn_id) as source_conn:
+            with source_conn.cursor() as source_cur:
+                source_cur.execute(query)
+                # Cursor using pyodbc
+                if source.conn_type in ("mssql", 'mysql'):
+                    df_source_columns = pd.DataFrame.from_records(
+                        ((col[0], col[1].__name__) for col in source_cur.description),
+                        columns=["Name", "DataType"],
+                    )
+                # Cursor using psycopg2
+                elif source.conn_type == "postgres":
+                    df_source_columns = pd.DataFrame.from_records(
+                        ((col[0], col[1]) for col in source_cur.description),
+                        columns=["Name", "DataType"],
+                    )
+                if not df_source_columns.empty:
+                    df_source_columns["converted_length"] = ""
+                    types_mapping = _load_yaml("config/types_mapping.yml")
+                    df_destination_columns = df_source_columns.apply(
+                        _convert_datatypes,
+                        args=(
+                            types_mapping,
+                            source.conn_type,
+                            destination.conn_type,
+                        ),
+                        axis=1,
+                    )
+                    table_ddl = _create_table_ddl(
+                        destination, df_destination_columns
+                    )
+                    _execute_query(destination.conn_id, table_ddl)
+                else:
+                    logging.warning("Source query metadata is empty")
+
+    except AssertionError as e:  # pylint: disable=invalid-name
+        logging.error(
+            "Cannot create the table automatically from this database."
+            "Please create the table manually to execute data copying."
+        )
+        raise e
+
+    except ValueError as e:
+        logging.error("Database engine not supported")
+        raise e
+
+
 def create_table_if_not_exists(
     source: SourceConnection, destination: DestinationConnection
 ):
     """Create table at destination database based on source database table
-    if it not exsists already.
+    or source query if it not exists already in destination.
 
     Args:
         source (SourceConnection): A `SourceConnection` object containing
@@ -343,8 +504,13 @@ def create_table_if_not_exists(
         to implement `create_table_from_others(source, destination)`
         scenarios (source table from databases mssql and postgres)
     """
-
-    if source.conn_type == "teiid":
-        create_table_from_teiid(source, destination)
+    if not source.query:
+        if source.conn_type == "teiid":
+            create_table_from_teiid(source, destination)
+        else:
+            create_table_from_others(source, destination)
     else:
-        create_table_from_others(source, destination)
+        if source.conn_type == "teiid":
+            create_table_from_query_using_pandas(source, destination)
+        else:
+            create_table_from_query_using_cursor(source, destination)

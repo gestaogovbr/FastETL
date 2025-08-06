@@ -1,4 +1,4 @@
-FROM apache/airflow:2.6.3-python3.10
+FROM apache/airflow:2.10.5-python3.10
 
 USER root
 
@@ -20,12 +20,12 @@ RUN chown -R airflow /opt/airflow/fastetl
 
 USER airflow
 
-RUN pip install --no-cache-dir --user \
+RUN pip install --no-cache-dir \
     apache-airflow[microsoft.mssql,odbc,samba] \
     apache-airflow-providers-common-sql \
-    pytest==6.2.5 \
-    /opt/airflow/fastetl \
-    && rm -rf /opt/airflow/fastetl
+    pytest==6.2.5
+
+RUN pip install -e /opt/airflow/fastetl
 
 RUN airflow db init
 

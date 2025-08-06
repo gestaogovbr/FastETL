@@ -10,7 +10,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__PROVIDERS_ODBC__ALLOW_DRIVER_IN_EXTRA: 'true'
     volumes:
-      - ../tests:/opt/airflow/tests
+      - ../fastetl:/opt/airflow/fastetl/fastetl
+      - ../tests:/opt/airflow/fastetl/tests
       - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
     container_name: airflow
     ports:
@@ -23,7 +24,7 @@ services:
     restart: always
 
   postgres-source:
-    image: postgres:11.4-alpine
+    image: postgres:16-alpine
     restart: always
     container_name: postgres-source
     ports:
@@ -34,7 +35,7 @@ services:
       - POSTGRES_DB=db
 
   postgres-destination:
-    image: postgres:11.4-alpine
+    image: postgres:16-alpine
     restart: always
     container_name: postgres-destination
     ports:
@@ -45,7 +46,7 @@ services:
       - POSTGRES_DB=db
 
   mssql-source:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql-source
     ports:
       - 1433:1433
@@ -54,7 +55,7 @@ services:
       ACCEPT_EULA: Y
 
   mssql-destination:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: mssql-destination
     ports:
       - 1434:1433

@@ -77,6 +77,7 @@ Args:
     copy_table_comments (bool, optional): Whether to copy table comments
         from the source database to the destination database.
         Defaults to False.
+    debug_mode (bool, optional): Whether to enable debug mode. Defaults to False.
 
 Raises:
     TypeError: If `source` or `destination` is not a dictionary.
@@ -103,28 +104,34 @@ class DbToDbOperator(BaseOperator):
         destination: Dict[str, str],
         columns_to_ignore: list = None,
         destination_truncate: bool = True,
+        destination_create: bool = True,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
         is_incremental: bool = False,
         table: str = None,
         date_column: str = None,
+        until_column: str = None,
         key_column: str = None,
         since_datetime: datetime = None,
         sync_exclusions: bool = False,
+        debug_mode: bool = False,
         *args,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.columns_to_ignore = columns_to_ignore
         self.destination_truncate = destination_truncate
+        self.destination_create = destination_create
         self.chunksize = chunksize
         self.copy_table_comments = copy_table_comments
         self.is_incremental = is_incremental
         self.table = table
         self.date_column = date_column
+        self.until_column = until_column
         self.key_column = key_column
         self.since_datetime = since_datetime
         self.sync_exclusions = sync_exclusions
+        self.debug_mode = debug_mode
 
         # rename if schema_name is present
         if source.get("schema_name", None):
@@ -160,16 +167,21 @@ class DbToDbOperator(BaseOperator):
             hook.incremental_copy(
                 table=self.table,
                 date_column=self.date_column,
+                until_column=self.until_column,
                 key_column=self.key_column,
                 since_datetime=self.since_datetime,
+                until_datetime=self.until_datetime,
                 sync_exclusions=self.sync_exclusions,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
+                debug_mode=self.debug_mode,
             )
         else:
             hook.full_copy(
                 columns_to_ignore=self.columns_to_ignore,
                 destination_truncate=self.destination_truncate,
+                destination_create=self.destination_create,
                 chunksize=self.chunksize,
                 copy_table_comments=self.copy_table_comments,
+                debug_mode=self.debug_mode,
             )

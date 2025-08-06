@@ -122,3 +122,127 @@ teiid:
     mssql:
       dtype:
         VARBINARY
+postgres:
+  16:
+    postgres:
+      dtype: BOOLEAN
+    mssql:
+      dtype: BIT
+  20:
+    postgres:
+      dtype: BIGINT
+    mssql:
+      dtype: BIGINT
+  21:
+    postgres:
+      dtype: SMALLINT
+    mssql:
+      dtype: SMALLINT
+  23:
+    postgres:
+      dtype: INTEGER
+    mssql:
+      dtype: INT
+  25:
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  1043:
+    postgres:
+      dtype: VARCHAR
+    mssql:
+      dtype: NVARCHAR(MAX)
+  1082:
+    postgres:
+      dtype: DATE
+    mssql:
+      dtype: DATE
+  1083:
+    postgres:
+      dtype: TIME
+    mssql:
+      dtype: TIME
+  1114:
+    postgres:
+      dtype: TIMESTAMP
+    mssql:
+      dtype: DATETIME2
+  1184:
+    postgres:
+      dtype: TIMESTAMP WITH TZ
+    mssql:
+      dtype: DATETIME2
+  1700:
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: DECIMAL
+  701:
+    postgres:
+      dtype: DOUBLE PRECISION
+    mssql:
+      dtype: FLOAT
+  700:
+    postgres:
+      dtype: REAL
+    mssql:
+      dtype: FLOAT
+  17:
+    postgres:
+      dtype: BYTEA
+    mssql:
+      dtype: IMAGE
+  114:
+    postgres:
+      dtype: JSON
+    mssql:
+      dtype: TEXT
+  2950:
+    postgres:
+      dtype: UUID
+    mssql:
+      dtype: UNIQUEIDENTIFIER
+mssql:
+  int:
+    postgres:
+      dtype:
+        INTEGER
+    mssql:
+      dtype:
+        INT
+  str:
+    postgres:
+      dtype:
+        TEXT
+    mssql:
+      dtype:
+        NVARCHAR(MAX)
+  float:
+    postgres:
+      dtype:
+        DOUBLE PRECISION
+    mssql:
+      dtype:
+        FLOAT
+  bool:
+    postgres:
+      dtype:
+        BOOLEAN
+    mssql:
+      dtype:
+        BIT
+  datetime:
+    postgres:
+      dtype:
+        TIMESTAMP
+    mssql:
+      dtype:
+        DATETIME2
+  date:
+    postgres:
+      dtype:
+        DATE
+    mssql:
+      dtype:
+        DATE

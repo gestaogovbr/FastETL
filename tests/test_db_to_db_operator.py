@@ -46,7 +46,7 @@ def _try_drop_table(table_name: str, hook: DbApiHook) -> None:
 
 def _create_initial_table(table_name: str, hook: DbApiHook, db_provider: str) -> None:
     filename = f"create_{table_name}_{db_provider.lower()}.sql"
-    path = "/opt/airflow/tests/sql/init/"
+    path = "/opt/airflow/fastetl/tests/sql/init/"
     with open(os.path.join(path, filename), "r", encoding="utf-8") as file:
         sql_statement = file.read()
     hook.run(sql_statement.format(table_name=table_name))
@@ -74,7 +74,7 @@ def generate_transactions(
                 DESCRIPTIONS[randint(0, 3)],
                 randint(1, 1000000),
                 round(uniform(0, 1000), 2),
-                DATETIMES[randint(0, 3)].date(),
+                DATETIMES[randint(0, 3)],
                 ACTIVES[randint(0, 1)],
                 DATETIMES[randint(0, 3)],
             )
@@ -246,4 +246,134 @@ def test_full_table_replication_various_db_types(
         f"select * from {dest_table_name} order by id asc;"
     )
 
+    assert_frame_equal(source_data, dest_data)
+
+@pytest.mark.parametrize(
+    "source_conn_id, source_hook_cls, source_provider, dest_conn_id, "
+    "dest_hook_cls, destination_provider, has_dest_table",
+    [
+        (
+            "postgres-source-conn",
+            PostgresHook,
+            "postgres",
+            "postgres-destination-conn",
+            PostgresHook,
+            "postgres",
+            True,
+        ),
+        (
+            "mssql-source-conn",
+            OdbcHook,
+            "mssql",
+            "mssql-destination-conn",
+            OdbcHook,
+            "mssql",
+            True,
+        ),
+        (
+            "postgres-source-conn",
+            PostgresHook,
+            "postgres",
+            "mssql-destination-conn",
+            OdbcHook,
+            "mssql",
+            True,
+        ),
+        (
+            "mssql-source-conn",
+            OdbcHook,
+            "mssql",
+            "postgres-destination-conn",
+            PostgresHook,
+            "postgres",
+            True,
+        ),
+        (
+            "postgres-source-conn",
+            PostgresHook,
+            "postgres",
+            "postgres-destination-conn",
+            PostgresHook,
+            "postgres",
+            False,
+        ),
+        (
+            "mssql-source-conn",
+            OdbcHook,
+            "mssql",
+            "mssql-destination-conn",
+            OdbcHook,
+            "mssql",
+            False,
+        ),
+        (
+            "postgres-source-conn",
+            PostgresHook,
+            "postgres",
+            "mssql-destination-conn",
+            OdbcHook,
+            "mssql",
+            False,
+        ),
+        (
+            "mssql-source-conn",
+            OdbcHook,
+            "mssql",
+            "postgres-destination-conn",
+            PostgresHook,
+            "postgres",
+            False,
+        ),
+    ],
+)
+def test_query_replication_various_db_types(
+    source_conn_id: str,
+    source_hook_cls: DbApiHook,
+    source_provider: str,
+    dest_conn_id: str,
+    dest_hook_cls: DbApiHook,
+    destination_provider: str,
+    has_dest_table: bool,
+):
+    """Test query replication using various database types.
+
+    Args:
+        source_conn_id (str): source database connection id.
+        source_hook_cls (DbApiHook): source database hook class.
+        source_provider (str): source database provider.
+        dest_conn_id (str): destination database connection id.
+        dest_hook_cls (DbApiHook): destination database hook class.
+        destination_provider (str): destination database provider.
+        has_dest_table (bool): whether or not to create the table at
+            the destination database before testing replication.
+    """
+    source_table_name = "source_table"
+    dest_table_name = "destination_table"
+    source_hook = source_hook_cls(source_conn_id)
+    dest_hook = dest_hook_cls(dest_conn_id)
+
+    # Setup
+    _try_drop_table(source_table_name, source_hook)
+    _insert_initial_source_table_n_data(source_table_name, source_hook, source_provider)
+
+    _try_drop_table(dest_table_name, dest_hook)
+    if has_dest_table:
+        _create_initial_table(dest_table_name, dest_hook, destination_provider)
+
+    # Run
+    task_id = f"test_from_{source_provider}_query_to_{destination_provider}".lower()
+    subprocess.run(
+        ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], check=True
+    )
+
+    # Assert
+    source_data = source_hook.get_pandas_df(
+        f"select * from {source_table_name} order by id asc;"
+    )
+    dest_data = dest_hook.get_pandas_df(
+        f"select * from {dest_table_name} order by id asc;"
+    )
+
+    # Compare only the values (with df.to_sql impossible to ensure the same dtypes)
+    #np.array_equal(source_data.values,dest_data.values)
     assert_frame_equal(source_data, dest_data)

@@ -6,15 +6,18 @@ Copy tabular data between Postgres, MSSQL and MySQL.
 import time
 from datetime import datetime, date
 import re
-from typing import Union, Tuple, Dict
+from textwrap import dedent
+from typing import Dict, Optional, Tuple, Union
 import logging
 import pandas as pd
 import psycopg2
 
+from airflow.providers.common.sql.hooks.sql import DbApiHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
 from fastetl.custom_functions.utils.db_connection import (
+    DatabaseType,
     DbConnection,
     SourceConnection,
     DestinationConnection,
@@ -29,8 +32,15 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
 )
 from fastetl.custom_functions.utils.create_table import create_table_if_not_exists
 
+def _format_date_value(value):
+    # Checks if is a date or datetime.
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    elif isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)
 
-def build_select_sql(schema: str, table: str, column_list: str) -> str:
+def build_select_sql(schema: str, table: str, column_list: list[str]) -> str:
     """Generates sql `select` query based on schema, table and columns."""
 
     columns = ", ".join(f'"{col}"' for col in column_list)
@@ -39,21 +49,22 @@ def build_select_sql(schema: str, table: str, column_list: str) -> str:
 
 
 def build_dest_sqls(
-    destination: DestinationConnection, column_list: str, wildcard_symbol: str
-) -> Union[str, str]:
+    destination: DestinationConnection,
+    column_list: list[str],
+    wildcard_symbol: str
+) -> tuple[str, str]:
     """Generates sql `insert` and `truncate` queries.
 
     Args:
         destination (DestinationConnection): Object with connection
             details as schema and table.
-        column_list (str): Columns names to be inserted on destination.
+        column_list (list[str]): Columns names to be inserted on destination.
         wildcard_symbol (str): Db symbol for insert statement.
             E.g.: ? for mssql or %s to postgres
 
     Returns:
-        Union[str, str]: `insert` and `truncate` sql queries.
+        tuple[str, str]: `insert` and `truncate` sql queries.
     """
-
 
     columns = ", ".join(f'"{col}"' for col in column_list)
 
@@ -95,6 +106,7 @@ def insert_df_to_db(
         if_exists="append",
         index=False,
     )
+
 
 def _copy_table_comments(
     source: SourceConnection, destination: DestinationConnection
@@ -159,20 +171,25 @@ def save_load_info(
     load_info.save(rows_loaded)
 
 
-def get_schema_table_from_query(query: str) -> Union[str, str]:
+def get_schema_table_from_query(query: str) -> tuple[str, str]:
     """Returns schema and table from a sql query string statement.
 
     Args:
         query (str): sql query statement.
 
     Returns:
-        schema, table (Union[str, str]): schema and table strings.
+        schema, table (tuple[str, str]): schema and table strings.
     """
 
     # search pattern "from schema.table" on query
-    sintax_from = re.search(
+    search_result = re.search(
         r"from\s+\"?\'?\[?[\w|\.|\"|\'|\]|\]]*\"?\'?\]?", query, re.IGNORECASE
-    ).group()
+    )
+    if search_result is None:
+        raise ValueError("Invalid query")
+
+    # get schema and table from the search result
+    sintax_from = search_result.group()
     # split "from " from "schema.table" and get schema.table[-1]
     db_schema_table = sintax_from.split()[-1]
     # clean `[`, `]`, `"`, `'`
@@ -189,11 +206,13 @@ def get_schema_table_from_query(query: str) -> Union[str, str]:
 def copy_db_to_db(
     source: Dict[str, str],
     destination: Dict[str, str],
-    columns_to_ignore: list = None,
+    columns_to_ignore: Optional[list[str]] = None,
     destination_truncate: bool = True,
+    destination_create: bool = True,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
     load_type: str = "full",
+    debug_mode: bool = False,
 ) -> None:
     """Load data from Postgres/MSSQL/MySQL to Postgres/MSSQL using psycopg2
     and pyodbc copying all existing columns and rows in the destination
@@ -243,6 +262,9 @@ def copy_db_to_db(
 
         columns_to_ignore (list, optional): A list of column names to
             ignore during the copy operation. Defaults to None.
+        destination_create (bool, optional): If True, the destination
+            table may be created if it does not already exist. Defaults
+            to True.
         destination_truncate (bool, optional): If True, the destination
             table will be truncated before copying data. Defaults to True.
         chunksize (int, optional): The number of rows to copy at once.
@@ -252,30 +274,35 @@ def copy_db_to_db(
             Defaults to False.
         load_type (str, optional): The type of load to perform. Can be
             "full" or "incremental". Defaults to "full".
+        debug_mode (bool, optional): If True, the function will print
+            debugging information. Defaults to False.
 
     Return:
         None
     """
+    if debug_mode:
+        logging.info("Debug mode on")
 
     # validate connections
-    source = SourceConnection(source)
-    destination = DestinationConnection(destination)
+    source_conn = SourceConnection(source)
+    destination_conn = DestinationConnection(destination)
 
-    # create table if not exists in destination db
-    if not source.query:
-        create_table_if_not_exists(source, destination)
+    if destination_create:
+        # create table if not exists in destination db
+        create_table_if_not_exists(source_conn, destination_conn)
 
+    if not source_conn.query:
         if copy_table_comments:
-            _copy_table_comments(source, destination)
+            _copy_table_comments(source_conn, destination_conn)
 
     # create connections
-    with DbConnection(source.conn_id) as source_conn:
-        with DbConnection(destination.conn_id) as destination_conn:
-            with source_conn.cursor() as source_cur:
-                with destination_conn.cursor() as destination_cur:
+    with DbConnection(source_conn.conn_id) as source_db_conn:
+        with DbConnection(destination_conn.conn_id) as destination_db_conn:
+            with source_db_conn.cursor() as source_cur:
+                with destination_db_conn.cursor() as destination_cur:
                     # Fast etl
-                    if destination.conn_type == "mssql":
-                        destination_conn.autocommit = False
+                    if destination_conn.conn_type == "mssql":
+                        destination_db_conn.autocommit = False
                         destination_cur.fast_executemany = True
                         wildcard_symbol = "?"
                     else:
@@ -283,35 +310,38 @@ def copy_db_to_db(
 
                     # generate queries
                     col_list = get_table_cols_name(
-                        conn_id=destination.conn_id,
-                        schema=destination.schema,
-                        table=destination.table,
+                        conn_id=destination_conn.conn_id,
+                        schema=destination_conn.schema,
+                        table=destination_conn.table,
                         columns_to_ignore=columns_to_ignore,
                     )
 
                     insert, truncate = build_dest_sqls(
-                        destination, col_list, wildcard_symbol
+                        destination=destination_conn,
+                        column_list=col_list,
+                        wildcard_symbol=wildcard_symbol,
                     )
-                    if source.query:
-                        select_sql = source.query
-                        source.schema, source.table = get_schema_table_from_query(
-                            source.query
+                    if source_conn.query:
+                        select_sql = source_conn.query
+                        source_conn.schema, source_conn.table = get_schema_table_from_query(
+                            source_conn.query
                         )
                     else:
                         select_sql = build_select_sql(
-                            schema=source.schema,
-                            table=source.table,
+                            schema=source_conn.schema,
+                            table=source_conn.table,
                             column_list=col_list,
                         )
 
                     # remove quotes for mysql compatibility
-                    if source.conn_type == "mysql":
+                    if source_conn.conn_type == "mysql":
                         select_sql = select_sql.replace('"', "")
-
+                    if debug_mode:
+                        logging.info("Query: %s", select_sql)
                     # truncate stage
                     if destination_truncate:
                         destination_cur.execute(truncate)
-                        if destination.conn_type == "mssql":
+                        if destination_conn.conn_type == "mssql":
                             destination_cur.commit()
 
                     # download data
@@ -322,11 +352,11 @@ def copy_db_to_db(
 
                     logging.info(
                         "Loading rows on table [%s].[%s]",
-                        destination.schema,
-                        destination.table,
+                        destination_conn.schema,
+                        destination_conn.table,
                     )
                     while rows:
-                        if destination.conn_type == "postgres":
+                        if destination_conn.conn_type == "postgres":
                             psycopg2.extras.execute_batch(destination_cur, insert, rows)
                         else:
                             destination_cur.executemany(insert, rows)
@@ -334,13 +364,13 @@ def copy_db_to_db(
                         rows = source_cur.fetchmany(chunksize)
                         logging.info("%d rows loaded!!", rows_inserted)
 
-                    destination_conn.commit()
+                    destination_db_conn.commit()
 
                     delta_time = time.perf_counter() - start_time
 
                     save_load_info(
-                        source=source,
-                        destination=destination,
+                        source=source_conn,
+                        destination=destination_conn,
                         load_type=load_type,
                         rows_loaded=rows_inserted,
                     )
@@ -362,86 +392,113 @@ def _table_rows_count(db_hook, table: str, where_condition: str = None):
 
 
 def _build_filter_condition(
-    dest_hook: MsSqlHook,
+    dest_hook: DbApiHook,
     table: str,
-    date_column: str,
     key_column: str,
-    since_datetime: datetime = None,
+    date_column: Optional[str] = None,
+    since_datetime: Optional[datetime|date] = None,
+    until_datetime: Optional[datetime|date] = None,
 ) -> Tuple[str, str]:
-    """Builds the filter (where) by obtaining the max() value from the table,
-    distinguishing whether the column is the "date or update datetime"
-    (date_column) or another sequential number (key_column). For example,
-    id, pk, etc. If the "since_datetime" parameter is provided, it will
-    be considered instead of the max() value from the table.
+    """Builds the filter (where) by obtaining the max() values from the
+    tables, distinguishing whether the column is the "date or update
+    datetime" (date_column) or another sequential number (key_column).
+    For example, id, pk, etc. If the "since_datetime" and/or
+    "until_datetime" parameters are provided, they will be considered
+    instead of the max() values from the destination and source table
+    respectively.
 
     Example:
         _build_filter_condition(dest_hook=dest_hook,
                         table=table,
-                        date_column=date_column,
-                        key_column=key_column)
+                        key_column=key_column,
+                        date_column=date_column)
 
     Args:
-        dest_hook (str): destination database connection hook.
+        dest_hook (DbApiHook): destination database connection hook.
         table (str): table to be synchronized.
-        date_column (str): name of the column to be used for
-            identification of updated records.
-        key_column (str): name of the column to be used as a key in the
-            step of updating old records that have been updated on
-            source.
-        since_datetime (datetime): date/time from which the filter will be
-            built, instead of using the max() value from the table.
+        key_column (str): name of the column to be used as a
+            key in the step of updating old records that have been
+            updated on source.
+        date_column (Optional[str]): name of the column to be used for
+            identification of updated records. Defaults to None.
+        since_datetime (Optional[datetime]): date/time from which the
+            filter will be built, instead of using the max() value from
+            the destination table. Defaults to None.
+        until_datetime (Optional[datetime]): date/time until which the
+            filter will be built, instead of using the max() value from
+            the source table. Defaults to None.
 
     Returns:
         Tuple[str, str]: Tuple containing the maximum value and the where
             condition of the SQL query.
     """
+    max_loaded_value = ""
 
-    if since_datetime:
-        max_value = since_datetime
-    else:
+    # arguments sanity checks
+    if not key_column:
+        raise ValueError("key_column is mandatory")
+    if date_column == "":
+        raise ValueError("date_column cannot be an empty string")
+    if (since_datetime or until_datetime) and not date_column:
+        raise ValueError(
+            'When using "since_datetime" and/or "until_datetime" arguments '
+            "is provided date_column is mandatory, but none was provided."
+        )
+
+    if not since_datetime:
         if date_column:
             sql = f"SELECT MAX({date_column}) FROM {table}"
         else:
             sql = f"SELECT MAX({key_column}) FROM {table}"
-
-        max_value = dest_hook.get_first(sql)[0]
+        max_loaded_value = dest_hook.get_first(sql)[0]
 
     if date_column:
-        # Checks if the format of the max_value field is date or datetime
-        if isinstance(max_value, date):
-            max_value = max_value.strftime("%Y-%m-%d")
-        elif isinstance(max_value, datetime):
-            max_value = max_value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        if since_datetime:
+            first_value = _format_date_value(since_datetime)
+        else:
+            first_value = _format_date_value(max_loaded_value)
 
-        where_condition = f"{date_column} > '{max_value}'"
+        where_condition = f"{date_column} > '{first_value}'"
+
+        if until_datetime:
+            last_value = _format_date_value(until_datetime)
+            where_condition += f" AND {date_column} <= '{last_value}'"
     else:
-        max_value = str(max_value)
-        where_condition = f"{key_column} > '{max_value}'"
+        # Incremental load based on the key_column
+        where_condition = f"{key_column} > '{max_loaded_value}'"
 
-    return max_value, where_condition
+    return str(max_loaded_value), where_condition
 
 
 def _build_incremental_sqls(
-    dest_table: str, source_table: str, key_column: str, column_list: str
-):
+    dest_table: str,
+    source_table: str,
+    key_column: str,
+    column_list: list[str],
+) -> Tuple[str, str]:
     """Builds the SQL queries that perform the updates of the source updated
     records since the last synchronization and the inserts of new records.
     """
 
     cols = ", ".join(f"{col} = orig.{col}" for col in column_list)
-    updates_sql = f"""
-            UPDATE {dest_table} SET {cols}
-            FROM {source_table} orig
-            WHERE orig.{key_column} = {dest_table}.{key_column}
-            """
+    updates_sql = dedent(
+        f"""
+        UPDATE {dest_table} SET {cols}
+        FROM {source_table} orig
+        WHERE orig.{key_column} = {dest_table}.{key_column}
+        """.strip()
+    )
     cols = ", ".join(column_list)
-    inserts_sql = f"""INSERT INTO {dest_table} ({cols})
-            SELECT {cols}
-            FROM {source_table} AS inc
-            WHERE NOT EXISTS
-            (SELECT 1 FROM {dest_table} AS atual
-                WHERE atual.{key_column} = inc.{key_column})
-            """
+    inserts_sql = dedent(
+        f"""
+        INSERT INTO {dest_table} ({cols})
+        SELECT {cols}
+        FROM {source_table} AS inc
+        WHERE NOT EXISTS
+        (SELECT 1 FROM {dest_table} AS atual
+            WHERE atual.{key_column} = inc.{key_column} )
+        """.strip()
+    )
     return updates_sql, inserts_sql
 
 
@@ -449,19 +506,21 @@ def sync_db_2_db(
     source_conn_id: str,
     destination_conn_id: str,
     table: str,
-    date_column: str,
     key_column: str,
     source_schema: str,
     destination_schema: str,
-    increment_schema: str,
-    select_sql: str = None,
-    since_datetime: datetime = None,
+    date_column: Optional[str] = None,
+    increment_schema: Optional[str] = None,
+    select_sql: Optional[str] = None,
+    since_datetime: Optional[datetime] = None,
+    until_datetime: Optional[datetime] = None,
     sync_exclusions: bool = False,
-    source_exc_schema: str = None,
-    source_exc_table: str = None,
-    source_exc_column: str = None,
+    source_exc_schema: Optional[str] = None,
+    source_exc_table: Optional[str] = None,
+    source_exc_column: Optional[str] = None,
     chunksize: int = 1000,
     copy_table_comments: bool = False,
+    debug_mode: bool = False,
 ) -> None:
     """Performs incremental update on a table. The synchronization is
     performed in 3 steps.
@@ -478,10 +537,10 @@ def sync_db_2_db(
         sync_db_2_db(source_conn_id=SOURCE_CONN_ID,
                      destination_conn_id=DEST_CONN_ID,
                      table=table,
-                     date_column=date_column,
                      key_column=key_column,
                      source_schema=SOURCE_SCHEMA,
                      destination_schema=STG_SCHEMA,
+                     date_column=date_column,
                      chunksize=CHUNK_SIZE)
 
     Args:
@@ -489,12 +548,12 @@ def sync_db_2_db(
         destination_conn_id (str): Airflow connection string of the
             destination DB.
         table (str): Table to be synchronized
-        date_column (str): Name of the column to be used for
-            identifying updated records in the source.
         key_column (str): Name of the column to be used as a key in
             the update step of old records that have been updated in the source.
         source_schema (str): Schema of the DB in the source.
         destination_schema (str): schema of the DB in the destination.
+        date_column (str): Name of the column to be used for
+            identifying updated records in the source. Defaults to None.
         increment_schema (str): Schema in the database used for temporary
             tables. If this variable is None, the table will be created
             at the same destiny schema with the suffix '_alteracoes'
@@ -514,10 +573,14 @@ def sync_db_2_db(
         Default = 1000 rows
         copy_table_comments (bool): flag if includes on the execution the
             copy of table comments/descriptions. Default to False.
+        debug_mode (bool): flag to enable debug mode. Default to False.
 
     Return:
         None
     """
+
+    if debug_mode:
+        logging.info("Debug mode on")
 
     def _divide_chunks(l, n):
         """Split list into a new list with n lists"""
@@ -541,10 +604,15 @@ def sync_db_2_db(
     logging.info("Total rows at destination table: %d.", dest_rows_count)
     # If empty table, to avoid error on _build_filter_condition()
     if dest_rows_count == 0:
-        raise Exception("Destination table empty. Use full load option.")
+        raise ValueError("Destination table empty. Use full load option.")
 
     ref_value, where_condition = _build_filter_condition(
-        dest_hook, dest_table_name, date_column, key_column, since_datetime
+        dest_hook=dest_hook,
+        table=dest_table_name,
+        key_column=key_column,
+        date_column=date_column,
+        since_datetime=since_datetime,
+        until_datetime=until_datetime,
     )
     new_rows_count = _table_rows_count(source_hook, source_table_name, where_condition)
     logging.info("New or modified rows total: %d.", new_rows_count)
@@ -555,7 +623,8 @@ def sync_db_2_db(
             schema=source_schema, table=table, column_list=col_list
         )
     select_diff = f"{select_sql} WHERE {where_condition}"
-    logging.info("SQL Query to mirror tables: %s", select_diff)
+    if debug_mode:
+        logging.info("SQL Query to mirror tables: %s", select_diff)
 
     copy_db_to_db(
         source={
@@ -572,15 +641,22 @@ def sync_db_2_db(
         destination_truncate=True,
         chunksize=chunksize,
         load_type="incremental",
+        debug_mode=debug_mode,
     )
 
     # rebuild index
     destination_conn_type = get_conn_type(destination_conn_id)
-    if destination_conn_type == "mssql":
+    if destination_conn_type == DatabaseType.MSSQL:
         sql = f"ALTER INDEX ALL ON {inc_table_name} REBUILD"
-    elif destination_conn_type == "postgres":
+    elif destination_conn_type == DatabaseType.POSTGRES:
         sql = f"REINDEX TABLE {inc_table_name}"
-
+    else:
+        raise NotImplementedError(
+            f"Suporte ao tipo de banco de dados {destination_conn_type}"
+            " não implementado."
+        )
+    if debug_mode:
+        logging.info("SQL Query to rebuild index: %s", sql)
     dest_hook.run(sql)
 
     logging.info("Starting incremental load on table %s.", dest_table_name)
@@ -613,9 +689,7 @@ def sync_db_2_db(
                 """
                 dest_hook.run(sql)
 
-        logging.info(
-            "Approximated number of rows deleted: %d", len(ids_to_del)
-        )
+        logging.info("Approximated number of rows deleted: %d", len(ids_to_del))
 
     # update table descriptions/comments
     if copy_table_comments:

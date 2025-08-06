@@ -5,7 +5,7 @@ data following full and incremental strategies.
 """
 
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 from airflow.hooks.base import BaseHook
 
@@ -24,20 +24,25 @@ class DbToDbHook(BaseHook):
         self.source = source
         self.destination = destination
 
+
     def full_copy(
         self,
         columns_to_ignore: list = None,
-        destination_truncate: str = True,
+        destination_truncate: bool = True,
+        destination_create: bool = True,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
+        debug_mode: bool = False
     ):
         copy_db_to_db(
             source=self.source,
             destination=self.destination,
             columns_to_ignore=columns_to_ignore,
             destination_truncate=destination_truncate,
+            destination_create=destination_create,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
+            debug_mode=debug_mode,
         )
 
     def incremental_copy(
@@ -45,10 +50,12 @@ class DbToDbHook(BaseHook):
         table: str,
         date_column: str,
         key_column: str,
-        since_datetime: datetime = None,
+        since_datetime: Optional[datetime] = None,
+        until_datetime: Optional[datetime] = None,
         sync_exclusions: bool = False,
         chunksize: int = 1000,
         copy_table_comments: bool = False,
+        debug_mode: bool = False
     ):
         sync_db_2_db(
             source_conn_id=self.source["conn_id"],
@@ -64,7 +71,9 @@ class DbToDbHook(BaseHook):
             date_column=date_column,
             key_column=key_column,
             since_datetime=since_datetime,
+            until_datetime=until_datetime,
             sync_exclusions=sync_exclusions,
             chunksize=chunksize,
             copy_table_comments=copy_table_comments,
+            debug_mode=debug_mode,
         )
