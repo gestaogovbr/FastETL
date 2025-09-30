@@ -346,10 +346,7 @@ def copy_db_to_db(
 
                     # download data
                     start_time = time.perf_counter()
-                    if source_conn.conn_type == "mysql":
-                        source_cur = source_db_conn.execution_options(stream_results=True).execute(select_sql)
-                    else:
-                        source_cur.execute(select_sql)
+                    source_cur.execute(select_sql)
                     rows = source_cur.fetchmany(chunksize)
                     rows_inserted = 0
 
