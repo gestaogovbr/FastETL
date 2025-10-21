@@ -27,29 +27,9 @@ Args:
         incremental copying. Defaults to False.
 
     (both full and incremental)
-    source (Dict[str, str]): A dictionary containing the connection details
-        of the source database.
-
-        Depending on full or incremental copy, specific keys can be passed
-        on the source dictionary.
-
-        (full copy)
-        source full copy dict expects these keys:
-        * conn_id -> required
-        * schema and table -> required if `query` not provided.
-        * query -> required if `schema` and `table` not provided.
-
-        (incremental copy)
-        source incremental copy dict expects these keys:
-        * conn_id -> required
-        * schema -> required
-        * query -> optional
-        * source_exc_schema -> optional
-            Table `schema` name at the source where exclusions are recorded.
-        * source_exc_table -> optional
-            Table `table` name at the source where exclusions are recorded.
-        * source_exc_column -> optional
-            Table `column` name at the source where exclusions are recorded.
+    source (DBSource): A typed dictionary containing connection information
+        for the source database.
+        See documentation on fastetl.types.DBSource for details.
 
     destination (Dict[str, str]): A dictionary containing the connection
         details of the destination database.
@@ -93,6 +73,7 @@ from metadata.generated.schema.entity.data.table import Table
 from metadata.ingestion.source.pipeline.airflow.lineage_parser import OMEntity
 
 from fastetl.hooks.db_to_db_hook import DbToDbHook
+from fastetl.types import DBSource
 
 
 class DbToDbOperator(BaseOperator):
@@ -100,7 +81,7 @@ class DbToDbOperator(BaseOperator):
 
     def __init__(
         self,
-        source: Dict[str, str],
+        source: DBSource,
         destination: Dict[str, str],
         columns_to_ignore: list = None,
         destination_truncate: bool = True,

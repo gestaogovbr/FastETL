@@ -10,13 +10,14 @@ from typing import Dict, Optional
 from airflow.hooks.base import BaseHook
 
 from fastetl.custom_functions.fast_etl import copy_db_to_db, sync_db_2_db
+from fastetl.types import DBSource
 
 
 class DbToDbHook(BaseHook):
 
     def __init__(
         self,
-        source: Dict[str, str],
+        source: DBSource,
         destination: Dict[str, str],
         *args,
         **kwargs

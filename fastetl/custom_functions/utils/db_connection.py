@@ -15,6 +15,8 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 
+from fastetl.types import DBSource
+
 class DatabaseType(str, Enum):
     """
     Enum class to represent the database type.
@@ -77,12 +79,8 @@ class SourceConnection:
     required to read data from a database.
 
     Args:
-        conn_id (str): The unique identifier of the connection to use.
-        schema (str, optional): The name of the schema to use.
-            Default is None.
-        table (str, optional): The name of the table to use.
-            Default is None.
-        query (str, optional): The SQL query to use. Default is None.
+        params(DBSource): a typed dictionary of parameters about the
+            connection. For more info see fastetl.types.DBSource.
 
     Raises:
         ValueError: If `conn_id` is empty or if neither `query` nor
@@ -90,16 +88,20 @@ class SourceConnection:
 
     Attributes:
         conn_id (str): The unique identifier of the connection.
-        schema (str): The name of the schema.
-        table (str): The name of the table.
-        query (str): The SQL query.
+        schema (Optional[str]): The name of the schema.
+        table (Optional[str]): The name of the table.
+        query (Optional[str]): The SQL query.
         conn_type (str): Connection type/provider.
     """
 
-    def __init__(self, params: dict):
-        self.conn_id = params.get("conn_id", None)
+    def __init__(self, params: DBSource):
+        # The unique identifier of the connection to use.
+        self.conn_id = params.get("conn_id")
+        # The name of the schema to use. Default is None.
         self.schema = params.get("schema", None)
+        # The name of the table to use. Default is None.
         self.table = params.get("table", None)
+        # The SQL query string or template file to use. Default is None.
         self.query = params.get("query", None)
 
         if not self.conn_id:

@@ -31,6 +31,7 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
     get_table_cols_name,
 )
 from fastetl.custom_functions.utils.create_table import create_table_if_not_exists
+from fastetl.types import DBSource
 
 def _format_date_value(value):
     # Checks if is a date or datetime.
@@ -204,7 +205,7 @@ def get_schema_table_from_query(query: str) -> tuple[str, str]:
 
 
 def copy_db_to_db(
-    source: Dict[str, str],
+    source: DBSource,
     destination: Dict[str, str],
     columns_to_ignore: Optional[list[str]] = None,
     destination_truncate: bool = True,
@@ -238,16 +239,9 @@ def copy_db_to_db(
         )
 
     Args:
-        source (Dict[str, str]): A dictionary containing connection
+        source (DBSource): A typed dictionary containing connection
             information for the source database.
-            conn_id (str): Airflow connection id.
-            schema (str): Source information `schema` name.
-            table (str): Source information `table` name.
-
-            source dict expects these keys:
-                * conn_id -> required
-                * schema and table -> required if `query` not provided.
-                * query -> required if `schema` and `table` not provided.
+            See documentation on fastetl.types.DBSource for details.
 
         destination (Dict[str, str]): A dictionary containing connection
             information for the destination database.
