@@ -154,11 +154,40 @@ class DbToDbOperator(BaseOperator):
         )
         return fqn
 
+    def _is_query_a_file(self):
+        """Check if the provided query is a file path to a .sql file."""
+        if "\n" not in self.source["query"] and self.source["query"].endswith(".sql"):
+            # str looks like a file path
+            if not os.path.exists(self.source["query"]):
+                raise ValueError(f"Template file not found: {self.source['query']}")
+            return True
+        return False
+
+    def _read_and_expand_query_template(self, file_path: str, context):
+        """Read the file contents and expand the Jinja2 template, if it
+        is a template.
+
+        Args:
+            file_path (str): path to the SQL file or template.
+            context (_type_): Airflow's context for expanding a template.
+        """
+        with open(file_path, "r", encoding="utf-8") as f:
+            template = f.read()
+
+        # return the expanded Jinja2 template
+        params = self.source["query_params"]
+        context_with_params = {**context, **{"params": params}}
+        return self.render_template(template, context=context_with_params)
+
     def execute(self, context):
         hook = DbToDbHook(
             source=self.source,
             destination=self.destination,
         )
+        if self.source.get("query", False) and self._is_query_a_file():
+            self.source["query"] = self._read_and_expand_query_template(
+                self.source["query"], context
+            )
 
         if self.is_incremental:
             hook.incremental_copy(
