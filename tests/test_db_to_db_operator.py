@@ -4,6 +4,7 @@ import os
 import pytest
 from random import randint, uniform
 import subprocess
+import sys
 
 import pandas as pd
 from pandas._testing import assert_frame_equal
@@ -234,9 +235,21 @@ def test_full_table_replication_various_db_types(
 
     # Run
     task_id = f"test_from_{source_provider}_to_{destination_provider}".lower()
-    subprocess.run(
-        ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], check=True
-    )
+    try:
+        subprocess.run(
+            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], 
+            capture_output=True,  # Capture standard output and error
+            text=True,            # Return output as text instead of bytes
+            check=True            # Raise CalledProcessError for non-zero exit status
+        )
+    except subprocess.CalledProcessError as e:
+        # Print detailed error information
+        print("STDOUT:", e.stdout, file=sys.stderr)
+        print("STDERR:", e.stderr, file=sys.stderr)
+
+        # Raise a more informative exception
+        raise AssertionError(f"Airflow task failed with exit code {e.returncode}. "
+                             f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}") from e
 
     # Assert
     source_data = source_hook.get_pandas_df(
@@ -249,82 +262,32 @@ def test_full_table_replication_various_db_types(
     assert_frame_equal(source_data, dest_data)
 
 @pytest.mark.parametrize(
-    "source_conn_id, source_hook_cls, source_provider, dest_conn_id, "
-    "dest_hook_cls, destination_provider, has_dest_table",
+    "source_conn_id, source_hook_cls, source_provider",
     [
-        (
-            "postgres-source-conn",
-            PostgresHook,
-            "postgres",
-            "postgres-destination-conn",
-            PostgresHook,
-            "postgres",
-            True,
-        ),
-        (
-            "mssql-source-conn",
-            OdbcHook,
-            "mssql",
-            "mssql-destination-conn",
-            OdbcHook,
-            "mssql",
-            True,
-        ),
-        (
-            "postgres-source-conn",
-            PostgresHook,
-            "postgres",
-            "mssql-destination-conn",
-            OdbcHook,
-            "mssql",
-            True,
-        ),
-        (
-            "mssql-source-conn",
-            OdbcHook,
-            "mssql",
-            "postgres-destination-conn",
-            PostgresHook,
-            "postgres",
-            True,
-        ),
-        (
-            "postgres-source-conn",
-            PostgresHook,
-            "postgres",
-            "postgres-destination-conn",
-            PostgresHook,
-            "postgres",
-            False,
-        ),
-        (
-            "mssql-source-conn",
-            OdbcHook,
-            "mssql",
-            "mssql-destination-conn",
-            OdbcHook,
-            "mssql",
-            False,
-        ),
-        (
-            "postgres-source-conn",
-            PostgresHook,
-            "postgres",
-            "mssql-destination-conn",
-            OdbcHook,
-            "mssql",
-            False,
-        ),
-        (
-            "mssql-source-conn",
-            OdbcHook,
-            "mssql",
-            "postgres-destination-conn",
-            PostgresHook,
-            "postgres",
-            False,
-        ),
-    ],
+        ("postgres-source-conn", PostgresHook, "postgres"),
+        ("mssql-source-conn", OdbcHook, "mssql"),
+    ]
+)
+@pytest.mark.parametrize(
+    "dest_conn_id, dest_hook_cls, destination_provider",
+    [
+        ("postgres-destination-conn", PostgresHook, "postgres"),
+        ("mssql-destination-conn", OdbcHook, "mssql"),
+    ]
+)
+@pytest.mark.parametrize(
+    "has_dest_table",
+    [
+        False,
+        True,
+    ]
+)
+@pytest.mark.parametrize(
+    "use_query_template",
+    [
+        False,
+        True,
+    ]
 )
 def test_query_replication_various_db_types(
     source_conn_id: str,
@@ -334,6 +297,7 @@ def test_query_replication_various_db_types(
     dest_hook_cls: DbApiHook,
     destination_provider: str,
     has_dest_table: bool,
+    use_query_template: bool,
 ):
     """Test query replication using various database types.
 
@@ -346,6 +310,9 @@ def test_query_replication_various_db_types(
         destination_provider (str): destination database provider.
         has_dest_table (bool): whether or not to create the table at
             the destination database before testing replication.
+        use_query_template (bool): if True, use a template file
+            containing a templete for the SQL query. Otherwise, use
+            a query string.
     """
     source_table_name = "source_table"
     dest_table_name = "destination_table"
@@ -362,9 +329,21 @@ def test_query_replication_various_db_types(
 
     # Run
     task_id = f"test_from_{source_provider}_query_to_{destination_provider}".lower()
-    subprocess.run(
-        ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], check=True
-    )
+    try:
+        subprocess.run(
+            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], 
+            capture_output=True,  # Capture standard output and error
+            text=True,            # Return output as text instead of bytes
+            check=True            # Raise CalledProcessError for non-zero exit status
+        )
+    except subprocess.CalledProcessError as e:
+        # Print detailed error information
+        print("STDOUT:", e.stdout, file=sys.stderr)
+        print("STDERR:", e.stderr, file=sys.stderr)
+
+        # Raise a more informative exception
+        raise AssertionError(f"Airflow task failed with exit code {e.returncode}. "
+                             f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}") from e
 
     # Assert
     source_data = source_hook.get_pandas_df(
@@ -375,5 +354,4 @@ def test_query_replication_various_db_types(
     )
 
     # Compare only the values (with df.to_sql impossible to ensure the same dtypes)
-    #np.array_equal(source_data.values,dest_data.values)
     assert_frame_equal(source_data, dest_data)
