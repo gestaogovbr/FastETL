@@ -12,7 +12,7 @@ services:
     volumes:
       - ../fastetl:/opt/airflow/fastetl/fastetl
       - ../tests:/opt/airflow/fastetl/tests
-      - ../tests/test_dag.py:/opt/airflow/dags/test_dag.py
+      - ../tests/dags:/opt/airflow/dags
     container_name: airflow
     ports:
       - 8080:8080
