@@ -24,7 +24,7 @@ class DbToDbHook(BaseHook):
     ):
         self.source = source
         self.destination = destination
-
+        super().__init__(*args, **kwargs)
 
     def full_copy(
         self,
