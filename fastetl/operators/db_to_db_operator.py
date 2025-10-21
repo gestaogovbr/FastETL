@@ -116,10 +116,24 @@ class DbToDbOperator(BaseOperator):
         self.sync_exclusions = sync_exclusions
         self.debug_mode = debug_mode
 
-        # rename if schema_name is present
+        # rename if schema_name is present (backwards compatibility)
         if source.get("schema_name", None):
-            source["schema"] = source.pop("schema_name")
+            logging.warning(
+                'Deprecated parameter schema_name="%s" was provided in source. '
+                "Support will be removed in a future version. "
+                'Use schema="%s" instead.',
+                source["schema_name"],
+                source["schema_name"],
+            )
+            source["schema"] = source.get("schema_name")
         if destination.get("schema_name", None):
+            logging.warning(
+                'Deprecated parameter schema_name="%s" was provided in destination. '
+                "Support will be removed in a future version. "
+                'Use schema="%s" instead.',
+                destination["schema_name"],
+                destination["schema_name"],
+            )
             destination["schema"] = destination.pop("schema_name")
         self.source = source
         self.destination = destination
