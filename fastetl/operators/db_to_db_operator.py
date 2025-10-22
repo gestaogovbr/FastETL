@@ -67,6 +67,7 @@ from datetime import datetime
 import logging
 import os
 import random
+from types import SimpleNamespace
 from typing import Dict
 
 from airflow.hooks.base import BaseHook
@@ -162,20 +163,24 @@ class DbToDbOperator(BaseOperator):
             return True
         return False
 
-    def _read_and_expand_query_template(self, file_path: str, context):
+    def _read_and_expand_query_template(self, str_or_file_path: str, context):
         """Read the file contents and expand the Jinja2 template, if it
         is a template.
 
         Args:
-            file_path (str): path to the SQL file or template.
+            str_or_file_path (str): template string or path to the SQL file
+                template.
             context (_type_): Airflow's context for expanding a template.
         """
-        with open(file_path, "r", encoding="utf-8") as f:
-            template = f.read()
+        if self.source.get("query", False) and self._is_query_a_file():
+            with open(str_or_file_path, "r", encoding="utf-8") as f:
+                template = f.read()
+        else:
+            template = str_or_file_path
 
         # return the expanded Jinja2 template
-        params = self.source["query_params"]
-        context_with_params = {**context, **{"params": params}}
+        params = self.source.get("query_params", dict())
+        context_with_params = {**context, **{"params": SimpleNamespace(**params)}}
         return self.render_template(template, context=context_with_params)
 
     def execute(self, context):
@@ -183,10 +188,9 @@ class DbToDbOperator(BaseOperator):
             source=self.source,
             destination=self.destination,
         )
-        if self.source.get("query", False) and self._is_query_a_file():
-            self.source["query"] = self._read_and_expand_query_template(
-                self.source["query"], context
-            )
+        self.source["query"] = self._read_and_expand_query_template(
+            self.source["query"], context
+        )
 
         if self.is_incremental:
             hook.incremental_copy(
