@@ -38,12 +38,28 @@ with DAG(
                 },
             )
         for dest_conf in db_confs:
-            # Using query template files
+            # Using a query template file
+            DbToDbOperator(
+                task_id=f'test_from_{source_conf[0]}_query_template_file_to_{dest_conf[0]}',
+                source={
+                    "conn_id": f'{source_conf[0]}-source-conn',
+                    "query": os.path.join(SQL_PATH, "test_query.sql"),
+                    "query_params": {
+                        "schema": source_conf[1],
+                    },
+                },
+                destination={
+                    "conn_id": f'{dest_conf[0]}-destination-conn',
+                    "schema": dest_conf[1],
+                    "table": 'destination_table',
+                },
+            )
+            # Using a query template string
             DbToDbOperator(
                 task_id=f'test_from_{source_conf[0]}_query_template_to_{dest_conf[0]}',
                 source={
                     "conn_id": f'{source_conf[0]}-source-conn',
-                    "query": os.path.join(SQL_PATH, "test_query.sql"),
+                    "query": "SELECT * FROM {{ params.schema }}.source_table",
                     "query_params": {
                         "schema": source_conf[1],
                     },

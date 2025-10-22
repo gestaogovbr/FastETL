@@ -5,6 +5,7 @@ import pytest
 from random import randint, uniform
 import subprocess
 import sys
+from typing import Optional
 
 import pandas as pd
 from pandas._testing import assert_frame_equal
@@ -285,8 +286,9 @@ def test_full_table_replication_various_db_types(
 @pytest.mark.parametrize(
     "use_query_template",
     [
-        False,
-        True,
+        None,
+        "string",
+        "file",
     ]
 )
 def test_query_replication_various_db_types(
@@ -297,7 +299,7 @@ def test_query_replication_various_db_types(
     dest_hook_cls: DbApiHook,
     destination_provider: str,
     has_dest_table: bool,
-    use_query_template: bool,
+    use_query_template: Optional[str],
 ):
     """Test query replication using various database types.
 
@@ -310,14 +312,22 @@ def test_query_replication_various_db_types(
         destination_provider (str): destination database provider.
         has_dest_table (bool): whether or not to create the table at
             the destination database before testing replication.
-        use_query_template (bool): if True, use a template file
-            containing a templete for the SQL query. Otherwise, use
-            a query string.
+        use_query_template (Optional[str]):
+            None: use a simple query string.
+            "string": use a template string for the SQL query.
+            "file": use a path to a file containing the templete for
+                the query.
     """
     source_table_name = "source_table"
     dest_table_name = "destination_table"
     source_hook = source_hook_cls(source_conn_id)
     dest_hook = dest_hook_cls(dest_conn_id)
+    # maps the parameter to the part of the task id on test_dag
+    query_task_id_part = {
+        None: "query",  # task uses a simple query string
+        "string": "query_template",  # query template string
+        "file": "query_template_file"  # query template file
+    }
 
     # Setup
     _try_drop_table(source_table_name, source_hook)
@@ -328,7 +338,7 @@ def test_query_replication_various_db_types(
         _create_initial_table(dest_table_name, dest_hook, destination_provider)
 
     # Run
-    task_id = f"test_from_{source_provider}_query_to_{destination_provider}".lower()
+    task_id = f"test_from_{source_provider}_{query_task_id_part[use_query_template]}_to_{destination_provider}".lower()
     try:
         subprocess.run(
             ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], 
