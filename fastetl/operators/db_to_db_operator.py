@@ -79,7 +79,6 @@ from fastetl.types import DBSource
 
 
 class DbToDbOperator(BaseOperator):
-    template_fields = ["source"]
 
     def __init__(
         self,
