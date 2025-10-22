@@ -238,10 +238,10 @@ def test_full_table_replication_various_db_types(
     task_id = f"test_from_{source_provider}_to_{destination_provider}".lower()
     try:
         subprocess.run(
-            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], 
+            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"],
             capture_output=True,  # Capture standard output and error
-            text=True,            # Return output as text instead of bytes
-            check=True            # Raise CalledProcessError for non-zero exit status
+            text=True,  # Return output as text instead of bytes
+            check=True,  # Raise CalledProcessError for non-zero exit status
         )
     except subprocess.CalledProcessError as e:
         # Print detailed error information
@@ -249,8 +249,10 @@ def test_full_table_replication_various_db_types(
         print("STDERR:", e.stderr, file=sys.stderr)
 
         # Raise a more informative exception
-        raise AssertionError(f"Airflow task failed with exit code {e.returncode}. "
-                             f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}") from e
+        raise AssertionError(
+            f"Airflow task failed with exit code {e.returncode}. "
+            f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}"
+        ) from e
 
     # Assert
     source_data = source_hook.get_pandas_df(
@@ -262,26 +264,27 @@ def test_full_table_replication_various_db_types(
 
     assert_frame_equal(source_data, dest_data)
 
+
 @pytest.mark.parametrize(
     "source_conn_id, source_hook_cls, source_provider",
     [
         ("postgres-source-conn", PostgresHook, "postgres"),
         ("mssql-source-conn", OdbcHook, "mssql"),
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "dest_conn_id, dest_hook_cls, destination_provider",
     [
         ("postgres-destination-conn", PostgresHook, "postgres"),
         ("mssql-destination-conn", OdbcHook, "mssql"),
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "has_dest_table",
     [
         False,
         True,
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "use_query_template",
@@ -289,7 +292,7 @@ def test_full_table_replication_various_db_types(
         None,
         "string",
         "file",
-    ]
+    ],
 )
 def test_query_replication_various_db_types(
     source_conn_id: str,
@@ -326,7 +329,7 @@ def test_query_replication_various_db_types(
     query_task_id_part = {
         None: "query",  # task uses a simple query string
         "string": "query_template",  # query template string
-        "file": "query_template_file"  # query template file
+        "file": "query_template_file",  # query template file
     }
 
     # Setup
@@ -341,10 +344,10 @@ def test_query_replication_various_db_types(
     task_id = f"test_from_{source_provider}_{query_task_id_part[use_query_template]}_to_{destination_provider}".lower()
     try:
         subprocess.run(
-            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"], 
+            ["airflow", "tasks", "test", "test_dag", task_id, "2021-01-01"],
             capture_output=True,  # Capture standard output and error
-            text=True,            # Return output as text instead of bytes
-            check=True            # Raise CalledProcessError for non-zero exit status
+            text=True,  # Return output as text instead of bytes
+            check=True,  # Raise CalledProcessError for non-zero exit status
         )
     except subprocess.CalledProcessError as e:
         # Print detailed error information
@@ -352,8 +355,10 @@ def test_query_replication_various_db_types(
         print("STDERR:", e.stderr, file=sys.stderr)
 
         # Raise a more informative exception
-        raise AssertionError(f"Airflow task failed with exit code {e.returncode}. "
-                             f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}") from e
+        raise AssertionError(
+            f"Airflow task failed with exit code {e.returncode}. "
+            f"STDOUT: {e.stdout}\nSTDERR: {e.stderr}"
+        ) from e
 
     # Assert
     source_data = source_hook.get_pandas_df(
