@@ -184,12 +184,20 @@ class DbToDbOperator(BaseOperator):
         return self.render_template(template, context=context_with_params)
 
     def execute(self, context):
+        """Execute the operator.
+
+        Args:
+            context (dict): Airflow's context.
+        """
+        # if query is provided, check and process template logic
+        if self.source.get("query", False):
+            self.source["query"] = self._read_and_expand_query_template(
+                self.source["query"], context
+            )
+
         hook = DbToDbHook(
             source=self.source,
             destination=self.destination,
-        )
-        self.source["query"] = self._read_and_expand_query_template(
-            self.source["query"], context
         )
 
         if self.is_incremental:
