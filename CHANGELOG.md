@@ -5,6 +5,15 @@ account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 
+## 0.2.6
+
+* Implement support for Jinja templates and template files in source
+  query argument of `DbToDbOperator`
+  ([issue-225](https://github.com/gestaogovbr/FastETL/issues/225))
+
+Note: skipped version numbers 0.2.4 and 0.2.5.
+
+
 ## 0.2.3
 
 * Add a flag in DbtoDbOperator whether or not to attempt to create table
