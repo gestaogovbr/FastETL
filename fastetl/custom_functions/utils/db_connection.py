@@ -15,7 +15,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 
-from fastetl.types import DBSource
+from fastetl.data_types import DBSource
 
 class DatabaseType(str, Enum):
     """
@@ -80,7 +80,7 @@ class SourceConnection:
 
     Args:
         params(DBSource): a typed dictionary of parameters about the
-            connection. For more info see fastetl.types.DBSource.
+            connection. For more info see fastetl.data_types.DBSource.
 
     Raises:
         ValueError: If `conn_id` is empty or if neither `query` nor
