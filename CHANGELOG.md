@@ -5,6 +5,15 @@ account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 
+## 0.2.7
+
+* Rename new module to avoid possible conflict with Python standard
+  library ([issue-227](https://github.com/gestaogovbr/FastETL/issues/227))
+  https://github.com/gestaogovbr/FastETL/pull/229
+* Refactor query replication tests for performance
+  ([issue-228](https://github.com/gestaogovbr/FastETL/issues/228))
+
+
 ## 0.2.6
 
 * Implement support for Jinja templates and template files in source
