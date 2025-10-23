@@ -29,7 +29,7 @@ Args:
     (both full and incremental)
     source (DBSource): A typed dictionary containing connection information
         for the source database.
-        See documentation on fastetl.types.DBSource for details.
+        See documentation on fastetl.data_types.DBSource for details.
 
     destination (Dict[str, str]): A dictionary containing the connection
         details of the destination database.
@@ -76,7 +76,7 @@ from metadata.generated.schema.entity.data.table import Table
 from metadata.ingestion.source.pipeline.airflow.lineage_parser import OMEntity
 
 from fastetl.hooks.db_to_db_hook import DbToDbHook
-from fastetl.types import DBSource
+from fastetl.data_types import DBSource
 
 
 class DbToDbOperator(BaseOperator):

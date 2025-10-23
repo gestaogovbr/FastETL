@@ -31,7 +31,7 @@ from fastetl.custom_functions.utils.get_table_cols_name import (
     get_table_cols_name,
 )
 from fastetl.custom_functions.utils.create_table import create_table_if_not_exists
-from fastetl.types import DBSource
+from fastetl.data_types import DBSource
 
 def _format_date_value(value):
     # Checks if is a date or datetime.
@@ -241,7 +241,7 @@ def copy_db_to_db(
     Args:
         source (DBSource): A typed dictionary containing connection
             information for the source database.
-            See documentation on fastetl.types.DBSource for details.
+            See documentation on fastetl.data_types.DBSource for details.
 
         destination (Dict[str, str]): A dictionary containing connection
             information for the destination database.
