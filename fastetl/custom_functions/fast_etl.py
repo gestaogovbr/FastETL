@@ -374,7 +374,7 @@ def copy_db_to_db(
                     logging.info("Rows per second: %f", rows_inserted / delta_time)
 
 
-def _table_rows_count(db_hook, table: str, where_condition: str = None):
+def _table_rows_count(db_hook, table: str, where_condition: Optional[str] = None):
     """Calculates the number of rows in the table and uses the condition
     (where_condition) if passed as a parameter.
     """
