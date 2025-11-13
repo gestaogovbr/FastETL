@@ -341,7 +341,7 @@ def query_first_row(source: SourceConnection):
         query = query[:-1]
 
     # Get the first row of the query
-    if source.conn_type in ("postgres", "mysql"):
+    if source.conn_type in ("postgres", "mysql", "teiid"):
         # If contains CTE expression, use it directly
         if query.strip().lower().startswith("with"):
             metadata_query = query + " LIMIT 1"
@@ -450,7 +450,7 @@ def create_table_from_query_using_cursor(
                         columns=["Name", "DataType"],
                     )
                 # Cursor using psycopg2
-                elif source.conn_type == "postgres":
+                elif source.conn_type in ("postgres", "teiid"):
                     df_source_columns = pd.DataFrame.from_records(
                         ((col[0], col[1]) for col in source_cur.description),
                         columns=["Name", "DataType"],
