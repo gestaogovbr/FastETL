@@ -370,8 +370,8 @@ def copy_db_to_db(
                     )
 
                     logging.info("Load time: %f seconds", delta_time)
-                    logging.info("Rows insertes: %d", rows_inserted)
-                    logging.info("lines by second: %f", rows_inserted / delta_time)
+                    logging.info("Rows inserted: %d", rows_inserted)
+                    logging.info("Rows per second: %f", rows_inserted / delta_time)
 
 
 def _table_rows_count(db_hook, table: str, where_condition: str = None):
