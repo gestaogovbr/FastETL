@@ -5,6 +5,12 @@ account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
 
+## 0.2.8
+
+* Restore support for teiid driver as a source for incremental loads
+  ([issue-232](https://github.com/gestaogovbr/FastETL/issues/232))
+
+
 ## 0.2.7
 
 * Rename new module to avoid possible conflict with Python standard
