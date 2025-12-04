@@ -373,7 +373,7 @@ def create_table_from_query_using_pandas(
             database.
     """
 
-    _, source_eng = get_hook_and_engine_by_provider(source.conn_id)
+    source_hook, source_eng = get_hook_and_engine_by_provider(source.conn_id)
     _, destination_eng = get_hook_and_engine_by_provider(destination.conn_id)
     source_eng.echo = True
 
@@ -386,8 +386,7 @@ def create_table_from_query_using_pandas(
             query = query_first_row(source)
 
             # Use pandas to execute the SQL and assign to the df
-            with source_eng.connect() as conn:
-                df_metadata = pd.read_sql(query, conn)
+            df_metadata = source_hook.get_pandas_df(query)
 
             # Drop rows (keep the columns only)
             df_metadata = df_metadata.drop(df_metadata.index)
