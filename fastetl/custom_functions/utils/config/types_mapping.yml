@@ -246,3 +246,99 @@ mssql:
     mssql:
       dtype:
         DATE
+mysql:
+  253:  # VARCHAR, CHAR, ENUM, SET, JSON
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  3:    # INT
+    postgres:
+      dtype: INTEGER
+    mssql:
+      dtype: INT
+  1:    # TINYINT
+    postgres:
+      dtype: SMALLINT
+    mssql:
+      dtype: SMALLINT
+  2:    # SMALLINT
+    postgres:
+      dtype: SMALLINT
+    mssql:
+      dtype: SMALLINT
+  4:    # FLOAT
+    postgres:
+      dtype: DOUBLE PRECISION
+    mssql:
+      dtype: FLOAT
+  5:    # DOUBLE
+    postgres:
+      dtype: DOUBLE PRECISION
+    mssql:
+      dtype: FLOAT
+  8:    # BIGINT
+    postgres:
+      dtype: BIGINT
+    mssql:
+      dtype: BIGINT
+  9:    # MEDIUMINT
+    postgres:
+      dtype: INTEGER
+    mssql:
+      dtype: INT
+  10:   # DATE
+    postgres:
+      dtype: DATE
+    mssql:
+      dtype: DATE
+  11:   # TIME
+    postgres:
+      dtype: TIME
+    mssql:
+      dtype: TIME
+  12:   # DATETIME
+    postgres:
+      dtype: TIMESTAMP
+    mssql:
+      dtype: DATETIME2
+  7:    # TIMESTAMP
+    postgres:
+      dtype: TIMESTAMP
+    mssql:
+      dtype: DATETIME2
+  246:  # DECIMAL
+    postgres:
+      dtype: NUMERIC
+    mssql:
+      dtype: DECIMAL
+  249:  # TINYBLOB, TINYTEXT
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  250:  # MEDIUMBLOB, MEDIUMTEXT
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  251:  # LONGBLOB, LONGTEXT
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  252:  # BLOB, TEXT
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  254:  # CHAR, BINARY
+    postgres:
+      dtype: TEXT
+    mssql:
+      dtype: NVARCHAR(MAX)
+  16:   # BIT
+    postgres:
+      dtype: BOOLEAN
+    mssql:
+      dtype: BIT

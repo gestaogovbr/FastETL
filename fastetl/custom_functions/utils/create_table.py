@@ -442,32 +442,14 @@ def create_table_from_query_using_cursor(
         with DbConnection(source.conn_id) as source_conn:
             with source_conn.cursor() as source_cur:
                 source_cur.execute(query)
-                # Cursor using pyodbc (mssql) ou mysql-connector (mysql)
-                # mssql/pyodbc: col[1] é objeto Python com .__name__ (ex: str, int, datetime)
-                # mysql-connector: col[1] é inteiro type code (ex: 253, 3, 12)
-                MYSQL_TYPE_MAP = {
-                    0: "Decimal", 1: "int", 2: "int", 3: "int", 4: "float",
-                    5: "float", 7: "datetime", 8: "int", 9: "int", 10: "date",
-                    11: "time", 12: "datetime", 13: "int", 14: "date", 15: "str",
-                    16: "int", 246: "Decimal", 247: "str", 248: "str", 249: "bytes",
-                    250: "bytes", 251: "bytes", 252: "bytes", 253: "str", 254: "str",
-                    255: "str",
-                }
-                if source.conn_type in ("mssql", 'mysql'):
+                # Cursor using pyodbc
+                if source.conn_type in ("mssql"):
                     df_source_columns = pd.DataFrame.from_records(
-                        (
-                            (
-                                col[0],
-                                col[1].__name__
-                                if hasattr(col[1], "__name__")
-                                else MYSQL_TYPE_MAP.get(col[1], "str"),
-                            )
-                            for col in source_cur.description
-                        ),
+                        ((col[0], col[1].__name__) for col in source_cur.description),
                         columns=["Name", "DataType"],
                     )
                 # Cursor using psycopg2
-                elif source.conn_type in ("postgres", "teiid"):
+                elif source.conn_type in ("postgres", "teiid", "mysql"):
                     df_source_columns = pd.DataFrame.from_records(
                         ((col[0], col[1]) for col in source_cur.description),
                         columns=["Name", "DataType"],
@@ -501,7 +483,6 @@ def create_table_from_query_using_cursor(
     except ValueError as e:
         logging.error("Database engine not supported")
         raise e
-
 
 def create_table_if_not_exists(
     source: SourceConnection, destination: DestinationConnection
