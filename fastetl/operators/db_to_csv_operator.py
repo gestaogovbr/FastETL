@@ -6,8 +6,9 @@ DbToCSVOperator
     result and stores the file in the file system.
 """
 
-from typing import Optional
 import os
+from pathlib import Path
+from typing import Optional
 
 from airflow.models.baseoperator import BaseOperator
 
@@ -98,7 +99,12 @@ class DbToCSVOperator(BaseOperator):
         db_hook, _ = get_hook_and_engine_by_provider(self.conn_id)
 
         if self.select_sql:
-            df_select = self.select_sql
+            path_sql = Path(self.select_sql)
+            if path_sql.is_file():
+                query = path_sql.read_text(encoding="utf-8")
+            else:
+                query = self.select_sql
+            df_select = query
         else:
             df_select = self.select_all_sql()
 
