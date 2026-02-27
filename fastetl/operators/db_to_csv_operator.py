@@ -69,16 +69,16 @@ class DbToCSVOperator(BaseOperator):
                  **kwargs
                  ):
         super(DbToCSVOperator, self).__init__(*args, **kwargs)
-        self.conn_id = conn_id
-        self.select_sql = select_sql
-        self.table_name = table_name
-        self.table_scheme = table_scheme
-        self.characters_to_remove = characters_to_remove
-        self.columns_to_remove = columns_to_remove
-        self.int_columns = int_columns
-        self.target_file_dir = target_file_dir
-        self.file_name = file_name
-        self.compression = compression
+        self.conn_id: str = conn_id
+        self.target_file_dir: str = target_file_dir
+        self.file_name: str = file_name
+        self.compression: str | dict = compression
+        self.select_sql: Optional[str] = select_sql
+        self.table_name: Optional[str] = table_name
+        self.table_scheme: Optional[str] = table_scheme
+        self.characters_to_remove: Optional[str] = characters_to_remove
+        self.columns_to_remove: Optional[list[str]] = columns_to_remove
+        self.int_columns: Optional[list[str]] = int_columns
 
     def select_all_sql(self):
         cols = get_table_cols_name(self.conn_id, self.table_scheme, self.table_name)
