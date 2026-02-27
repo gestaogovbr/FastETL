@@ -1,9 +1,9 @@
 """
-Módulo contém a classe:
+Module contains the class
 
 DbToCSVOperator
-    Operador que executa uma query SQL, gera um arquivo CSV com o
-    resultado e grava o arquivo no sistema de arquivo.
+    Operador that executes a SQL query, generates a CSV file with the
+    result and stores the file in the file system.
 """
 
 from typing import Optional
@@ -16,26 +16,39 @@ from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_
 
 class DbToCSVOperator(BaseOperator):
     """
-    Operador que executa uma query SQL, gera um arquivo CSV com o
-    resultado e grava o arquivo no sistema de arquivo.
+    Operador that executes a SQL query, generates a CSV file with the
+    result and stores the file in the file system.
 
     Args:
-        conn_id (str): Airflow conn_id do BD onde a query select_sql
-            será executada
-        select_sql (str): query que retorna os dados que serão gravados
-            no CSV
-        table_name (str): nome da tabela utilizado para construção
-            dinâmica do sql. Deve ser utilizado alternativamente ao parâmetro
-            `select_sql` table_scheme (str): nome do esquema utilizado para
-            construção dinâmica do sql. Deve ser utilizado alternativamente
-            ao parâmetro `select_sql` em conjunto com o `table_name`
-        columns_to_remove (list): deve ser utilizado em conjunto com os
-            campos `table_name` e `table_scheme` para remover as colunas que
-            não serão extraídas para o CSB target_file_dir (str): local no
-            sistema de arquivo onde o arquivo CSV será gravado
-        file_name (str): nome para o arquivo CSV a ser gravado
-        int_columns (str): lista com nome das colunas que são do tipo
-            inteiro para geração correta do arquivo CSV
+        conn_id (str): Airflow conn_id of the database where the
+            `select_sql` query will be run.
+        target_file_dir (str): path to the directory where the target
+            file will be created.
+        file_name (str): name of the file to be created.
+        compression (str | dict): compression parameter to be passed
+            along to Panda's to_csv method. Defaults to "infer".
+        select_sql (Optional[str]): query string, or path to a file
+            containing the query string, that will select and return the
+            data to be recorded in the CSV file. If omitted (or None),
+            will build a select query containing the specified columns.
+            Defaults to None.
+        table_name (Optional[str]): name of the table to dynamically build
+            the query. Must be used alternatively to the `select_sql`
+            argument. Defaults to None.
+        table_scheme (Optional[str]): name of the schema to be used to
+            dynamically build the query. Must be used alternatively to
+            the `select_sql` argument in tandem with the `table_name`
+            argument. Defaults to None.
+        characters_to_remove (Optional[str]): if specified, the characters
+            specified in this string will be removed from any string type
+            columns in the dataframe, before exporting to CSV. Defaults
+            to None.
+        columns_to_remove (Optional[list[str]]): must be used together with
+            the `table_name` and `table_scheme` arguments to except the
+            columns which won't be extracted to the CSV. Defaults to None.
+        int_columns (Optional[list[str]]): list with the names of the
+            columns that are of type integer to generate the CSV file
+            correctly. Defaults to None.
     """
     ui_color = '#95aad5'
     ui_fgcolor = '#000000'
