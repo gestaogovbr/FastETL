@@ -6,6 +6,7 @@ DbToCSVOperator
     resultado e grava o arquivo no sistema de arquivo.
 """
 
+from typing import Optional
 import os
 
 from airflow.models.baseoperator import BaseOperator
@@ -41,16 +42,16 @@ class DbToCSVOperator(BaseOperator):
     template_fields = ('select_sql', 'target_file_dir', 'file_name')
 
     def __init__(self,
-                 conn_id,
-                 target_file_dir,
-                 file_name,
-                 compression=None,
-                 select_sql=None,
-                 table_name=None,
-                 table_scheme=None,
-                 characters_to_remove=None,
-                 columns_to_remove: []=None,
-                 int_columns=None,
+                 conn_id: str,
+                 target_file_dir: str,
+                 file_name: str,
+                 compression: str | dict = "infer",
+                 select_sql: Optional[str] = None,
+                 table_name: Optional[str] = None,
+                 table_scheme: Optional[str] = None,
+                 characters_to_remove: Optional[str] = None,
+                 columns_to_remove: Optional[list[str]] = None,
+                 int_columns: Optional[list[str]] = None,
                  *args,
                  **kwargs
                  ):
