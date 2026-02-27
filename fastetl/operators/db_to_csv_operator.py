@@ -68,7 +68,7 @@ class DbToCSVOperator(BaseOperator):
                  int_columns: Optional[list[str]] = None,
                  **kwargs
                  ):
-        super(DbToCSVOperator, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.conn_id: str = conn_id
         self.target_file_dir: str = target_file_dir
         self.file_name: str = file_name
