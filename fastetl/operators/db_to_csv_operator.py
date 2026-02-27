@@ -14,6 +14,7 @@ from airflow.models.baseoperator import BaseOperator
 from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
 
+
 class DbToCSVOperator(BaseOperator):
     """
     Operador that executes a SQL query, generates a CSV file with the
@@ -50,24 +51,26 @@ class DbToCSVOperator(BaseOperator):
             columns that are of type integer to generate the CSV file
             correctly. Defaults to None.
     """
-    ui_color = '#95aad5'
-    ui_fgcolor = '#000000'
-    template_fields = ('select_sql', 'target_file_dir', 'file_name')
 
-    def __init__(self,
-                 *args,
-                 conn_id: str,
-                 target_file_dir: str,
-                 file_name: str,
-                 compression: str | dict = "infer",
-                 select_sql: Optional[str] = None,
-                 table_name: Optional[str] = None,
-                 table_scheme: Optional[str] = None,
-                 characters_to_remove: Optional[str] = None,
-                 columns_to_remove: Optional[list[str]] = None,
-                 int_columns: Optional[list[str]] = None,
-                 **kwargs
-                 ):
+    ui_color = "#95aad5"
+    ui_fgcolor = "#000000"
+    template_fields = ("select_sql", "target_file_dir", "file_name")
+
+    def __init__(
+        self,
+        *args,
+        conn_id: str,
+        target_file_dir: str,
+        file_name: str,
+        compression: str | dict = "infer",
+        select_sql: Optional[str] = None,
+        table_name: Optional[str] = None,
+        table_scheme: Optional[str] = None,
+        characters_to_remove: Optional[str] = None,
+        columns_to_remove: Optional[list[str]] = None,
+        int_columns: Optional[list[str]] = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.conn_id: str = conn_id
         self.target_file_dir: str = target_file_dir
@@ -99,7 +102,7 @@ class DbToCSVOperator(BaseOperator):
         else:
             df_select = self.select_all_sql()
 
-        self.log.info(f'Executing SQL check: {df_select}')
+        self.log.info(f"Executing SQL check: {df_select}")
         df = db_hook.get_pandas_df(df_select)
 
         # Convert columns data types to int
@@ -109,16 +112,13 @@ class DbToCSVOperator(BaseOperator):
 
         # Remove specified characters
         if self.characters_to_remove:
-            str_cols = df.select_dtypes(['object']).columns
+            str_cols = df.select_dtypes(["object"]).columns
             for col in str_cols:
-                df[col] = df[col].str.replace(self.characters_to_remove, '')
+                df[col] = df[col].str.replace(self.characters_to_remove, "")
 
         # Remove specified columns
         if self.columns_to_remove:
-            df.drop(self.columns_to_remove,
-                    axis=1,
-                    errors='ignore',
-                    inplace=True)
+            df.drop(self.columns_to_remove, axis=1, errors="ignore", inplace=True)
 
         # Create folder if not exists
         if not os.path.exists(self.target_file_dir):
