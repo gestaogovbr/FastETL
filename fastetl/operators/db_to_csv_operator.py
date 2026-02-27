@@ -42,6 +42,7 @@ class DbToCSVOperator(BaseOperator):
     template_fields = ('select_sql', 'target_file_dir', 'file_name')
 
     def __init__(self,
+                 *args,
                  conn_id: str,
                  target_file_dir: str,
                  file_name: str,
@@ -52,7 +53,6 @@ class DbToCSVOperator(BaseOperator):
                  characters_to_remove: Optional[str] = None,
                  columns_to_remove: Optional[list[str]] = None,
                  int_columns: Optional[list[str]] = None,
-                 *args,
                  **kwargs
                  ):
         super(DbToCSVOperator, self).__init__(*args, **kwargs)
