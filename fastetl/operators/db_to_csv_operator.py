@@ -1,25 +1,9 @@
 """
-Operador que executa uma query SQL, gera um arquivo CSV com o resultado
-e grava o arquivo no sistema de arquivo.
+Módulo contém a classe:
 
-Args:
-    conn_id (str): Airflow conn_id do BD onde a query select_sql
-    será executada
-    select_sql (str): query que retorna os dados que serão gravados no
-    CSV
-    table_name (str): nome da tabela utilizado para construção dinâmica
-    do sql. Deve ser utilizado alternativamente ao parâmetro `select_sql`
-    table_scheme (str): nome do esquema utilizado para construção
-    dinâmica do sql. Deve ser utilizado alternativamente ao parâmetro
-    `select_sql` em conjunto com o `table_name`
-    columns_to_remove (list): deve ser utilizado em conjunto com os
-    campos `table_name` e `table_scheme` para remover as colunas que
-    não serão extraídas para o CSB
-    target_file_dir (str): local no sistema de arquivo onde o arquivo
-    CSV será gravado
-    file_name (str): nome para o arquivo CSV a ser gravado
-    int_columns (str): lista com nome das colunas que são do tipo
-    inteiro para geração correta do arquivo CSV
+DbToCSVOperator
+    Operador que executa uma query SQL, gera um arquivo CSV com o
+    resultado e grava o arquivo no sistema de arquivo.
 """
 
 import os
@@ -30,6 +14,28 @@ from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_na
 from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
 
 class DbToCSVOperator(BaseOperator):
+    """
+    Operador que executa uma query SQL, gera um arquivo CSV com o
+    resultado e grava o arquivo no sistema de arquivo.
+
+    Args:
+        conn_id (str): Airflow conn_id do BD onde a query select_sql
+            será executada
+        select_sql (str): query que retorna os dados que serão gravados
+            no CSV
+        table_name (str): nome da tabela utilizado para construção
+            dinâmica do sql. Deve ser utilizado alternativamente ao parâmetro
+            `select_sql` table_scheme (str): nome do esquema utilizado para
+            construção dinâmica do sql. Deve ser utilizado alternativamente
+            ao parâmetro `select_sql` em conjunto com o `table_name`
+        columns_to_remove (list): deve ser utilizado em conjunto com os
+            campos `table_name` e `table_scheme` para remover as colunas que
+            não serão extraídas para o CSB target_file_dir (str): local no
+            sistema de arquivo onde o arquivo CSV será gravado
+        file_name (str): nome para o arquivo CSV a ser gravado
+        int_columns (str): lista com nome das colunas que são do tipo
+            inteiro para geração correta do arquivo CSV
+    """
     ui_color = '#95aad5'
     ui_fgcolor = '#000000'
     template_fields = ('select_sql', 'target_file_dir', 'file_name')
