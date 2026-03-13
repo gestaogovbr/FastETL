@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from airflow.models.baseoperator import BaseOperator
+from airflow.utils.context import Context
 
 from fastetl.custom_functions.utils.get_table_cols_name import get_table_cols_name
 from fastetl.custom_functions.utils.db_connection import get_hook_and_engine_by_provider
@@ -95,7 +96,18 @@ class DbToCSVOperator(BaseOperator):
             FROM {self.table_scheme}.{self.table_name};
             """
 
-    def execute(self, context):
+    def execute(self, context: Context):
+        """Executes the SQL query and saves the CSV file. In the process,
+        converts data types to integers and removes specified characters
+        if the options have been specified.
+
+        Args:
+            context (Context): The Airflow context object.
+
+        Returns:
+            str: The name of the written file.
+        """
+        _ = context  # left unused
         db_hook, _ = get_hook_and_engine_by_provider(self.conn_id)
 
         if self.select_sql:
