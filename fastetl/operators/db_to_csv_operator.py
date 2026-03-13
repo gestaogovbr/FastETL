@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd
+
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.context import Context
 
@@ -126,7 +128,7 @@ class DbToCSVOperator(BaseOperator):
         # Convert columns data types to int
         if self.int_columns:
             for col in self.int_columns:
-                df[col] = df[col].astype("Int64")
+                df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
 
         # Remove specified characters
         if self.characters_to_remove:
