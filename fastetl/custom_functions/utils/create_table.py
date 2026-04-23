@@ -272,6 +272,7 @@ def create_table_from_others(
         type_mapping = {
             "NUMERIC": sa_types.Numeric(38, 13),
             "BIT": sa_types.Boolean(),
+            "BINARY": sa_types.LargeBinary(),
         }
 
         if db_provider == "mssql":
