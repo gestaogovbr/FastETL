@@ -1,16 +1,16 @@
 """
-Funções utilitárias para acesso ao SharePoint via Microsoft Graph API.
+Utility functions for accessing SharePoint via Microsoft Graph API.
 
-Substitui o método ACS (descontinuado em abril de 2026) pelo fluxo moderno:
-Entra ID + MSAL + Microsoft Graph com permissão Sites.Selected.
+Replaces the ACS (Azure Control Service) method discontinued in April 2026
+with the modern flow: Entra ID + MSAL + Microsoft Graph with Sites.Selected
+permission.
 
-Uso:
+Usage:
     from fastetl.custom_functions.sharepoint import (
         get_sharepoint_client,
+        list_sharepoint_files,
         upload_to_sharepoint,
-        upload_tmp_to_sharepoint,
         download_from_sharepoint,
-        listar_arquivos_sharepoint,
     )
 """
 
@@ -21,29 +21,28 @@ import logging
 import msal
 import requests
 from airflow.hooks.base import BaseHook
-from airflow.models import Variable
 
 
 def get_sharepoint_client(conn_id: str, site_host: str, site_name: str):
     """
-    Autentica no SharePoint via Microsoft Graph API e retorna
-    token, site_id e drive_id prontos para uso.
+    Authenticates to SharePoint via Microsoft Graph API and returns
+    the token, site_id, and drive_id ready for use.
 
-    A Airflow Connection informada deve conter no campo extra:
-        CLIENT_ID, CLIENT_SECRET e TENANT_ID do app registration
-        criado no Entra ID do tenant colaboragov.
+    The Airflow Connection must contain the following fields in the extra field:
+        CLIENT_ID, CLIENT_SECRET, and TENANT_ID from the app registration
+        created in the Entra ID of the target tenant.
 
     Args:
-        conn_id: ID da Airflow Connection com as credenciais.
-        site_host: hostname do SharePoint, ex: colaboragov.sharepoint.com
-        site_name: nome do site, ex: CDATASEGES
+        conn_id: Airflow Connection ID containing the credentials.
+        site_host: SharePoint hostname, e.g.: colaboragov.sharepoint.com
+        site_name: Site name after /sites/, e.g.: CDATASEGES
 
     Returns:
         tuple: (token, site_id, drive_id)
 
     Raises:
-        ValueError: se o token não for obtido com sucesso.
-        HTTPError: se o site ou drive não forem encontrados.
+        ValueError: if the token cannot be obtained successfully.
+        HTTPError: if the site or drive are not found.
     """
     hook = BaseHook.get_connection(conn_id)
     client = json.loads(hook.extra)
@@ -57,12 +56,12 @@ def get_sharepoint_client(conn_id: str, site_host: str, site_name: str):
         scopes=["https://graph.microsoft.com/.default"]
     )
     if "access_token" not in result:
-        raise ValueError(f"Erro ao obter token: {result.get('error_description')}")
+        raise ValueError(f"Failed to obtain token: {result.get('error_description')}")
 
     token = result["access_token"]
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
-    # Descobre SITE_ID
+    # Get SITE_ID
     r = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{site_host}:/sites/{site_name}",
         headers=headers
@@ -70,7 +69,7 @@ def get_sharepoint_client(conn_id: str, site_host: str, site_name: str):
     r.raise_for_status()
     site_id = r.json()["id"]
 
-    # Descobre DRIVE_ID (biblioteca Documents)
+    # Get DRIVE_ID (Documents library)
     r = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
         headers=headers
@@ -82,39 +81,40 @@ def get_sharepoint_client(conn_id: str, site_host: str, site_name: str):
     return token, site_id, drive_id
 
 
-def listar_arquivos_sharepoint(
+def list_sharepoint_files(
     conn_id: str,
     site_host: str,
     site_name: str,
-    pasta: str,
+    folder: str,
 ) -> list:
     """
-    Lista os arquivos dentro de uma pasta no SharePoint.
+    Lists files inside a SharePoint folder.
 
     Args:
-        conn_id: ID da Airflow Connection com as credenciais.
-        site_host: hostname do SharePoint, ex: colaboragov.sharepoint.com
-        site_name: nome do site, ex: CDATASEGES
-        pasta: caminho da pasta relativo à raiz do drive,
-               ex: legado ou General/2024. Nao incluir Shared Documents.
+        conn_id: Airflow Connection ID containing the credentials.
+        site_host: SharePoint hostname, e.g.: colaboragov.sharepoint.com
+        site_name: Site name after /sites/, e.g.: CDATASEGES
+        folder: Folder path relative to the drive root,
+                e.g.: legado or General/2024.
+                Do not include Shared Documents.
 
     Returns:
-        list: lista de dicts com os metadados dos arquivos.
+        list: list of dicts with file metadata.
     """
     token, site_id, drive_id = get_sharepoint_client(conn_id, site_host, site_name)
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
     r = requests.get(
-        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/{pasta}:/children",
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/{folder}:/children",
         headers=headers
     )
     r.raise_for_status()
-    arquivos = r.json().get("value", [])
+    files = r.json().get("value", [])
 
-    for item in arquivos:
+    for item in files:
         logging.info("  %s (%s bytes)", item["name"], item.get("size", 0))
 
-    return arquivos
+    return files
 
 
 def upload_to_sharepoint(
@@ -122,32 +122,32 @@ def upload_to_sharepoint(
     site_host: str,
     site_name: str,
     local_path: str,
-    pasta: str,
+    folder: str,
     delete_after_upload: bool = False,
 ) -> str:
     """
-    Faz upload de um arquivo local para uma pasta no SharePoint.
+    Uploads a local file to a SharePoint folder.
 
     Args:
-        conn_id: ID da Airflow Connection com as credenciais.
-        site_host: hostname do SharePoint, ex: colaboragov.sharepoint.com
-        site_name: nome do site, ex: CDATASEGES
-        local_path: caminho completo do arquivo local, ex: /tmp/arquivo.csv
-        pasta: pasta de destino no SharePoint, ex: legado ou General/2024.
-               Nao incluir Shared Documents.
-        delete_after_upload: se True, remove o arquivo local apos o upload
-                             com sucesso. Util para limpeza de pastas
-                             temporarias do Airflow. Default: False.
+        conn_id: Airflow Connection ID containing the credentials.
+        site_host: SharePoint hostname, e.g.: colaboragov.sharepoint.com
+        site_name: Site name after /sites/, e.g.: CDATASEGES
+        local_path: Full path of the local file, e.g.: /tmp/file.csv
+        folder: Destination folder in SharePoint, e.g.: legado or General/2024.
+                Do not include Shared Documents.
+        delete_after_upload: If True, removes the local file after a successful
+                             upload. Useful for cleaning up temporary files.
+                             Default: False.
 
     Returns:
-        str: webUrl do arquivo enviado.
+        str: webUrl of the uploaded file.
 
     Raises:
-        HTTPError: se o upload falhar.
-        FileNotFoundError: se o arquivo local nao existir.
+        HTTPError: if the upload fails.
+        FileNotFoundError: if the local file does not exist.
     """
     if not os.path.exists(local_path):
-        raise FileNotFoundError(f"Arquivo nao encontrado: {local_path}")
+        raise FileNotFoundError(f"File not found: {local_path}")
 
     token, site_id, drive_id = get_sharepoint_client(conn_id, site_host, site_name)
     file_name = os.path.basename(local_path)
@@ -159,60 +159,19 @@ def upload_to_sharepoint(
     with open(local_path, "rb") as f:
         r = requests.put(
             f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}"
-            f"/root:/{pasta}/{file_name}:/content",
+            f"/root:/{folder}/{file_name}:/content",
             headers=headers,
             data=f
         )
     r.raise_for_status()
     web_url = r.json().get("webUrl")
-    logging.info("Upload OK -> %s", web_url)
+    logging.info("Upload successful -> %s", web_url)
 
     if delete_after_upload:
         os.remove(local_path)
-        logging.info("Arquivo local removido -> %s", local_path)
+        logging.info("Local file removed -> %s", local_path)
 
     return web_url
-
-
-def upload_tmp_to_sharepoint(
-    conn_id: str,
-    site_host: str,
-    site_name: str,
-    file_name: str,
-    pasta: str,
-) -> str:
-    """
-    Faz upload de um arquivo localizado na pasta temporária do Airflow
-    (variável path_tmp) para uma pasta no SharePoint, removendo o arquivo
-    local após o upload com sucesso.
-
-    Ideal para pipelines onde o arquivo é gerado em path_tmp e deve ser
-    enviado ao SharePoint sem deixar resíduos no worker do Airflow.
-
-    Args:
-        conn_id: ID da Airflow Connection com as credenciais.
-        site_host: hostname do SharePoint, ex: colaboragov.sharepoint.com
-        site_name: nome do site, ex: CDATASEGES
-        file_name: nome do arquivo dentro de path_tmp, ex: arquivo.csv
-        pasta: pasta de destino no SharePoint, ex: legado ou General/2024.
-               Nao incluir Shared Documents.
-
-    Returns:
-        str: webUrl do arquivo enviado.
-
-    Raises:
-        HTTPError: se o upload falhar.
-        FileNotFoundError: se o arquivo nao existir em path_tmp.
-    """
-    local_path = os.path.join(Variable.get("path_tmp"), file_name)
-    return upload_to_sharepoint(
-        conn_id=conn_id,
-        site_host=site_host,
-        site_name=site_name,
-        local_path=local_path,
-        pasta=pasta,
-        delete_after_upload=True
-    )
 
 
 def download_from_sharepoint(
@@ -220,26 +179,26 @@ def download_from_sharepoint(
     site_host: str,
     site_name: str,
     file_name: str,
-    pasta: str,
-    destino: str = "/tmp",
+    folder: str,
+    destination: str = "/tmp",
 ) -> str:
     """
-    Faz download de um arquivo do SharePoint para uma pasta local.
+    Downloads a file from SharePoint to a local folder.
 
     Args:
-        conn_id: ID da Airflow Connection com as credenciais.
-        site_host: hostname do SharePoint, ex: colaboragov.sharepoint.com
-        site_name: nome do site, ex: CDATASEGES
-        file_name: nome do arquivo no SharePoint, ex: Base_Indicadores.xlsx
-        pasta: pasta de origem no SharePoint, ex: legado ou General/2024.
-               Nao incluir Shared Documents.
-        destino: pasta local onde o arquivo sera salvo. Default: /tmp
+        conn_id: Airflow Connection ID containing the credentials.
+        site_host: SharePoint hostname, e.g.: colaboragov.sharepoint.com
+        site_name: Site name after /sites/, e.g.: CDATASEGES
+        file_name: Name of the file in SharePoint, e.g.: Base_Indicadores.xlsx
+        folder: Source folder in SharePoint, e.g.: legado or General/2024.
+                Do not include Shared Documents.
+        destination: Local folder where the file will be saved. Default: /tmp
 
     Returns:
-        str: caminho completo do arquivo baixado.
+        str: Full path of the downloaded file.
 
     Raises:
-        HTTPError: se o download falhar.
+        HTTPError: if the download fails.
     """
     token, site_id, drive_id = get_sharepoint_client(conn_id, site_host, site_name)
     headers = {
@@ -249,19 +208,19 @@ def download_from_sharepoint(
 
     r = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}"
-        f"/root:/{pasta}/{file_name}:/content",
+        f"/root:/{folder}/{file_name}:/content",
         headers=headers,
         allow_redirects=True
     )
     r.raise_for_status()
 
-    os.makedirs(destino, exist_ok=True)
-    local_path = os.path.join(destino, file_name)
+    os.makedirs(destination, exist_ok=True)
+    local_path = os.path.join(destination, file_name)
     with open(local_path, "wb") as f:
         f.write(r.content)
 
     logging.info(
-        "Download OK -> %s (%d bytes)",
+        "Download successful -> %s (%d bytes)",
         local_path,
         os.path.getsize(local_path)
     )
