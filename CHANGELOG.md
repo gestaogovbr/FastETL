@@ -4,6 +4,10 @@ Here are only the breaking and most significant changes. For a full
 account of changes, please see the
 [commit history](https://github.com/gestaogovbr/FastETL/commits/main).
 
+## 0.2.14
+
+* Fix BINARY type mapping to LargeBinary in create_table_from_others
+  ([#242](https://github.com/gestaogovbr/FastETL/pull/242))
 
 ## 0.2.8
 
